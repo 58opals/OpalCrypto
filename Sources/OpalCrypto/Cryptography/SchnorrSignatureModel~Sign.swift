@@ -4,19 +4,19 @@ import Foundation
 
 public extension SchnorrSignatureModel {
     static func sign(
-        digest32: Data,
-        privateKey32: Data,
-        nonce: NonceGenerationPolicy = .rfc6979BchDefault
+        digestData32Bytes: Data,
+        privateKeyData32Bytes: Data,
+        nonce: NonceGenerationPolicy = .requestForComments6979BitcoinCashDefault
     ) throws -> Signature {
-        guard digest32.count == 32 else {
-            throw Error.invalidDigestLength(actual: digest32.count)
+        guard digestData32Bytes.count == 32 else {
+            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
         }
-        guard privateKey32.count == 32 else {
-            throw Error.invalidPrivateKeyLength(actual: privateKey32.count)
+        guard privateKeyData32Bytes.count == 32 else {
+            throw Error.invalidPrivateKeyLength(actual: privateKeyData32Bytes.count)
         }
         let privateKeyScalar: ScalarModel
         do {
-            privateKeyScalar = try ScalarModel(data32: privateKey32, requireNonZero: true)
+            privateKeyScalar = try ScalarModel(data32: privateKeyData32Bytes, requireNonZero: true)
         } catch {
             throw Error.invalidPrivateKeyValue
         }
@@ -26,22 +26,22 @@ public extension SchnorrSignatureModel {
         }
         var makeNextNonce: () throws -> ScalarModel
         switch nonce {
-        case .rfc6979BchDefault:
-            var generator = try NonceGeneratorModel(privateKey: privateKeyScalar, digest32: digest32)
+        case .requestForComments6979BitcoinCashDefault:
+            var generator = try NonceGeneratorModel(privateKey: privateKeyScalar, digest32: digestData32Bytes)
             makeNextNonce = {
                 try generator.makeNextScalar()
             }
-        case .bipSchnorrDeterministic:
+        case .bitcoinImprovementProposalSchnorrDeterministic:
             var generator = try NonceGeneratorModel.BitcoinImprovementProposalSchnorrSignatureModel(
                 privateKey: privateKeyScalar,
-                digest32: digest32
+                digest32: digestData32Bytes
             )
             makeNextNonce = {
                 try generator.makeNextScalar()
             }
         case .systemRandom:
             makeNextNonce = {
-                try makeSystemRandomScalar()
+                try NonceGeneratorModel.makeSystemRandomScalar()
             }
         }
         while true {
@@ -62,7 +62,7 @@ public extension SchnorrSignatureModel {
             }
             let signatureRFieldElement = adjustedNonceAffine.x
             let challengeScalar = try ChallengeHashModel.makeChallengeScalar(
-                digest32: digest32,
+                digest32: digestData32Bytes,
                 r: signatureRFieldElement,
                 publicKey: publicKeyAffine
             )
@@ -72,8 +72,8 @@ public extension SchnorrSignatureModel {
                 continue
             }
             return try Signature(
-                r: signatureRFieldElement.data32,
-                s: signatureSScalar.data32
+                r: signatureRFieldElement.data32Bytes,
+                s: signatureSScalar.data32Bytes
             )
         }
     }

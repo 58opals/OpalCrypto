@@ -3,8 +3,8 @@
 import Foundation
 import CryptoKit
 
-struct SecureHashAlgorithm256Model {
-    static func hash(_ data: Data) -> Data {
+public struct SecureHashAlgorithm256Model {
+    public static func hash(_ data: Data) -> Data {
         let digest = CryptoKit.SHA256.hash(data: data)
         return .init(digest)
     }

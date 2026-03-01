@@ -7,18 +7,18 @@ struct SchnorrSignatureValidator {
     @Test("Create signature from sixty-four bytes")
     func createSignatureFromSixtyFourBytes() throws {
         let payload = Data((0..<64).map { UInt8($0) })
-        let signature = try SchnorrSignatureModel.Signature(raw64: payload)
+        let signature = try SchnorrSignatureModel.Signature(raw64ByteSignatureData: payload)
 
         #expect(signature.r == Data(payload.prefix(32)))
         #expect(signature.s == Data(payload.suffix(32)))
-        #expect(signature.raw64 == payload)
+        #expect(signature.raw64ByteSignatureData == payload)
     }
 
     @Test("Reject raw signature payload with invalid length")
     func rejectRawSignaturePayloadWithInvalidLength() {
         let payload = Data(repeating: 0xAB, count: 63)
         do {
-            _ = try SchnorrSignatureModel.Signature(raw64: payload)
+            _ = try SchnorrSignatureModel.Signature(raw64ByteSignatureData: payload)
             Issue.record("Expected invalid signature length error.")
         } catch let error as SchnorrSignatureModel.Error {
             #expect(error == .invalidSignatureLength(actual: 63))

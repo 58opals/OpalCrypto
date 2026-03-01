@@ -24,23 +24,23 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             return result
         }
         
-        static func decodeSignature(_ derEncoded: Data) throws -> (r: Data, s: Data) {
-            guard !derEncoded.isEmpty else {
+        static func decodeSignature(_ distinguishedEncodingRulesEncoded: Data) throws -> (r: Data, s: Data) {
+            guard !distinguishedEncodingRulesEncoded.isEmpty else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }
             var index = 0
-            guard derEncoded[index] == 0x30 else {
+            guard distinguishedEncodingRulesEncoded[index] == 0x30 else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }
             index += 1
-            let lengthData = try DistinguishedEncodingRulesLengthModel.decode(from: derEncoded, startingAt: index)
+            let lengthData = try DistinguishedEncodingRulesLengthModel.decode(from: distinguishedEncodingRulesEncoded, startingAt: index)
             index = lengthData.nextIndex
             let endIndex = index + lengthData.length
-            guard endIndex == derEncoded.count else {
+            guard endIndex == distinguishedEncodingRulesEncoded.count else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }
-            let rValue = try decodeInteger(from: derEncoded, startingAt: &index)
-            let sValue = try decodeInteger(from: derEncoded, startingAt: &index)
+            let rValue = try decodeInteger(from: distinguishedEncodingRulesEncoded, startingAt: &index)
+            let sValue = try decodeInteger(from: distinguishedEncodingRulesEncoded, startingAt: &index)
             guard index == endIndex else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }

@@ -5,11 +5,11 @@ import Foundation
 public extension SchnorrSignatureModel {
     static func verify(
         signature: Signature,
-        digest32: Data,
+        digestData32Bytes: Data,
         publicKey: Data
     ) throws -> Bool {
-        guard digest32.count == 32 else {
-            throw Error.invalidDigestLength(actual: digest32.count)
+        guard digestData32Bytes.count == 32 else {
+            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
         }
         guard publicKey.count == 33 || publicKey.count == 65 else {
             throw Error.invalidPublicKeyLength(actual: publicKey.count)
@@ -35,7 +35,7 @@ public extension SchnorrSignatureModel {
         let challengeScalar: ScalarModel
         do {
             challengeScalar = try ChallengeHashModel.makeChallengeScalar(
-                digest32: digest32,
+                digest32: digestData32Bytes,
                 r: signatureRFieldElement,
                 publicKey: publicKeyPoint
             )

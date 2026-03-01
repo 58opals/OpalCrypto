@@ -4,14 +4,14 @@ import Foundation
 
 extension Unsigned256BitIntegerModel {
     @inlinable
-    func shiftRightOneBit() -> Unsigned256BitIntegerModel {
+    public func shiftRightOneBit() -> Unsigned256BitIntegerModel {
         var result = self
         result.shiftRightOneBitInPlace()
         return result
     }
 
     @inlinable
-    mutating func shiftRightOneBitInPlace() {
+    public mutating func shiftRightOneBitInPlace() {
         var carry: UInt64 = 0
         for index in stride(from: 3, through: 0, by: -1) {
             let limb = limbs[index]
@@ -22,14 +22,14 @@ extension Unsigned256BitIntegerModel {
     }
 
     @inlinable
-    func subtractWord(_ value: UInt64) -> Unsigned256BitIntegerModel {
+    public func subtractWord(_ value: UInt64) -> Unsigned256BitIntegerModel {
         var result = self
         result.subtractWordInPlace(value)
         return result
     }
 
     @inlinable
-    mutating func subtractWordInPlace(_ value: UInt64) {
+    public mutating func subtractWordInPlace(_ value: UInt64) {
         var borrow = value
         for index in 0..<4 {
             if borrow == 0 {
@@ -42,14 +42,14 @@ extension Unsigned256BitIntegerModel {
     }
 
     @inlinable
-    func addWord(_ value: UInt64) -> Unsigned256BitIntegerModel {
+    public func addWord(_ value: UInt64) -> Unsigned256BitIntegerModel {
         var result = self
         result.addWordInPlace(value)
         return result
     }
 
     @inlinable
-    mutating func addWordInPlace(_ value: UInt64) {
+    public mutating func addWordInPlace(_ value: UInt64) {
         var carry = value
         for index in 0..<4 {
             if carry == 0 {

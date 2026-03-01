@@ -7,16 +7,16 @@ public enum SchnorrSignatureModel {
         public let r: Data
         public let s: Data
         
-        public var raw64: Data {
+        public var raw64ByteSignatureData: Data {
             r + s
         }
         
-        public init(raw64: Data) throws {
-            guard raw64.count == 64 else {
-                throw Error.invalidSignatureLength(actual: raw64.count)
+        public init(raw64ByteSignatureData: Data) throws {
+            guard raw64ByteSignatureData.count == 64 else {
+                throw Error.invalidSignatureLength(actual: raw64ByteSignatureData.count)
             }
-            r = Data(raw64.prefix(32))
-            s = Data(raw64.suffix(32))
+            r = Data(raw64ByteSignatureData.prefix(32))
+            s = Data(raw64ByteSignatureData.suffix(32))
         }
         
         public init(r: Data, s: Data) throws {

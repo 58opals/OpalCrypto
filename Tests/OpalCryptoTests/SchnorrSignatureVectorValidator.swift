@@ -13,10 +13,10 @@ struct SchnorrSignatureVectorValidator {
                 let digest32 = try vector.message32
                 let publicKey = try vector.publicKey
 
-                let signature = try SchnorrSignatureModel.Signature(raw64: signaturePayload)
+                let signature = try SchnorrSignatureModel.Signature(raw64ByteSignatureData: signaturePayload)
                 let verificationResult = try SchnorrSignatureModel.verify(
                     signature: signature,
-                    digest32: digest32,
+                    digestData32Bytes: digest32,
                     publicKey: publicKey
                 )
 
@@ -48,19 +48,19 @@ struct SchnorrSignatureVectorValidator {
                 let publicKey = try vector.publicKey
 
                 let generatedSignature = try SchnorrSignatureModel.sign(
-                    digest32: digest32,
-                    privateKey32: secretKey32,
-                    nonce: .bipSchnorrDeterministic
+                    digestData32Bytes: digest32,
+                    privateKeyData32Bytes: secretKey32,
+                    nonce: .bitcoinImprovementProposalSchnorrDeterministic
                 )
 
                 #expect(
-                    generatedSignature.raw64 == expectedSignature,
+                    generatedSignature.raw64ByteSignatureData == expectedSignature,
                     "\(context): generated signature does not match expected vector signature."
                 )
 
                 let verificationResult = try SchnorrSignatureModel.verify(
                     signature: generatedSignature,
-                    digest32: digest32,
+                    digestData32Bytes: digest32,
                     publicKey: publicKey
                 )
                 #expect(verificationResult, "\(context): generated signature failed verification.")

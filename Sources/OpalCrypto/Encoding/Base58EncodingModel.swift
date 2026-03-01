@@ -2,7 +2,7 @@
 
 import Foundation
 
-struct Base58EncodingModel {
+public struct Base58EncodingModel {
     static let characters: [Character] = [
         "1", "2", "3", "4", "5", "6", "7", "8", "9",
         "A", "B", "C", "D", "E", "F", "G", "H",
@@ -13,7 +13,7 @@ struct Base58EncodingModel {
     ]
     private static let baseNumber: Int = characters.count
     
-    static func encode(_ data: Data) -> String {
+    public static func encode(_ data: Data) -> String {
         var value = LargeUnsignedIntegerArithmeticModel(data)
         var charactersResult: [Character] = .init()
         charactersResult.reserveCapacity(Swift.max(1, data.count * 2))
@@ -30,7 +30,7 @@ struct Base58EncodingModel {
         return String(charactersResult.reversed())
     }
     
-    static func decode(_ base58: String) -> Data? {
+    public static func decode(_ base58: String) -> Data? {
         var total = LargeUnsignedIntegerArithmeticModel.zero
         
         for character in base58 {

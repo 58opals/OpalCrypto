@@ -11,8 +11,8 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
             s: makeSignatureComponent(trailingByte: 0x02)
         )
 
-        let encoded = try signature.encodeDER()
-        let decoded = try StandardsForEfficientCryptography256k1CurveModel.Signature(derEncoded: encoded)
+        let encoded = try signature.encodeDistinguishedEncodingRules()
+        let decoded = try StandardsForEfficientCryptography256k1CurveModel.Signature(distinguishedEncodingRulesEncoded: encoded)
 
         #expect(decoded == signature)
     }
@@ -41,12 +41,12 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         onePrivateKey[31] = 0x01
 
         #expect(
-            !StandardsForEfficientCryptography256k1CurveModel.OperationModel.validatePrivateKey32(
+            !StandardsForEfficientCryptography256k1CurveModel.OperationModel.validatePrivateKeyData32Bytes(
                 zeroPrivateKey
             )
         )
         #expect(
-            StandardsForEfficientCryptography256k1CurveModel.OperationModel.validatePrivateKey32(
+            StandardsForEfficientCryptography256k1CurveModel.OperationModel.validatePrivateKeyData32Bytes(
                 onePrivateKey
             )
         )
@@ -58,7 +58,7 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         onePrivateKey[31] = 0x01
 
         let publicKey = try StandardsForEfficientCryptography256k1CurveModel.OperationModel.derivePublicKey(
-            fromPrivateKey32: onePrivateKey,
+            fromPrivateKeyData32Bytes: onePrivateKey,
             format: .compressed
         )
 
@@ -71,7 +71,7 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         let invalidLengthPrivateKey = Data(repeating: 0x01, count: 31)
         do {
             _ = try StandardsForEfficientCryptography256k1CurveModel.OperationModel.derivePublicKey(
-                fromPrivateKey32: invalidLengthPrivateKey
+                fromPrivateKeyData32Bytes: invalidLengthPrivateKey
             )
             Issue.record("Expected invalid private key length error.")
         } catch let error as StandardsForEfficientCryptography256k1CurveModel.OperationModel.Error {

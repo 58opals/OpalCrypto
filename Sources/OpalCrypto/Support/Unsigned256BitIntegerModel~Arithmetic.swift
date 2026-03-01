@@ -4,7 +4,7 @@ import Foundation
 
 extension Unsigned256BitIntegerModel {
     @inlinable
-    func add(_ other: Unsigned256BitIntegerModel) -> (sum: Unsigned256BitIntegerModel, carry: Bool) {
+    public func add(_ other: Unsigned256BitIntegerModel) -> (sum: Unsigned256BitIntegerModel, carry: Bool) {
         var result: InlineArray<4, UInt64> = .init(repeating: 0)
         var carry: UInt64 = 0
         for index in 0..<4 {
@@ -20,7 +20,7 @@ extension Unsigned256BitIntegerModel {
     }
 
     @inlinable
-    func subtract(_ other: Unsigned256BitIntegerModel) -> (difference: Unsigned256BitIntegerModel, borrow: Bool) {
+    public func subtract(_ other: Unsigned256BitIntegerModel) -> (difference: Unsigned256BitIntegerModel, borrow: Bool) {
         var result: InlineArray<4, UInt64> = .init(repeating: 0)
         var borrow: UInt64 = 0
         for index in 0..<4 {
@@ -36,7 +36,7 @@ extension Unsigned256BitIntegerModel {
     }
 
     @inlinable
-    func multiplyFullWidth(by other: Unsigned256BitIntegerModel) -> Unsigned512BitIntegerModel {
+    public func multiplyFullWidth(by other: Unsigned256BitIntegerModel) -> Unsigned512BitIntegerModel {
         var result: InlineArray<8, UInt64> = .init(repeating: 0)
         for leftIndex in 0..<4 {
             var carry: UInt64 = 0
@@ -63,7 +63,7 @@ extension Unsigned256BitIntegerModel {
     }
 
     @inlinable
-    static func multiplyAdd(
+    public static func multiplyAdd(
         low: UInt64,
         addend: UInt64,
         carry: UInt64,
@@ -85,7 +85,7 @@ extension Unsigned256BitIntegerModel {
     }
 
     @inlinable
-    func squareFullWidth() -> Unsigned512BitIntegerModel {
+    public func squareFullWidth() -> Unsigned512BitIntegerModel {
         var result: InlineArray<8, UInt64> = .init(repeating: 0)
 
         func addProduct(low: UInt64, high: UInt64, at index: Int) {

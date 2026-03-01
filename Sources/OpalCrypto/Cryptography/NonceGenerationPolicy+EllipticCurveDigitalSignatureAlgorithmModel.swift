@@ -1,16 +1,10 @@
-// NonceGenerationPolicy.swift
+// NonceGenerationPolicy+EllipticCurveDigitalSignatureAlgorithmModel.swift
 
 import Foundation
 
-public enum NonceGenerationPolicy: Sendable, Equatable {
-    case rfc6979BchDefault
-    case bipSchnorrDeterministic
-    case systemRandom
-}
-
 extension NonceGenerationPolicy {
     public enum EllipticCurveDigitalSignatureAlgorithmModel: Sendable, Equatable {
-        case rfc6979Sha256
+        case requestForComments6979SecureHashAlgorithm256
         case systemRandom
     }
 }

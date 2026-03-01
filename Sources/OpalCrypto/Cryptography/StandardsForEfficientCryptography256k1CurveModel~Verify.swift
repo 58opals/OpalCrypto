@@ -5,35 +5,24 @@ import Foundation
 public extension StandardsForEfficientCryptography256k1CurveModel {
     static func verify(
         signature: Signature,
-        digest32: Data,
+        digestData32Bytes: Data,
         publicKey: Data
     ) throws -> Bool {
-        guard digest32.count == 32 else {
-            throw Error.invalidDigestLength(actual: digest32.count)
+        guard digestData32Bytes.count == 32 else {
+            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
         }
         guard publicKey.count == 33 || publicKey.count == 65 else {
             throw Error.invalidPublicKeyLength(actual: publicKey.count)
         }
-        let publicKeyPoint: AffinePointModel
-        do {
-            publicKeyPoint = try PublicKeyParserModel.parsePublicKey(publicKey)
-        } catch {
-            return false
-        }
-        let signatureRScalar: ScalarModel
-        let signatureSScalar: ScalarModel
-        do {
-            signatureRScalar = try ScalarModel(data32: signature.r, requireNonZero: true)
-            signatureSScalar = try ScalarModel(data32: signature.s, requireNonZero: true)
-        } catch {
-            return false
-        }
-        let digestScalar = try ScalarConversionModel.makeReducedScalarFromDigest(digest32)
+        let publicKeyPoint = try PublicKeyParserModel.parsePublicKey(publicKey)
+        let signatureRScalar = try ScalarModel(data32: signature.r, requireNonZero: true)
+        let signatureSScalar = try ScalarModel(data32: signature.s, requireNonZero: true)
+        let digestScalar = try ScalarConversionModel.makeReducedScalarFromDigest(digestData32Bytes)
         let signatureSInverse: ScalarModel
         do {
             signatureSInverse = try signatureSScalar.invert()
         } catch {
-            return false
+            throw Error.invalidSignatureScalar
         }
         let u1 = digestScalar.mulModN(signatureSInverse)
         let u2 = signatureRScalar.mulModN(signatureSInverse)
@@ -50,13 +39,11 @@ public extension StandardsForEfficientCryptography256k1CurveModel {
     }
     
     static func verify(
-        derEncodedSignature: Data,
-        digest32: Data,
+        distinguishedEncodingRulesEncodedSignature: Data,
+        digestData32Bytes: Data,
         publicKey: Data
     ) throws -> Bool {
-        guard let signature = try? Signature(derEncoded: derEncodedSignature) else {
-            return false
-        }
-        return try verify(signature: signature, digest32: digest32, publicKey: publicKey)
+        let signature = try Signature(distinguishedEncodingRulesEncoded: distinguishedEncodingRulesEncodedSignature)
+        return try verify(signature: signature, digestData32Bytes: digestData32Bytes, publicKey: publicKey)
     }
 }

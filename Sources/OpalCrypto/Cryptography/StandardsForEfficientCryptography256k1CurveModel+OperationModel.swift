@@ -21,18 +21,18 @@ extension StandardsForEfficientCryptography256k1CurveModel {
         }
 
         public static var curveOrderN: Data {
-            StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n.data32
+            StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n.data32Bytes
         }
 
-        public static func validatePrivateKey32(_ privateKey32: Data) -> Bool {
-            (try? ScalarModel(data32: privateKey32, requireNonZero: true)) != nil
+        public static func validatePrivateKeyData32Bytes(_ privateKeyData32Bytes: Data) -> Bool {
+            (try? ScalarModel(data32: privateKeyData32Bytes, requireNonZero: true)) != nil
         }
 
         public static func derivePublicKey(
-            fromPrivateKey32 privateKey32: Data,
+            fromPrivateKeyData32Bytes privateKeyData32Bytes: Data,
             format: PublicKeyFormat = .compressed
         ) throws -> Data {
-            let privateKeyScalar = try parsePrivateKeyScalar(privateKey32, requireNonZero: true)
+            let privateKeyScalar = try parsePrivateKeyScalar(privateKeyData32Bytes, requireNonZero: true)
             let publicPoint = ScalarMultiplicationModel.mulG(privateKeyScalar)
             guard let publicAffine = publicPoint.convertToAffine() else {
                 throw Error.invalidDerivedPublicKey
@@ -40,26 +40,26 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             return encodePublicKey(publicAffine, format: format)
         }
 
-        public static func tweakAddPrivateKey32(
-            _ privateKey32: Data,
-            tweak32: Data
+        public static func tweakAddPrivateKeyData32Bytes(
+            _ privateKeyData32Bytes: Data,
+            tweakData32Bytes: Data
         ) throws -> Data {
-            let privateKeyScalar = try parsePrivateKeyScalar(privateKey32, requireNonZero: true)
-            let tweakScalar = try parseTweakScalar(tweak32, requireNonZero: false)
+            let privateKeyScalar = try parsePrivateKeyScalar(privateKeyData32Bytes, requireNonZero: true)
+            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
             let derivedScalar = privateKeyScalar.addModN(tweakScalar)
             guard !derivedScalar.isZero else {
                 throw Error.invalidDerivedPrivateKey
             }
-            return derivedScalar.data32
+            return derivedScalar.data32Bytes
         }
 
         public static func tweakAddPublicKey(
             _ publicKey: Data,
-            tweak32: Data,
+            tweakData32Bytes: Data,
             format: PublicKeyFormat? = nil
         ) throws -> Data {
             let publicAffine = try parsePublicKeyAffine(publicKey)
-            let tweakScalar = try parseTweakScalar(tweak32, requireNonZero: true)
+            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: true)
             let tweakPoint = ScalarMultiplicationModel.mulG(tweakScalar)
             let combined = JacobianPointModel(affine: publicAffine).add(tweakPoint)
             guard let derivedAffine = combined.convertToAffine() else {

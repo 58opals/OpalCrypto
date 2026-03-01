@@ -79,6 +79,10 @@ struct ScalarModel: Sendable, Equatable {
     var data32: Data {
         value.data32
     }
+
+    var data32Bytes: Data {
+        data32
+    }
     
     @inlinable
     init(unchecked value: Unsigned256BitIntegerModel) {

@@ -2,8 +2,8 @@
 
 import Foundation
 
-struct PolynomialModuloChecksumModel {
-    static func compute(_ values: [UInt8]) -> UInt64 {
+public struct PolynomialModuloChecksumModel {
+    public static func compute(_ values: [UInt8]) -> UInt64 {
          var checksum: UInt64 = 1
          for value in values {
              let topBits = checksum >> 35
