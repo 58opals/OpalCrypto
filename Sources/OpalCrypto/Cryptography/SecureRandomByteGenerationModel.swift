@@ -3,12 +3,12 @@
 import Foundation
 import Security
 
-enum SecureRandomByteGenerationModel {
-    enum Error: Swift.Error, Equatable, Sendable {
+public enum SecureRandomByteGenerationModel {
+    public enum Error: Swift.Error, Equatable, Sendable {
         case failed(status: Int32)
     }
     
-    static func makeBytes(count: Int) throws -> [UInt8] {
+    public static func makeBytes(count: Int) throws -> [UInt8] {
         precondition(count >= 0)
         guard count > 0 else { return .init() }
         

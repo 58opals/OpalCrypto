@@ -3,7 +3,7 @@
 import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel.OperationModel {
-    static func deriveCompressedPublicKeys(
+    public static func deriveCompressedPublicKeys(
         fromPrivateKeys32 privateKeys32: [Data],
         assumingValidPrivateKeys: Bool = false
     ) async throws -> [Data] {
