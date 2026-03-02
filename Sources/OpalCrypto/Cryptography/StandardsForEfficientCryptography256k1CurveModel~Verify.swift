@@ -2,7 +2,7 @@
 
 import Foundation
 
-public extension StandardsForEfficientCryptography256k1CurveModel {
+internal extension StandardsForEfficientCryptography256k1CurveModel {
     static func verify(
         signature: Signature,
         digestData32Bytes: Data,

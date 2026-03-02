@@ -1,16 +1,16 @@
 # OpalCrypto
 
-A Swift package that provides practical cryptography primitives through a focused public boundary API.
+A Swift package that exposes cryptography through a strict boundary-first public API.
 
 ## Features
 
-`OpalCryptoBoundaryModel` groups stable public APIs into feature namespaces:
+`OpalCryptoBoundaryModel` is the only public namespace:
 
-- `SignatureModel`: derive secp256k1 public keys, sign, and verify using ECDSA or Schnorr formats.
-- `HashingModel`: SHA-256 family helpers, SHA-160 helper, and HMAC-SHA512.
-- `EncodingModel`: Base58 encode/decode, Base32 encode/decode, and polynomial checksum.
-- `KeyDerivationModel`: PBKDF2 key derivation.
-- `NumericModel`: large unsigned integer aliases for arithmetic-oriented workflows.
+- `Signature`: derive secp256k1 public keys, sign, and verify with boundary-owned formats and nonce policies.
+- `Hashing`: SHA-256 family helpers, SHA-160 helper, and HMAC-SHA512.
+- `Encoding`: Base58 encode/decode, Base32 encode/decode, and polynomial checksum.
+- `KeyDerivation`: PBKDF2 key derivation.
+- `Numeric`: boundary wrappers `UInt256`, `UInt512`, and `BigUnsignedInteger`.
 
 ## Requirements
 
@@ -46,26 +46,26 @@ var privateKeyData = Data(repeating: 0x00, count: 32)
 privateKeyData[31] = 0x01
 let messageData = Data("opal-ecdsa-message".utf8)
 
-let publicKeyData = try OpalCryptoBoundaryModel.SignatureModel.derivePublicKey(
+let publicKeyData = try OpalCryptoBoundaryModel.Signature.derivePublicKey(
     fromPrivateKeyData: privateKeyData
 )
 
-let signatureData = try OpalCryptoBoundaryModel.SignatureModel.sign(
+let signatureData = try OpalCryptoBoundaryModel.Signature.sign(
     messageData: messageData,
     privateKeyData: privateKeyData,
-    format: .ecdsa(.distinguishedEncodingRules)
+    format: .ecdsa(.der),
+    noncePolicy: .requestForComments6979
 )
 
-let isValid = try OpalCryptoBoundaryModel.SignatureModel.verify(
+let isValid = try OpalCryptoBoundaryModel.Signature.verify(
     signatureData: signatureData,
     messageData: messageData,
     publicKeyData: publicKeyData,
-    format: .ecdsa(.distinguishedEncodingRules)
+    format: .ecdsa(.der)
 )
 ```
 
-For Schnorr signatures, use `format: .schnorr` and optionally set
-`nonceGenerationPolicy: .bitcoinImprovementProposalSchnorrDeterministic`.
+For Schnorr signatures, use `format: .schnorr` and pass 32-byte digest data.
 
 ### Example B: Hash, Base58 Roundtrip, and PBKDF2
 
@@ -75,14 +75,14 @@ import OpalCrypto
 
 let payloadData = Data("opal-api-boundary".utf8)
 
-let sha256 = OpalCryptoBoundaryModel.HashingModel.makeSecureHashAlgorithm256(payloadData)
-let doubleSha256 = OpalCryptoBoundaryModel.HashingModel.makeSecureHash256(payloadData)
-let hash160 = OpalCryptoBoundaryModel.HashingModel.makeSecureHash160(payloadData)
+let sha256 = OpalCryptoBoundaryModel.Hashing.makeSecureHashAlgorithm256(payloadData)
+let doubleSha256 = OpalCryptoBoundaryModel.Hashing.makeSecureHash256(payloadData)
+let hash160 = OpalCryptoBoundaryModel.Hashing.makeSecureHash160(payloadData)
 
-let base58Text = OpalCryptoBoundaryModel.EncodingModel.encodeBase58(payloadData)
-let decodedPayload = OpalCryptoBoundaryModel.EncodingModel.decodeBase58(base58Text)
+let base58Text = OpalCryptoBoundaryModel.Encoding.encodeBase58(payloadData)
+let decodedPayload = OpalCryptoBoundaryModel.Encoding.decodeBase58(base58Text)
 
-let derivedKey = try OpalCryptoBoundaryModel.KeyDerivationModel.derivePasswordBasedKeyDerivationFunction2Key(
+let derivedKey = try OpalCryptoBoundaryModel.KeyDerivation.derivePasswordBasedKeyDerivationFunction2Key(
     passwordData: Data("password".utf8),
     saltData: Data("salt".utf8),
     iterationCount: 4096,

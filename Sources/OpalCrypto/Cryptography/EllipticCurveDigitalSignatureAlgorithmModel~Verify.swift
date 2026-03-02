@@ -3,7 +3,7 @@
 import Foundation
 
 extension EllipticCurveDigitalSignatureAlgorithmModel {
-    public static func verify(
+    internal static func verify(
         signature: Data,
         message: Data,
         publicKey: Data,
@@ -54,7 +54,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         }
     }
 
-    public static func verify(
+    internal static func verify(
         signature: Data,
         message: EllipticCurveDigitalSignatureAlgorithmModel.MessageModel,
         publicKey: Data,
@@ -70,7 +70,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         }
     }
 
-    public static func detectFormat(signatureCore: Data) -> SignatureFormatModel? {
+    internal static func detectFormat(signatureCore: Data) -> SignatureFormatModel? {
         if signatureCore.count == 64 { return .schnorr }
         do {
             _ = try StandardsForEfficientCryptography256k1CurveModel.Signature(

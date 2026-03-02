@@ -3,8 +3,8 @@
 import Foundation
 import CryptoKit
 
-public struct PasswordBasedKeyDerivationFunction2Model {
-    public enum Error: Swift.Error {
+internal struct PasswordBasedKeyDerivationFunction2Model {
+    internal enum Error: Swift.Error {
         case invalidParameters
         case keyLengthExceedsLimit
     }
@@ -17,7 +17,7 @@ public struct PasswordBasedKeyDerivationFunction2Model {
     
     let sha512BlockSize = (512 / 8)
     
-    public init(password: Data, salt: Data, iterationCount: Int = 4096, derivedKeyLength: Int? = nil) throws {
+    internal init(password: Data, salt: Data, iterationCount: Int = 4096, derivedKeyLength: Int? = nil) throws {
         precondition(iterationCount > 0)
         let symmetricKey = SymmetricKey(data: password)
         
@@ -35,7 +35,7 @@ public struct PasswordBasedKeyDerivationFunction2Model {
         self.blockCount = Int(ceil(keyLengthFinal / hLen))
     }
     
-    public func deriveKey() throws -> Data {
+    internal func deriveKey() throws -> Data {
         var derivedKey = Array<UInt8>(repeating: 0, count: self.blockCount * sha512BlockSize)
         var derivedKeyIndex = 0
         for blockIndex in 1...self.blockCount {

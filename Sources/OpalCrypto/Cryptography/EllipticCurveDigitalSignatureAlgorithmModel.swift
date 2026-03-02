@@ -2,5 +2,5 @@
 
 import Foundation
 
-public struct EllipticCurveDigitalSignatureAlgorithmModel {
+internal struct EllipticCurveDigitalSignatureAlgorithmModel {
 }

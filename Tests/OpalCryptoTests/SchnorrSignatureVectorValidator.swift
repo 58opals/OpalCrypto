@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Schnorr signature vector validation")
 struct SchnorrSignatureVectorValidator {

@@ -1,7 +1,7 @@
 // Unsigned512BitIntegerModel+.swift
 
 extension Unsigned512BitIntegerModel: Equatable {
-    public static func == (lhs: Unsigned512BitIntegerModel, rhs: Unsigned512BitIntegerModel) -> Bool {
+    internal static func == (lhs: Unsigned512BitIntegerModel, rhs: Unsigned512BitIntegerModel) -> Bool {
         lhs.limbs[0] == rhs.limbs[0]
         && lhs.limbs[1] == rhs.limbs[1]
         && lhs.limbs[2] == rhs.limbs[2]

@@ -3,7 +3,7 @@
 import Foundation
 import Security
 
-public extension StandardsForEfficientCryptography256k1CurveModel {
+internal extension StandardsForEfficientCryptography256k1CurveModel {
     static func sign(
         digestData32Bytes: Data,
         privateKeyData32Bytes: Data,

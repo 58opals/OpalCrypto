@@ -2,7 +2,7 @@
 
 import Foundation
 
-public struct Base32EncodingModel {
+internal struct Base32EncodingModel {
     static let characters: [Character] = [
         "q", "p", "z", "r", "y", "9", "x", "8",
         "g", "f", "2", "t", "v", "d", "w", "0",
@@ -11,7 +11,7 @@ public struct Base32EncodingModel {
     ]
     private static let baseNumber: Int = characters.count
 
-    public static func encode(_ data: Data, interpretedAsFiveBitValues: Bool) -> String {
+    internal static func encode(_ data: Data, interpretedAsFiveBitValues: Bool) -> String {
         switch interpretedAsFiveBitValues {
         case true:
             var result = String()
@@ -32,7 +32,7 @@ public struct Base32EncodingModel {
         }
     }
 
-    public static func decode(_ string: String, interpretedAsFiveBitValues: Bool) throws -> Data {
+    internal static func decode(_ string: String, interpretedAsFiveBitValues: Bool) throws -> Data {
         var data = Data()
         switch interpretedAsFiveBitValues {
         case true:

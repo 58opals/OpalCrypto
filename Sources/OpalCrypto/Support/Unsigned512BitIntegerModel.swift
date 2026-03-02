@@ -2,8 +2,8 @@
 
 import Foundation
 
-public struct Unsigned512BitIntegerModel: Sendable {
-    public enum Error: Swift.Error, Equatable {
+internal struct Unsigned512BitIntegerModel: Sendable {
+    internal enum Error: Swift.Error, Equatable {
         case invalidDataLength(expected: Int, actual: Int)
     }
 
@@ -14,7 +14,7 @@ public struct Unsigned512BitIntegerModel: Sendable {
         self.limbs = limbs
     }
 
-    public init(limbs: [UInt64]) {
+    internal init(limbs: [UInt64]) {
         precondition(limbs.count == 8)
         self.limbs = [
             limbs[0], limbs[1], limbs[2], limbs[3],
@@ -22,7 +22,7 @@ public struct Unsigned512BitIntegerModel: Sendable {
         ]
     }
 
-    public init(data64Bytes: Data) throws {
+    internal init(data64Bytes: Data) throws {
         guard data64Bytes.count == 64 else {
             throw Error.invalidDataLength(expected: 64, actual: data64Bytes.count)
         }
@@ -42,7 +42,7 @@ public struct Unsigned512BitIntegerModel: Sendable {
     }
 
     @inlinable
-    public var data64Bytes: Data {
+    internal var data64Bytes: Data {
         var data = Data(count: 64)
         data.withUnsafeMutableBytes { buffer in
             for index in 0..<8 {
@@ -59,7 +59,7 @@ public struct Unsigned512BitIntegerModel: Sendable {
     }
 
     @inlinable
-    public var isZero: Bool {
+    internal var isZero: Bool {
         (limbs[0] | limbs[1] | limbs[2] | limbs[3] |
          limbs[4] | limbs[5] | limbs[6] | limbs[7]) == 0
     }

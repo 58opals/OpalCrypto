@@ -3,8 +3,8 @@
 import Foundation
 import CryptoKit
 
-public struct HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model {
-    public static func hash(_ data: Data, key: Data) -> Data {
+internal struct HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model {
+    internal static func hash(_ data: Data, key: Data) -> Data {
         let input = data
         let key = key
         let hmac = HMAC<CryptoKit.SHA512>.authenticationCode(for: input, using: .init(data: key))

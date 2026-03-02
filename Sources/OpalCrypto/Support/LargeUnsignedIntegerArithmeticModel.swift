@@ -2,12 +2,12 @@
 
 import Foundation
 
-public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
+internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     private var words: [UInt32]
     
-    public static let zero = LargeUnsignedIntegerArithmeticModel(words: .init())
+    internal static let zero = LargeUnsignedIntegerArithmeticModel(words: .init())
     
-    public init(_ value: UInt64) {
+    internal init(_ value: UInt64) {
         if value == 0 {
             self.words = .init()
         } else {
@@ -17,7 +17,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         }
     }
     
-    public init(_ data: Data) {
+    internal init(_ data: Data) {
         guard !data.isEmpty else {
             self.words = .init()
             return
@@ -39,11 +39,11 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         normalize()
     }
     
-    public var isZero: Bool {
+    internal var isZero: Bool {
         words.isEmpty
     }
     
-    public func serialize() -> Data {
+    internal func serialize() -> Data {
         guard !words.isEmpty else { return Data() }
         var data = Data()
         for (index, word) in words.reversed().enumerated() {
@@ -63,7 +63,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return data
     }
     
-    public func shiftLeft(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
+    internal func shiftLeft(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
         guard bits > 0 else { return self }
         precondition(bits % 8 == 0, "Shift must be a multiple of 8.")
         var data = serialize()
@@ -71,7 +71,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return LargeUnsignedIntegerArithmeticModel(data)
     }
     
-    public func shiftRight(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
+    internal func shiftRight(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
         guard bits > 0 else { return self }
         precondition(bits % 8 == 0, "Shift must be a multiple of 8.")
         var data = serialize()
@@ -81,7 +81,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return LargeUnsignedIntegerArithmeticModel(data)
     }
     
-    public static func < (lhs: LargeUnsignedIntegerArithmeticModel, rhs: LargeUnsignedIntegerArithmeticModel) -> Bool {
+    internal static func < (lhs: LargeUnsignedIntegerArithmeticModel, rhs: LargeUnsignedIntegerArithmeticModel) -> Bool {
         if lhs.words.count != rhs.words.count {
             return lhs.words.count < rhs.words.count
         }
@@ -93,7 +93,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return false
     }
     
-    public mutating func add(_ addend: Int) {
+    internal mutating func add(_ addend: Int) {
         precondition(addend >= 0, "Addend must be non-negative.")
         var carry = UInt64(addend)
         var index = 0
@@ -108,7 +108,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         }
     }
     
-    public mutating func multiply(by multiplier: Int) {
+    internal mutating func multiply(by multiplier: Int) {
         precondition(multiplier >= 0, "Multiplier must be non-negative.")
         guard !words.isEmpty, multiplier > 1 else {
             if multiplier == 0 {
@@ -127,7 +127,7 @@ public struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         }
     }
     
-    public mutating func divide(by divisor: Int) -> Int {
+    internal mutating func divide(by divisor: Int) -> Int {
         precondition(divisor > 0, "Divisor must be positive.")
         guard !words.isEmpty else { return 0 }
         var remainder: UInt64 = 0

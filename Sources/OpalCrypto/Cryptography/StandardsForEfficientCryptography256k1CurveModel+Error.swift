@@ -2,7 +2,7 @@
 
 import Foundation
 
-public extension StandardsForEfficientCryptography256k1CurveModel {
+internal extension StandardsForEfficientCryptography256k1CurveModel {
     enum Error: Swift.Error, Equatable {
         case invalidDigestLength(actual: Int)
         case invalidPrivateKeyLength(actual: Int)

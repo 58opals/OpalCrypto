@@ -2,8 +2,8 @@
 
 import Foundation
 
-public struct Unsigned256BitIntegerModel: Sendable {
-    public enum Error: Swift.Error, Equatable {
+internal struct Unsigned256BitIntegerModel: Sendable {
+    internal enum Error: Swift.Error, Equatable {
         case invalidDataLength(expected: Int, actual: Int)
     }
 
@@ -14,7 +14,7 @@ public struct Unsigned256BitIntegerModel: Sendable {
         self.limbs = limbs
     }
 
-    public init(limbs: [UInt64]) {
+    internal init(limbs: [UInt64]) {
         precondition(limbs.count == 4)
         self.limbs = [limbs[0], limbs[1], limbs[2], limbs[3]]
     }
@@ -22,7 +22,7 @@ public struct Unsigned256BitIntegerModel: Sendable {
     @usableFromInline static let zero = Unsigned256BitIntegerModel(limbs: .init(repeating: 0))
     @usableFromInline static let one = Unsigned256BitIntegerModel(limbs: [1, 0, 0, 0])
 
-    public init(data32Bytes: Data) throws {
+    internal init(data32Bytes: Data) throws {
         guard data32Bytes.count == 32 else {
             throw Error.invalidDataLength(expected: 32, actual: data32Bytes.count)
         }
@@ -42,7 +42,7 @@ public struct Unsigned256BitIntegerModel: Sendable {
     }
 
     @inlinable
-    public var data32Bytes: Data {
+    internal var data32Bytes: Data {
         var data = Data(count: 32)
         data.withUnsafeMutableBytes { buffer in
             for index in 0..<4 {
@@ -59,7 +59,7 @@ public struct Unsigned256BitIntegerModel: Sendable {
     }
 
     @inlinable
-    public func compare(to other: Unsigned256BitIntegerModel) -> ComparisonResult {
+    internal func compare(to other: Unsigned256BitIntegerModel) -> ComparisonResult {
         for index in stride(from: 3, through: 0, by: -1) {
             if limbs[index] < other.limbs[index] {
                 return .orderedAscending
@@ -72,22 +72,22 @@ public struct Unsigned256BitIntegerModel: Sendable {
     }
 
     @inlinable
-    public var isZero: Bool {
+    internal var isZero: Bool {
         (limbs[0] | limbs[1] | limbs[2] | limbs[3]) == 0
     }
 
     @inlinable
-    public var isOne: Bool {
+    internal var isOne: Bool {
         limbs[0] == 1 && limbs[1] == 0 && limbs[2] == 0 && limbs[3] == 0
     }
 
     @inlinable
-    public var isLeastSignificantBitSet: Bool {
+    internal var isLeastSignificantBitSet: Bool {
         (limbs[0] & 1) == 1
     }
 
     @inlinable
-    public var mostSignificantBitIndex: Int? {
+    internal var mostSignificantBitIndex: Int? {
         for index in stride(from: 3, through: 0, by: -1) {
             let limb = limbs[index]
             if limb != 0 {
@@ -99,7 +99,7 @@ public struct Unsigned256BitIntegerModel: Sendable {
     }
 
     @inlinable
-    public func testBit(at index: Int) -> Bool {
+    internal func testBit(at index: Int) -> Bool {
         guard index >= 0, index < 256 else {
             return false
         }

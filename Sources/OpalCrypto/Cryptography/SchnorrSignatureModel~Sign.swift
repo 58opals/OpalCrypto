@@ -2,7 +2,7 @@
 
 import Foundation
 
-public extension SchnorrSignatureModel {
+internal extension SchnorrSignatureModel {
     static func sign(
         digestData32Bytes: Data,
         privateKeyData32Bytes: Data,

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Standards for efficient cryptography 256k1 signature validation")
 struct StandardsForEfficientCryptography256k1CurveSignatureValidator {

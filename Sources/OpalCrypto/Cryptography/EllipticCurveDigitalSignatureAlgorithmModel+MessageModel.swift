@@ -4,8 +4,8 @@ import Foundation
 import CryptoKit
 
 extension EllipticCurveDigitalSignatureAlgorithmModel {
-    public struct MessageModel {
-        public enum Error: Swift.Error {
+    internal struct MessageModel {
+        internal enum Error: Swift.Error {
             case hashCountMustBeGreaterThanZero
             case invalidDigestByteCount(expected: Int, actual: Int)
         }
@@ -24,24 +24,24 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
 }
 
 extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
-    public static func makeRaw(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeRaw(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
         .init(representation: .payload(data: data, hashRounds: 0))
     }
     
-    public static func makeSingleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeSingleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
         .init(representation: .payload(data: data, hashRounds: 1))
     }
     
-    public static func makeDoubleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeDoubleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
         .init(representation: .payload(data: data, hashRounds: 2))
     }
     
-    public static func makeHashing(_ data: Data, rounds: UInt8) throws -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeHashing(_ data: Data, rounds: UInt8) throws -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
         guard rounds > 0 else { throw Error.hashCountMustBeGreaterThanZero }
         return .init(representation: .payload(data: data, hashRounds: rounds))
     }
     
-    public static func makeDigest(
+    internal static func makeDigest(
         _ digest: CryptoKit.SHA256.Digest,
         hashCount: UInt8 = 1
     ) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
@@ -50,7 +50,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
 }
 
 extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
-    public func makeConsensusDigestData32Bytes() throws -> Data {
+    internal func makeConsensusDigestData32Bytes() throws -> Data {
         let baseData = makeDataForHashingRounds()
         let rounds = Int(hashRounds)
         guard rounds > 0 else { throw Error.hashCountMustBeGreaterThanZero }

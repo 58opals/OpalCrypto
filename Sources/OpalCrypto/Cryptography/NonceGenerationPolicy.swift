@@ -2,7 +2,7 @@
 
 import Foundation
 
-public enum NonceGenerationPolicy: Sendable, Equatable {
+internal enum NonceGenerationPolicy: Sendable, Equatable {
     case requestForComments6979BitcoinCashDefault
     case bitcoinImprovementProposalSchnorrDeterministic
     case systemRandom

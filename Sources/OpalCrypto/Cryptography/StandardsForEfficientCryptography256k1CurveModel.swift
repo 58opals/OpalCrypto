@@ -2,16 +2,16 @@
 
 import Foundation
 
-public enum StandardsForEfficientCryptography256k1CurveModel {
-    public struct Signature: Sendable, Equatable {
-        public let r: Data
-        public let s: Data
+internal enum StandardsForEfficientCryptography256k1CurveModel {
+    internal struct Signature: Sendable, Equatable {
+        internal let r: Data
+        internal let s: Data
         
-        public var raw64ByteSignatureData: Data {
+        internal var raw64ByteSignatureData: Data {
             r + s
         }
         
-        public init(raw64ByteSignatureData: Data) throws {
+        internal init(raw64ByteSignatureData: Data) throws {
             guard raw64ByteSignatureData.count == 64 else {
                 throw Error.invalidSignatureLength(actual: raw64ByteSignatureData.count)
             }
@@ -20,7 +20,7 @@ public enum StandardsForEfficientCryptography256k1CurveModel {
             try self.init(r: rValue, s: sValue)
         }
         
-        public init(r: Data, s: Data) throws {
+        internal init(r: Data, s: Data) throws {
             guard r.count == 32, s.count == 32 else {
                 throw Error.invalidSignatureLength(actual: r.count + s.count)
             }
@@ -30,18 +30,18 @@ public enum StandardsForEfficientCryptography256k1CurveModel {
             self.s = Data(s)
         }
         
-        public func encodeDistinguishedEncodingRules() throws -> Data {
+        internal func encodeDistinguishedEncodingRules() throws -> Data {
             try StandardsForEfficientCryptography256k1CurveModel.DistinguishedEncodingRulesModel.encodeSignature(r: r, s: s)
         }
         
-        public init(distinguishedEncodingRulesEncoded: Data) throws {
+        internal init(distinguishedEncodingRulesEncoded: Data) throws {
             let signatureValues = try StandardsForEfficientCryptography256k1CurveModel.DistinguishedEncodingRulesModel.decodeSignature(
                 distinguishedEncodingRulesEncoded
             )
             try self.init(r: signatureValues.r, s: signatureValues.s)
         }
         
-        public func normalizeLowS() -> Signature {
+        internal func normalizeLowS() -> Signature {
             guard let signatureSScalar = try? Self.makeSignatureScalar(from: s) else {
                 return self
             }
@@ -52,7 +52,7 @@ public enum StandardsForEfficientCryptography256k1CurveModel {
             return (try? Signature(r: r, s: normalizedScalar.data32Bytes)) ?? self
         }
         
-        public var isLowS: Bool {
+        internal var isLowS: Bool {
             guard let signatureSScalar = try? Self.makeSignatureScalar(from: s) else {
                 return false
             }

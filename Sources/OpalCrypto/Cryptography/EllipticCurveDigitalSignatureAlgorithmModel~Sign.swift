@@ -3,7 +3,7 @@
 import Foundation
 
 extension EllipticCurveDigitalSignatureAlgorithmModel {
-    public static func add(to compressedPublicKeyData: Data, tweakData: Data) throws -> Data {
+    internal static func add(to compressedPublicKeyData: Data, tweakData: Data) throws -> Data {
         try StandardsForEfficientCryptography256k1CurveModel.OperationModel.tweakAddPublicKey(
             compressedPublicKeyData,
             tweakData32Bytes: tweakData,
@@ -11,14 +11,14 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         )
     }
 
-    public static func derivePublicKey(from privateKeyData: Data) throws -> Data {
+    internal static func derivePublicKey(from privateKeyData: Data) throws -> Data {
         try StandardsForEfficientCryptography256k1CurveModel.OperationModel.derivePublicKey(
             fromPrivateKeyData32Bytes: privateKeyData,
             format: .compressed
         )
     }
 
-    public static func sign(
+    internal static func sign(
         message: Data,
         with privateKeyData: Data,
         in format: SignatureFormatModel,
@@ -51,7 +51,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         }
     }
 
-    public static func sign(
+    internal static func sign(
         message: EllipticCurveDigitalSignatureAlgorithmModel.MessageModel,
         with privateKeyData: Data,
         in format: SignatureFormatModel,

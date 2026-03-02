@@ -2,7 +2,7 @@
 
 import Foundation
 
-public extension SchnorrSignatureModel {
+internal extension SchnorrSignatureModel {
     enum Error: Swift.Error, Equatable {
         case invalidDigestLength(actual: Int)
         case invalidPrivateKeyLength(actual: Int)

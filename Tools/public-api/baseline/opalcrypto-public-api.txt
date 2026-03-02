@@ -1,0 +1,91 @@
+s:10OpalCrypto0aB13BoundaryModelO	OpalCryptoBoundaryModel	enum OpalCryptoBoundaryModel
+s:10OpalCrypto0aB13BoundaryModelO13KeyDerivationO	OpalCryptoBoundaryModel.KeyDerivation	enum KeyDerivation
+s:10OpalCrypto0aB13BoundaryModelO13KeyDerivationO019derivePasswordBasedef9Function2E012passwordData04saltL014iterationCount07derivedE6Length10Foundation0L0VAM_AMS2iSgtKFZ	OpalCryptoBoundaryModel.KeyDerivation.derivePasswordBasedKeyDerivationFunction2Key(passwordData:saltData:iterationCount:derivedKeyLength:)	static func derivePasswordBasedKeyDerivationFunction2Key(passwordData: Data, saltData: Data, iterationCount: Int, derivedKeyLength: Int?) throws -> Data
+s:10OpalCrypto0aB13BoundaryModelO7HashingO	OpalCryptoBoundaryModel.Hashing	enum Hashing
+s:10OpalCrypto0aB13BoundaryModelO7HashingO044makeHashBasedMessageAuthenticationCodeSecureG12Algorithm5124data3key10Foundation4DataVAK_AKtFZ	OpalCryptoBoundaryModel.Hashing.makeHashBasedMessageAuthenticationCodeSecureHashAlgorithm512(data:key:)	static func makeHashBasedMessageAuthenticationCodeSecureHashAlgorithm512(data: Data, key: Data) -> Data
+s:10OpalCrypto0aB13BoundaryModelO7HashingO17makeSecureHash160y10Foundation4DataVAIFZ	OpalCryptoBoundaryModel.Hashing.makeSecureHash160(_:)	static func makeSecureHash160(_ data: Data) -> Data
+s:10OpalCrypto0aB13BoundaryModelO7HashingO17makeSecureHash256y10Foundation4DataVAIFZ	OpalCryptoBoundaryModel.Hashing.makeSecureHash256(_:)	static func makeSecureHash256(_ data: Data) -> Data
+s:10OpalCrypto0aB13BoundaryModelO7HashingO26makeSecureHashAlgorithm256y10Foundation4DataVAIFZ	OpalCryptoBoundaryModel.Hashing.makeSecureHashAlgorithm256(_:)	static func makeSecureHashAlgorithm256(_ data: Data) -> Data
+s:10OpalCrypto0aB13BoundaryModelO7NumericO	OpalCryptoBoundaryModel.Numeric	enum Numeric
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger	struct BigUnsignedInteger
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV10shiftRight2byAGSi_tF	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.shiftRight(by:)	func shiftRight(by bits: Int) -> OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV1loiySbAG_AGtFZ	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.<(_:_:)	static func < (lhs: OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger, rhs: OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger) -> Bool
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV3addyySiF	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.add(_:)	mutating func add(_ addend: Int)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV4zeroAGvpZ	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.zero	static let zero: OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV6divide2byS2i_tF	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.divide(by:)	mutating func divide(by divisor: Int) -> Int
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV6isZeroSbvp	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.isZero	var isZero: Bool { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV8multiply2byySi_tF	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.multiply(by:)	mutating func multiply(by multiplier: Int)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV9serialize10Foundation4DataVyF	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.serialize()	func serialize() -> Data
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV9shiftLeft2byAGSi_tF	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.shiftLeft(by:)	func shiftLeft(by bits: Int) -> OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerVyAG10Foundation4DataVcfc	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.init(_:)	init(_ data: Data)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerVyAGs6UInt64Vcfc	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.init(_:)	init(_ value: UInt64)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO5ErrorO	OpalCryptoBoundaryModel.Numeric.Error	enum Error
+s:10OpalCrypto0aB13BoundaryModelO7NumericO5ErrorO17invalidDataLengthyAGSi_SitcAGmF	OpalCryptoBoundaryModel.Numeric.Error.invalidDataLength(expected:actual:)	case invalidDataLength(expected: Int, actual: Int)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V	OpalCryptoBoundaryModel.Numeric.UInt256	struct UInt256
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V11data32Bytes10Foundation4DataVvp	OpalCryptoBoundaryModel.Numeric.UInt256.data32Bytes	var data32Bytes: Data { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V11data32BytesAG10Foundation4DataV_tKcfc	OpalCryptoBoundaryModel.Numeric.UInt256.init(data32Bytes:)	init(data32Bytes: Data) throws
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V12subtractWordyAGs6UInt64VF	OpalCryptoBoundaryModel.Numeric.UInt256.subtractWord(_:)	func subtractWord(_ value: UInt64) -> OpalCryptoBoundaryModel.Numeric.UInt256
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V14addWordInPlaceyys6UInt64VF	OpalCryptoBoundaryModel.Numeric.UInt256.addWordInPlace(_:)	mutating func addWordInPlace(_ value: UInt64)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V15squareFullWidthAE7UInt512VyF	OpalCryptoBoundaryModel.Numeric.UInt256.squareFullWidth()	func squareFullWidth() -> OpalCryptoBoundaryModel.Numeric.UInt512
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V16shiftRightOneBitAGyF	OpalCryptoBoundaryModel.Numeric.UInt256.shiftRightOneBit()	func shiftRightOneBit() -> OpalCryptoBoundaryModel.Numeric.UInt256
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V17multiplyFullWidth2byAE7UInt512VAG_tF	OpalCryptoBoundaryModel.Numeric.UInt256.multiplyFullWidth(by:)	func multiplyFullWidth(by other: OpalCryptoBoundaryModel.Numeric.UInt256) -> OpalCryptoBoundaryModel.Numeric.UInt512
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V19subtractWordInPlaceyys6UInt64VF	OpalCryptoBoundaryModel.Numeric.UInt256.subtractWordInPlace(_:)	mutating func subtractWordInPlace(_ value: UInt64)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V23mostSignificantBitIndexSiSgvp	OpalCryptoBoundaryModel.Numeric.UInt256.mostSignificantBitIndex	var mostSignificantBitIndex: Int? { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V23shiftRightOneBitInPlaceyyF	OpalCryptoBoundaryModel.Numeric.UInt256.shiftRightOneBitInPlace()	mutating func shiftRightOneBitInPlace()
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V24isLeastSignificantBitSetSbvp	OpalCryptoBoundaryModel.Numeric.UInt256.isLeastSignificantBitSet	var isLeastSignificantBitSet: Bool { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V3addyAG3sum_Sb5carrytAGF	OpalCryptoBoundaryModel.Numeric.UInt256.add(_:)	func add(_ other: OpalCryptoBoundaryModel.Numeric.UInt256) -> (sum: OpalCryptoBoundaryModel.Numeric.UInt256, carry: Bool)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V5isOneSbvp	OpalCryptoBoundaryModel.Numeric.UInt256.isOne	var isOne: Bool { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V6isZeroSbvp	OpalCryptoBoundaryModel.Numeric.UInt256.isZero	var isZero: Bool { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V7addWordyAGs6UInt64VF	OpalCryptoBoundaryModel.Numeric.UInt256.addWord(_:)	func addWord(_ value: UInt64) -> OpalCryptoBoundaryModel.Numeric.UInt256
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V7compare2toSo18NSComparisonResultVAG_tF	OpalCryptoBoundaryModel.Numeric.UInt256.compare(to:)	func compare(to other: OpalCryptoBoundaryModel.Numeric.UInt256) -> ComparisonResult
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V7testBit2atSbSi_tF	OpalCryptoBoundaryModel.Numeric.UInt256.testBit(at:)	func testBit(at index: Int) -> Bool
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V8subtractyAG10difference_Sb6borrowtAGF	OpalCryptoBoundaryModel.Numeric.UInt256.subtract(_:)	func subtract(_ other: OpalCryptoBoundaryModel.Numeric.UInt256) -> (difference: OpalCryptoBoundaryModel.Numeric.UInt256, borrow: Bool)
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt512V	OpalCryptoBoundaryModel.Numeric.UInt512	struct UInt512
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt512V11data64Bytes10Foundation4DataVvp	OpalCryptoBoundaryModel.Numeric.UInt512.data64Bytes	var data64Bytes: Data { get }
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt512V11data64BytesAG10Foundation4DataV_tKcfc	OpalCryptoBoundaryModel.Numeric.UInt512.init(data64Bytes:)	init(data64Bytes: Data) throws
+s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt512V6isZeroSbvp	OpalCryptoBoundaryModel.Numeric.UInt512.isZero	var isZero: Bool { get }
+s:10OpalCrypto0aB13BoundaryModelO8EncodingO	OpalCryptoBoundaryModel.Encoding	enum Encoding
+s:10OpalCrypto0aB13BoundaryModelO8EncodingO12decodeBase32_26interpretedAsFiveBitValues10Foundation4DataVSS_SbtKFZ	OpalCryptoBoundaryModel.Encoding.decodeBase32(_:interpretedAsFiveBitValues:)	static func decodeBase32(_ text: String, interpretedAsFiveBitValues: Bool) throws -> Data
+s:10OpalCrypto0aB13BoundaryModelO8EncodingO12decodeBase58y10Foundation4DataVSgSSFZ	OpalCryptoBoundaryModel.Encoding.decodeBase58(_:)	static func decodeBase58(_ text: String) -> Data?
+s:10OpalCrypto0aB13BoundaryModelO8EncodingO12encodeBase32_26interpretedAsFiveBitValuesSS10Foundation4DataV_SbtFZ	OpalCryptoBoundaryModel.Encoding.encodeBase32(_:interpretedAsFiveBitValues:)	static func encodeBase32(_ data: Data, interpretedAsFiveBitValues: Bool) -> String
+s:10OpalCrypto0aB13BoundaryModelO8EncodingO12encodeBase58ySS10Foundation4DataVFZ	OpalCryptoBoundaryModel.Encoding.encodeBase58(_:)	static func encodeBase58(_ data: Data) -> String
+s:10OpalCrypto0aB13BoundaryModelO8EncodingO31computePolynomialModuloChecksumys6UInt64VSays5UInt8VGFZ	OpalCryptoBoundaryModel.Encoding.computePolynomialModuloChecksum(_:)	static func computePolynomialModuloChecksum(_ values: [UInt8]) -> UInt64
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO	OpalCryptoBoundaryModel.Signature	enum Signature
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO11NoncePolicyO	OpalCryptoBoundaryModel.Signature.NoncePolicy	enum NoncePolicy
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO11NoncePolicyO12systemRandomyA2GmF	OpalCryptoBoundaryModel.Signature.NoncePolicy.systemRandom	case systemRandom
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO11NoncePolicyO22requestForComments6979yA2GmF	OpalCryptoBoundaryModel.Signature.NoncePolicy.requestForComments6979	case requestForComments6979
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO11NoncePolicyO46bitcoinImprovementProposalSchnorrDeterministicyA2GmF	OpalCryptoBoundaryModel.Signature.NoncePolicy.bitcoinImprovementProposalSchnorrDeterministic	case bitcoinImprovementProposalSchnorrDeterministic
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO15derivePublicKey011fromPrivateH4Data10Foundation0K0VAJ_tKFZ	OpalCryptoBoundaryModel.Signature.derivePublicKey(fromPrivateKeyData:)	static func derivePublicKey(fromPrivateKeyData privateKeyData: Data) throws -> Data
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO4sign11messageData010privateKeyH06format11noncePolicy10Foundation0H0VAM_AmE6FormatOAE05NonceM0OtKFZ	OpalCryptoBoundaryModel.Signature.sign(messageData:privateKeyData:format:noncePolicy:)	static func sign(messageData: Data, privateKeyData: Data, format: OpalCryptoBoundaryModel.Signature.Format, noncePolicy: OpalCryptoBoundaryModel.Signature.NoncePolicy = .requestForComments6979) throws -> Data
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO	OpalCryptoBoundaryModel.Signature.Error	enum Error
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO07invalidE6LengthyAGSi_SitcAGmF	OpalCryptoBoundaryModel.Signature.Error.invalidSignatureLength(expected:actual:)	case invalidSignatureLength(expected: Int, actual: Int)
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO19cryptographyFailureyA2GmF	OpalCryptoBoundaryModel.Signature.Error.cryptographyFailure	case cryptographyFailure
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO19invalidDigestLengthyAGSi_SitcAGmF	OpalCryptoBoundaryModel.Signature.Error.invalidDigestLength(expected:actual:)	case invalidDigestLength(expected: Int, actual: Int)
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO22invalidPublicKeyLengthyAGSi_SitcAGmF	OpalCryptoBoundaryModel.Signature.Error.invalidPublicKeyLength(expected:actual:)	case invalidPublicKeyLength(expected: Int, actual: Int)
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO22invalidPublicKeyPrefixyAGs5UInt8V_tcAGmF	OpalCryptoBoundaryModel.Signature.Error.invalidPublicKeyPrefix(actual:)	case invalidPublicKeyPrefix(actual: UInt8)
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO23invalidPrivateKeyLengthyAGSi_SitcAGmF	OpalCryptoBoundaryModel.Signature.Error.invalidPrivateKeyLength(expected:actual:)	case invalidPrivateKeyLength(expected: Int, actual: Int)
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO	OpalCryptoBoundaryModel.Signature.Format	enum Format
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO13EcdsaEncodingO	OpalCryptoBoundaryModel.Signature.Format.EcdsaEncoding	enum EcdsaEncoding
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO13EcdsaEncodingO3deryA2ImF	OpalCryptoBoundaryModel.Signature.Format.EcdsaEncoding.der	case der
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO13EcdsaEncodingO3rawyA2ImF	OpalCryptoBoundaryModel.Signature.Format.EcdsaEncoding.raw	case raw
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO5ecdsayA2G13EcdsaEncodingOcAGmF	OpalCryptoBoundaryModel.Signature.Format.ecdsa(_:)	case ecdsa(OpalCryptoBoundaryModel.Signature.Format.EcdsaEncoding)
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO7schnorryA2GmF	OpalCryptoBoundaryModel.Signature.Format.schnorr	case schnorr
+s:10OpalCrypto0aB13BoundaryModelO9SignatureO6verify13signatureData07messageH009publicKeyH06formatSb10Foundation0H0V_A2mE6FormatOtKFZ	OpalCryptoBoundaryModel.Signature.verify(signatureData:messageData:publicKeyData:format:)	static func verify(signatureData: Data, messageData: Data, publicKeyData: Data, format: OpalCryptoBoundaryModel.Signature.Format) throws -> Bool
+s:SLsE1goiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.>(_:_:)	static func > (lhs: Self, rhs: Self) -> Bool
+s:SLsE2geoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.>=(_:_:)	static func >= (lhs: Self, rhs: Self) -> Bool
+s:SLsE2leoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.<=(_:_:)	static func <= (lhs: Self, rhs: Self) -> Bool
+s:SLsE3zzloiySnyxGx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger...<(_:_:)	static func ..< (minimum: Self, maximum: Self) -> Range<Self>
+s:SLsE3zzlopys16PartialRangeUpToVyxGxFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger...<(_:)	static func ..< (maximum: Self) -> PartialRangeUpTo<Self>
+s:SLsE3zzzoPys16PartialRangeFromVyxGxFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger....(_:)	static func ... (minimum: Self) -> PartialRangeFrom<Self>
+s:SLsE3zzzoiySNyxGx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger....(_:_:)	static func ... (minimum: Self, maximum: Self) -> ClosedRange<Self>
+s:SLsE3zzzopys19PartialRangeThroughVyxGxFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger....(_:)	static func ... (maximum: Self) -> PartialRangeThrough<Self>
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO18BigUnsignedIntegerV	OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO5ErrorO	OpalCryptoBoundaryModel.Numeric.Error.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt256V	OpalCryptoBoundaryModel.Numeric.UInt256.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO7UInt512V	OpalCryptoBoundaryModel.Numeric.UInt512.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO9SignatureO11NoncePolicyO	OpalCryptoBoundaryModel.Signature.NoncePolicy.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO	OpalCryptoBoundaryModel.Signature.Error.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO	OpalCryptoBoundaryModel.Signature.Format.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:SQsE2neoiySbx_xtFZ::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO9SignatureO6FormatO13EcdsaEncodingO	OpalCryptoBoundaryModel.Signature.Format.EcdsaEncoding.!=(_:_:)	static func != (lhs: Self, rhs: Self) -> Bool
+s:s5ErrorP10FoundationE20localizedDescriptionSSvp::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO7NumericO5ErrorO	OpalCryptoBoundaryModel.Numeric.Error.localizedDescription	var localizedDescription: String { get }
+s:s5ErrorP10FoundationE20localizedDescriptionSSvp::SYNTHESIZED::s:10OpalCrypto0aB13BoundaryModelO9SignatureO5ErrorO	OpalCryptoBoundaryModel.Signature.Error.localizedDescription	var localizedDescription: String { get }

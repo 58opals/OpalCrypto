@@ -3,13 +3,13 @@
 import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
-    public enum OperationModel {
-        public enum PublicKeyFormat {
+    internal enum OperationModel {
+        internal enum PublicKeyFormat {
             case compressed
             case uncompressed
         }
 
-        public enum Error: Swift.Error, Equatable {
+        internal enum Error: Swift.Error, Equatable {
             case invalidPrivateKeyLength(actual: Int)
             case invalidPrivateKeyValue
             case invalidPublicKeyLength(actual: Int)
@@ -20,15 +20,15 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             case invalidDerivedPublicKey
         }
 
-        public static var curveOrderN: Data {
+        internal static var curveOrderN: Data {
             StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n.data32Bytes
         }
 
-        public static func validatePrivateKeyData32Bytes(_ privateKeyData32Bytes: Data) -> Bool {
+        internal static func validatePrivateKeyData32Bytes(_ privateKeyData32Bytes: Data) -> Bool {
             (try? ScalarModel(data32: privateKeyData32Bytes, requireNonZero: true)) != nil
         }
 
-        public static func derivePublicKey(
+        internal static func derivePublicKey(
             fromPrivateKeyData32Bytes privateKeyData32Bytes: Data,
             format: PublicKeyFormat = .compressed
         ) throws -> Data {
@@ -40,7 +40,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             return encodePublicKey(publicAffine, format: format)
         }
 
-        public static func tweakAddPrivateKeyData32Bytes(
+        internal static func tweakAddPrivateKeyData32Bytes(
             _ privateKeyData32Bytes: Data,
             tweakData32Bytes: Data
         ) throws -> Data {
@@ -53,7 +53,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             return derivedScalar.data32Bytes
         }
 
-        public static func tweakAddPublicKey(
+        internal static func tweakAddPublicKey(
             _ publicKey: Data,
             tweakData32Bytes: Data,
             format: PublicKeyFormat? = nil
