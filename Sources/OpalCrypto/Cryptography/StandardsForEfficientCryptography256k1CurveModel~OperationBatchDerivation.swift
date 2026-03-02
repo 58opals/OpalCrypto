@@ -23,7 +23,7 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         let chunkSize = min(maximumChunkSize, max(1, idealChunkSize))
         let chunkCount = (totalCount + chunkSize - 1) / chunkSize
 
-        return try await withThrowingTaskGroup(of: CompressedPublicKeyChunkResultModel.self) { group in
+        return try await withThrowingTaskGroup(of: CompressedPublicKeyChunkResult.self) { group in
             for chunkIndex in 0..<chunkCount {
                 let startIndex = chunkIndex * chunkSize
                 let endIndex = min(startIndex + chunkSize, totalCount)
@@ -51,14 +51,14 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
                         compressedPublicKeys.append(affinePoint.encodeCompressed33())
                     }
 
-                    return CompressedPublicKeyChunkResultModel(
+                    return CompressedPublicKeyChunkResult(
                         startIndex: startIndex,
                         compressedPublicKeys: compressedPublicKeys
                     )
                 }
             }
 
-            var chunkResults: [CompressedPublicKeyChunkResultModel] = .init()
+            var chunkResults: [CompressedPublicKeyChunkResult] = .init()
             chunkResults.reserveCapacity(chunkCount)
 
             for try await chunkResult in group {
@@ -78,11 +78,6 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
 }
 
 private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
-    struct CompressedPublicKeyChunkResultModel: Sendable {
-        let startIndex: Int
-        let compressedPublicKeys: [Data]
-    }
-
     static func deriveCompressedPublicKeysSingleChunk(
         fromPrivateKeys32 privateKeys32: [Data],
         assumingValidPrivateKeys: Bool

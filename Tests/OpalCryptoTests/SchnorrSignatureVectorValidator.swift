@@ -21,8 +21,8 @@ struct SchnorrSignatureVectorValidator {
                 )
 
                 #expect(
-                    verificationResult == vector.expectedVerificationResult,
-                    "\(context): expected \(vector.expectedVerificationResult) but got \(verificationResult)."
+                    verificationResult == vector.isVerificationExpected,
+                    "\(context): expected \(vector.isVerificationExpected) but got \(verificationResult)."
                 )
             } catch {
                 Issue.record("\(context): unexpected error: \(error).")
