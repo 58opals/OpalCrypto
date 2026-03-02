@@ -1,10 +1,10 @@
-// EllipticCurveDigitalSignatureAlgorithmModel+MessageModel.swift
+// EllipticCurveDigitalSignatureAlgorithmModel+Message.swift
 
 import Foundation
 import CryptoKit
 
 extension EllipticCurveDigitalSignatureAlgorithmModel {
-    internal struct MessageModel {
+    internal struct Message {
         internal enum Error: Swift.Error {
             case hashCountMustBeGreaterThanZero
             case invalidDigestByteCount(expected: Int, actual: Int)
@@ -23,20 +23,20 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
     }
 }
 
-extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
-    internal static func makeRaw(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
+    internal static func makeRaw(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
         .init(representation: .payload(data: data, hashRounds: 0))
     }
     
-    internal static func makeSingleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeSingleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
         .init(representation: .payload(data: data, hashRounds: 1))
     }
     
-    internal static func makeDoubleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeDoubleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
         .init(representation: .payload(data: data, hashRounds: 2))
     }
     
-    internal static func makeHashing(_ data: Data, rounds: UInt8) throws -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    internal static func makeHashing(_ data: Data, rounds: UInt8) throws -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
         guard rounds > 0 else { throw Error.hashCountMustBeGreaterThanZero }
         return .init(representation: .payload(data: data, hashRounds: rounds))
     }
@@ -44,12 +44,12 @@ extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
     internal static func makeDigest(
         _ digest: CryptoKit.SHA256.Digest,
         hashCount: UInt8 = 1
-    ) -> EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+    ) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
         .init(representation: .digest(digest: digest, hashRounds: hashCount))
     }
 }
 
-extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
     internal func makeConsensusDigestData32Bytes() throws -> Data {
         let baseData = makeDataForHashingRounds()
         let rounds = Int(hashRounds)
@@ -69,7 +69,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
     }
 }
 
-private extension EllipticCurveDigitalSignatureAlgorithmModel.MessageModel {
+private extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
     var hashRounds: UInt8 {
         switch representation {
         case .payload(_, let rounds):

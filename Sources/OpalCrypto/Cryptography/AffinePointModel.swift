@@ -29,7 +29,7 @@ struct AffinePointModel: Sendable, Equatable {
     }
     
     func applyEndomorphism() -> AffinePointModel {
-        let beta = FieldElementModel(unchecked: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.endomorphismBeta)
+        let beta = FieldElementModel(unchecked: StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismBeta)
         return AffinePointModel(x: beta.mul(x), y: y)
     }
 }

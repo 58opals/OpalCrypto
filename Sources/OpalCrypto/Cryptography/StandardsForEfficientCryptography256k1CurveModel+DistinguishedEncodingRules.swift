@@ -1,9 +1,9 @@
-// StandardsForEfficientCryptography256k1CurveModel+DistinguishedEncodingRulesModel.swift
+// StandardsForEfficientCryptography256k1CurveModel+DistinguishedEncodingRules.swift
 
 import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
-    enum DistinguishedEncodingRulesModel {
+    enum DistinguishedEncodingRules {
         static func encodeSignature(r: Data, s: Data) throws -> Data {
             guard r.count == 32, s.count == 32 else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.invalidSignatureLength(actual: r.count + s.count)
@@ -12,14 +12,14 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             let sEncoded = encodeIntegerBytes(s)
             var sequence = Data()
             sequence.append(0x02)
-            sequence.append(try DistinguishedEncodingRulesLengthModel.encode(rEncoded.count))
+            sequence.append(try DistinguishedEncodingRulesLength.encode(rEncoded.count))
             sequence.append(rEncoded)
             sequence.append(0x02)
-            sequence.append(try DistinguishedEncodingRulesLengthModel.encode(sEncoded.count))
+            sequence.append(try DistinguishedEncodingRulesLength.encode(sEncoded.count))
             sequence.append(sEncoded)
             var result = Data()
             result.append(0x30)
-            result.append(try DistinguishedEncodingRulesLengthModel.encode(sequence.count))
+            result.append(try DistinguishedEncodingRulesLength.encode(sequence.count))
             result.append(sequence)
             return result
         }
@@ -33,7 +33,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }
             index += 1
-            let lengthData = try DistinguishedEncodingRulesLengthModel.decode(from: distinguishedEncodingRulesEncoded, startingAt: index)
+            let lengthData = try DistinguishedEncodingRulesLength.decode(from: distinguishedEncodingRulesEncoded, startingAt: index)
             index = lengthData.nextIndex
             let endIndex = index + lengthData.length
             guard endIndex == distinguishedEncodingRulesEncoded.count else {
@@ -66,7 +66,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }
             index += 1
-            let lengthData = try DistinguishedEncodingRulesLengthModel.decode(from: data, startingAt: index)
+            let lengthData = try DistinguishedEncodingRulesLength.decode(from: data, startingAt: index)
             index = lengthData.nextIndex
             let length = lengthData.length
             guard length > 0 else {

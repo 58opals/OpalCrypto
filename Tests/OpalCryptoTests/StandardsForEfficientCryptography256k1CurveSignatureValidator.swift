@@ -41,12 +41,12 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         onePrivateKey[31] = 0x01
 
         #expect(
-            !StandardsForEfficientCryptography256k1CurveModel.OperationModel.validatePrivateKeyData32Bytes(
+            !StandardsForEfficientCryptography256k1CurveModel.Operation.validatePrivateKeyData32Bytes(
                 zeroPrivateKey
             )
         )
         #expect(
-            StandardsForEfficientCryptography256k1CurveModel.OperationModel.validatePrivateKeyData32Bytes(
+            StandardsForEfficientCryptography256k1CurveModel.Operation.validatePrivateKeyData32Bytes(
                 onePrivateKey
             )
         )
@@ -57,7 +57,7 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         var onePrivateKey = Data(repeating: 0x00, count: 32)
         onePrivateKey[31] = 0x01
 
-        let publicKey = try StandardsForEfficientCryptography256k1CurveModel.OperationModel.derivePublicKey(
+        let publicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation.derivePublicKey(
             fromPrivateKeyData32Bytes: onePrivateKey,
             format: .compressed
         )
@@ -70,11 +70,11 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
     func rejectPublicKeyDerivationWithInvalidPrivateKeyLength() {
         let invalidLengthPrivateKey = Data(repeating: 0x01, count: 31)
         do {
-            _ = try StandardsForEfficientCryptography256k1CurveModel.OperationModel.derivePublicKey(
+            _ = try StandardsForEfficientCryptography256k1CurveModel.Operation.derivePublicKey(
                 fromPrivateKeyData32Bytes: invalidLengthPrivateKey
             )
             Issue.record("Expected invalid private key length error.")
-        } catch let error as StandardsForEfficientCryptography256k1CurveModel.OperationModel.Error {
+        } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
             #expect(error == .invalidPrivateKeyLength(actual: 31))
         } catch {
             Issue.record("Unexpected error type: \(error)")

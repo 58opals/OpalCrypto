@@ -15,8 +15,8 @@ struct FieldElement52Model: Sendable, Equatable {
     @inlinable
     init(fromUInt256 value: Unsigned256BitIntegerModel) {
         var reduced = value
-        if reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p) != .orderedAscending {
-            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).difference
+        if reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.p) != .orderedAscending {
+            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.p).difference
         }
         limbs = FieldElement52Model.makeLimbs(from: reduced)
     }
@@ -35,8 +35,8 @@ struct FieldElement52Model: Sendable, Equatable {
     func add(_ other: FieldElement52Model) -> FieldElement52Model {
         let (sum, carry) = asUInt256.add(other.asUInt256)
         var reduced = sum
-        if carry || reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p) != .orderedAscending {
-            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).difference
+        if carry || reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.p) != .orderedAscending {
+            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.p).difference
         }
         return FieldElement52Model(fromUInt256: reduced)
     }
@@ -46,7 +46,7 @@ struct FieldElement52Model: Sendable, Equatable {
         let (difference, borrow) = asUInt256.subtract(other.asUInt256)
         var reduced = difference
         if borrow {
-            reduced = reduced.add(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).sum
+            reduced = reduced.add(StandardsForEfficientCryptography256k1CurveModel.Constant.p).sum
         }
         return FieldElement52Model(fromUInt256: reduced)
     }
@@ -56,7 +56,7 @@ struct FieldElement52Model: Sendable, Equatable {
         guard !asUInt256.isZero else {
             return .zero
         }
-        let difference = StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p.subtract(asUInt256).difference
+        let difference = StandardsForEfficientCryptography256k1CurveModel.Constant.p.subtract(asUInt256).difference
         return FieldElement52Model(fromUInt256: difference)
     }
     
@@ -82,8 +82,8 @@ struct FieldElement52Model: Sendable, Equatable {
     @inlinable
     func normalize() -> FieldElement52Model {
         var reduced = asUInt256
-        if reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p) != .orderedAscending {
-            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).difference
+        if reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.p) != .orderedAscending {
+            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.p).difference
         }
         return FieldElement52Model(fromUInt256: reduced)
     }

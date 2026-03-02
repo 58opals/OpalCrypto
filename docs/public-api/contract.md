@@ -3,24 +3,24 @@
 ## Contract Mode
 
 - Hard cut migration: no deprecation window.
-- Only `OpalCryptoBoundaryModel` is public.
+- Only `OpalCryptoFacade` is public.
 - `public`/`open` declarations are allowed only under `Sources/OpalCrypto/PublicAPI/`.
 
 ## Stable Namespace
 
-`OpalCryptoBoundaryModel`
+`OpalCryptoFacade`
 
 ### Signature
 
-- `OpalCryptoBoundaryModel.Signature.Format`
+- `OpalCryptoFacade.Signature.Format`
   - `.ecdsa(.raw)`
   - `.ecdsa(.der)`
   - `.schnorr`
-- `OpalCryptoBoundaryModel.Signature.NoncePolicy`
+- `OpalCryptoFacade.Signature.NoncePolicy`
   - `.requestForComments6979`
   - `.bitcoinImprovementProposalSchnorrDeterministic`
   - `.systemRandom`
-- `OpalCryptoBoundaryModel.Signature.Error`
+- `OpalCryptoFacade.Signature.Error`
 - `derivePublicKey(fromPrivateKeyData:)`
 - `sign(messageData:privateKeyData:format:noncePolicy:)`
 - `verify(signatureData:messageData:publicKeyData:format:)`
@@ -46,10 +46,10 @@
 
 ### Numeric
 
-- `OpalCryptoBoundaryModel.Numeric.UInt256`
-- `OpalCryptoBoundaryModel.Numeric.UInt512`
-- `OpalCryptoBoundaryModel.Numeric.BigUnsignedInteger`
-- `OpalCryptoBoundaryModel.Numeric.Error`
+- `OpalCryptoFacade.Numeric.UInt256`
+- `OpalCryptoFacade.Numeric.UInt512`
+- `OpalCryptoFacade.Numeric.BigUnsignedInteger`
+- `OpalCryptoFacade.Numeric.Error`
 
 ## Prohibited Public Exposure
 

@@ -7,7 +7,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         signature: Data,
         message: Data,
         publicKey: Data,
-        format: SignatureFormatModel
+        format: SignatureFormat
     ) throws -> Bool {
         let compressedPublicKey = publicKey
         guard compressedPublicKey.count == 33 else { throw Error.invalidCompressedPublicKeyLength }
@@ -56,9 +56,9 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
 
     internal static func verify(
         signature: Data,
-        message: EllipticCurveDigitalSignatureAlgorithmModel.MessageModel,
+        message: EllipticCurveDigitalSignatureAlgorithmModel.Message,
         publicKey: Data,
-        format: SignatureFormatModel
+        format: SignatureFormat
     ) throws -> Bool {
         switch format {
         case .ecdsa:
@@ -70,7 +70,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         }
     }
 
-    internal static func detectFormat(signatureCore: Data) -> SignatureFormatModel? {
+    internal static func detectFormat(signatureCore: Data) -> SignatureFormat? {
         if signatureCore.count == 64 { return .schnorr }
         do {
             _ = try StandardsForEfficientCryptography256k1CurveModel.Signature(

@@ -4,11 +4,11 @@ import Foundation
 
 extension ScalarModel {
     func splitForEndomorphism() -> (firstScalar: SignedScalar128Model, secondScalar: SignedScalar128Model, isFirstNegative: Bool, isSecondNegative: Bool) {
-        let coefficientOne = StandardsForEfficientCryptography256k1CurveModel.ConstantModel.endomorphismCoefficientOne
-        let coefficientTwo = StandardsForEfficientCryptography256k1CurveModel.ConstantModel.endomorphismCoefficientTwo
-        let minusBasisOne = StandardsForEfficientCryptography256k1CurveModel.ConstantModel.endomorphismMinusBasisOne
-        let minusBasisTwo = StandardsForEfficientCryptography256k1CurveModel.ConstantModel.endomorphismMinusBasisTwo
-        let lambda = ScalarModel(unchecked: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.endomorphismLambda)
+        let coefficientOne = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismCoefficientOne
+        let coefficientTwo = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismCoefficientTwo
+        let minusBasisOne = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismMinusBasisOne
+        let minusBasisTwo = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismMinusBasisTwo
+        let lambda = ScalarModel(unchecked: StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismLambda)
         
         let coefficientOneProduct = ScalarModel(unchecked: value.multiplyShiftRight384(by: coefficientOne))
         let coefficientTwoProduct = ScalarModel(unchecked: value.multiplyShiftRight384(by: coefficientTwo))

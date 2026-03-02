@@ -1,9 +1,9 @@
-// StandardsForEfficientCryptography256k1CurveModel+OperationModel.swift
+// StandardsForEfficientCryptography256k1CurveModel+Operation.swift
 
 import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
-    internal enum OperationModel {
+    internal enum Operation {
         internal enum PublicKeyFormat {
             case compressed
             case uncompressed
@@ -21,7 +21,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
         }
 
         internal static var curveOrderN: Data {
-            StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n.data32Bytes
+            StandardsForEfficientCryptography256k1CurveModel.Constant.n.data32Bytes
         }
 
         internal static func validatePrivateKeyData32Bytes(_ privateKeyData32Bytes: Data) -> Bool {

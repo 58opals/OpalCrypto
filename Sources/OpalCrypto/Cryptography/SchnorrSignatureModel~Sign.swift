@@ -32,7 +32,7 @@ internal extension SchnorrSignatureModel {
                 try generator.makeNextScalar()
             }
         case .bitcoinImprovementProposalSchnorrDeterministic:
-            var generator = try NonceGeneratorModel.BitcoinImprovementProposalSchnorrSignatureModel(
+            var generator = try NonceGeneratorModel.BitcoinImprovementProposalSchnorrSignature(
                 privateKey: privateKeyScalar,
                 digest32: digestData32Bytes
             )

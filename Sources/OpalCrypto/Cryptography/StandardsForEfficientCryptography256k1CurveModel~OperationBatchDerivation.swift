@@ -1,8 +1,8 @@
-// StandardsForEfficientCryptography256k1CurveModel+OperationModel~BatchDerivation.swift
+// StandardsForEfficientCryptography256k1CurveModel~OperationBatchDerivation.swift
 
 import Foundation
 
-extension StandardsForEfficientCryptography256k1CurveModel.OperationModel {
+extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     internal static func deriveCompressedPublicKeys(
         fromPrivateKeys32 privateKeys32: [Data],
         assumingValidPrivateKeys: Bool = false
@@ -77,7 +77,7 @@ extension StandardsForEfficientCryptography256k1CurveModel.OperationModel {
     }
 }
 
-private extension StandardsForEfficientCryptography256k1CurveModel.OperationModel {
+private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     struct CompressedPublicKeyChunkResultModel: Sendable {
         let startIndex: Int
         let compressedPublicKeys: [Data]

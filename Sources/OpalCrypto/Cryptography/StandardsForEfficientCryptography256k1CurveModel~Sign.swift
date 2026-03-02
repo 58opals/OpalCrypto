@@ -26,7 +26,7 @@ internal extension StandardsForEfficientCryptography256k1CurveModel {
         let makeNextNonce: () throws -> ScalarModel
         switch nonce {
         case .requestForComments6979SecureHashAlgorithm256:
-            var generator = try NonceGeneratorModel.RequestForComments6979Model(
+            var generator = try NonceGeneratorModel.RequestForComments6979(
                 privateKey: privateKeyScalar,
                 digest32: digestData32Bytes
             )

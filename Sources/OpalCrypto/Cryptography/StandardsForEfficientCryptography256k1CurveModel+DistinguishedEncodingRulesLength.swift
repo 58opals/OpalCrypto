@@ -1,9 +1,9 @@
-// StandardsForEfficientCryptography256k1CurveModel+DistinguishedEncodingRulesLengthModel.swift
+// StandardsForEfficientCryptography256k1CurveModel+DistinguishedEncodingRulesLength.swift
 
 import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
-    enum DistinguishedEncodingRulesLengthModel {
+    enum DistinguishedEncodingRulesLength {
         static func encode(_ length: Int) throws -> Data {
             guard length >= 0 else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed

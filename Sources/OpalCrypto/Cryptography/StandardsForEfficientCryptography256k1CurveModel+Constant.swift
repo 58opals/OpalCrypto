@@ -1,9 +1,9 @@
-// StandardsForEfficientCryptography256k1CurveModel+ConstantModel.swift
+// StandardsForEfficientCryptography256k1CurveModel+Constant.swift
 
 import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
-    enum ConstantModel {
+    enum Constant {
         @usableFromInline static let p = Unsigned256BitIntegerModel(
             limbs: [
                 0xfffffffefffffc2f,

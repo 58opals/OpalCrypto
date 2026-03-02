@@ -30,8 +30,8 @@ enum ScalarReductionModel {
                     foldedValue.limbs[2],
                     foldedValue.limbs[3]
                 ])
-                if result.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n) != .orderedAscending {
-                    result = result.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n).difference
+                if result.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.n) != .orderedAscending {
+                    result = result.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.n).difference
                 }
                 return result
             }

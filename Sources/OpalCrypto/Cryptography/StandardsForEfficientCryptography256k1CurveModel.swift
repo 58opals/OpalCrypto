@@ -31,11 +31,11 @@ internal enum StandardsForEfficientCryptography256k1CurveModel {
         }
         
         internal func encodeDistinguishedEncodingRules() throws -> Data {
-            try StandardsForEfficientCryptography256k1CurveModel.DistinguishedEncodingRulesModel.encodeSignature(r: r, s: s)
+            try StandardsForEfficientCryptography256k1CurveModel.DistinguishedEncodingRules.encodeSignature(r: r, s: s)
         }
         
         internal init(distinguishedEncodingRulesEncoded: Data) throws {
-            let signatureValues = try StandardsForEfficientCryptography256k1CurveModel.DistinguishedEncodingRulesModel.decodeSignature(
+            let signatureValues = try StandardsForEfficientCryptography256k1CurveModel.DistinguishedEncodingRules.decodeSignature(
                 distinguishedEncodingRulesEncoded
             )
             try self.init(r: signatureValues.r, s: signatureValues.s)

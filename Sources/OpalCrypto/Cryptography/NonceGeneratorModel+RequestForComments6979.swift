@@ -1,10 +1,10 @@
-// NonceGeneratorModel+RequestForComments6979Model.swift
+// NonceGeneratorModel+RequestForComments6979.swift
 
 import Foundation
 import CryptoKit
 
 extension NonceGeneratorModel {
-    struct RequestForComments6979Model {
+    struct RequestForComments6979 {
         private var keyBytes: Data
         private var valueBytes: Data
         private let privateKeyData: Data

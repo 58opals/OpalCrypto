@@ -18,7 +18,7 @@ struct FieldElementModel: Sendable, Equatable {
     @usableFromInline static let eight = FieldElementModel(unchecked: Unsigned256BitIntegerModel(limbs: [8, 0, 0, 0]))
     
     init(value: Unsigned256BitIntegerModel) throws {
-        guard value.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p) == .orderedAscending else {
+        guard value.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.p) == .orderedAscending else {
             throw Error.invalidFieldValue
         }
         self.value = value
@@ -36,8 +36,8 @@ struct FieldElementModel: Sendable, Equatable {
     func add(_ other: FieldElementModel) -> FieldElementModel {
         let (sum, carry) = value.add(other.value)
         var reduced = sum
-        if carry || reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p) != .orderedAscending {
-            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).difference
+        if carry || reduced.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.p) != .orderedAscending {
+            reduced = reduced.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.p).difference
         }
         return FieldElementModel(unchecked: reduced)
     }
@@ -47,7 +47,7 @@ struct FieldElementModel: Sendable, Equatable {
         let (difference, borrow) = value.subtract(other.value)
         var reduced = difference
         if borrow {
-            reduced = reduced.add(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).sum
+            reduced = reduced.add(StandardsForEfficientCryptography256k1CurveModel.Constant.p).sum
         }
         return FieldElementModel(unchecked: reduced)
     }
@@ -57,7 +57,7 @@ struct FieldElementModel: Sendable, Equatable {
         guard !value.isZero else {
             return .zero
         }
-        let difference = StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p.subtract(value).difference
+        let difference = StandardsForEfficientCryptography256k1CurveModel.Constant.p.subtract(value).difference
         return FieldElementModel(unchecked: difference)
     }
     

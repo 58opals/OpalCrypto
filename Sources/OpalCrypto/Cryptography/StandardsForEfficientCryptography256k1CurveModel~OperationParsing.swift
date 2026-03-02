@@ -1,8 +1,8 @@
-// StandardsForEfficientCryptography256k1CurveModel+OperationModel~ParsingModel.swift
+// StandardsForEfficientCryptography256k1CurveModel~OperationParsing.swift
 
 import Foundation
 
-extension StandardsForEfficientCryptography256k1CurveModel.OperationModel {
+extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     static func parsePrivateKeyScalar(
         _ data: Data,
         requireNonZero: Bool

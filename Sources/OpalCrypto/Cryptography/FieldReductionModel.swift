@@ -27,8 +27,8 @@ enum FieldReductionModel {
         var result = Unsigned256BitIntegerModel(limbs: [
             reducedLimbs[0], reducedLimbs[1], reducedLimbs[2], reducedLimbs[3]
         ])
-        if result.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p) != .orderedAscending {
-            result = result.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.p).difference
+        if result.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.p) != .orderedAscending {
+            result = result.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.p).difference
         }
         return result
     }

@@ -1,10 +1,10 @@
-// NonceGeneratorModel+BitcoinImprovementProposalSchnorrSignatureModel.swift
+// NonceGeneratorModel+BitcoinImprovementProposalSchnorrSignature.swift
 
 import Foundation
 import CryptoKit
 
 extension NonceGeneratorModel {
-    struct BitcoinImprovementProposalSchnorrSignatureModel {
+    struct BitcoinImprovementProposalSchnorrSignature {
         private let privateKeyData: Data
         private let digestData: Data
         private var counter: UInt32 = 0
@@ -35,8 +35,8 @@ extension NonceGeneratorModel {
                 let hashValue = try Unsigned256BitIntegerModel(data32: hashData)
                 
                 var reducedValue = hashValue
-                if reducedValue.compare(to: StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n) != .orderedAscending {
-                    reducedValue = reducedValue.subtract(StandardsForEfficientCryptography256k1CurveModel.ConstantModel.n).difference
+                if reducedValue.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.n) != .orderedAscending {
+                    reducedValue = reducedValue.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.n).difference
                 }
                 
                 let scalar = ScalarModel(unchecked: reducedValue)
