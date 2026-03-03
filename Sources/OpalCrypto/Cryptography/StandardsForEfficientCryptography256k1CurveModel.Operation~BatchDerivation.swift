@@ -1,4 +1,4 @@
-// StandardsForEfficientCryptography256k1CurveModel~OperationBatchDerivation.swift
+// StandardsForEfficientCryptography256k1CurveModel.Operation~BatchDerivation.swift
 
 import Foundation
 

@@ -1,4 +1,4 @@
-// StandardsForEfficientCryptography256k1CurveModel~OperationParsing.swift
+// StandardsForEfficientCryptography256k1CurveModel.Operation~Parsing.swift
 
 import Foundation
 

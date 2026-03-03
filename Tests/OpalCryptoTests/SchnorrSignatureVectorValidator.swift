@@ -6,7 +6,7 @@ import Testing
 struct SchnorrSignatureVectorValidator {
     @Test("Verify all pure Swift Schnorr vectors")
     func verifyAllPureSwiftSchnorrVectors() {
-        for vector in TestVectors.all {
+        for vector in SchnorrVectorRepository.all {
             let context = makeContext(for: vector)
             do {
                 let signaturePayload = try vector.signature64
@@ -32,7 +32,7 @@ struct SchnorrSignatureVectorValidator {
 
     @Test("Reproduce secret-key vectors with deterministic BIP Schnorr nonce")
     func reproduceSecretKeyVectorsWithDeterministicBitcoinImprovementProposalSchnorrNonce() {
-        let vectorsWithSecretKeys = TestVectors.all.filter { $0.secretKeyHex != nil }
+        let vectorsWithSecretKeys = SchnorrVectorRepository.all.filter { $0.secretKeyHex != nil }
         #expect(vectorsWithSecretKeys.count == 3, "Expected exactly 3 vectors with secret keys.")
 
         for vector in vectorsWithSecretKeys {
@@ -70,7 +70,7 @@ struct SchnorrSignatureVectorValidator {
         }
     }
 
-    private func makeContext(for vector: TestVectors.SchnorrTestVector) -> String {
+    private func makeContext(for vector: SchnorrVectorRepository.SchnorrVectorData) -> String {
         if let comment = vector.comment, !comment.isEmpty {
             return "Vector \(vector.index) (\(comment))"
         }
