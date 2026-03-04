@@ -1,21 +1,21 @@
 import Foundation
 
-extension OpalCryptoFacade {
+extension OpalCrypto {
     public enum Signature {
         public enum Format: Sendable, Equatable {
-            public enum EcdsaEncoding: Sendable, Equatable {
+            public enum ECDSAEncoding: Sendable, Equatable {
                 case raw
                 case der
             }
 
-            case ecdsa(EcdsaEncoding)
+            case ecdsa(ECDSAEncoding)
             case schnorr
         }
 
         public enum NoncePolicy: Sendable, Equatable {
-            case requestForComments6979
-            case bitcoinImprovementProposalSchnorrDeterministic
-            case systemRandom
+            case rfc6979
+            case bip340Deterministic
+            case random
         }
 
         public enum Error: Swift.Error, Equatable {
@@ -27,32 +27,32 @@ extension OpalCryptoFacade {
             case cryptographyFailure
         }
 
-        public static func derivePublicKey(fromPrivateKeyData privateKeyData: Data) throws -> Data {
-            try validatePrivateKeyLength(privateKeyData)
+        public static func derivePublicKey(fromPrivateKey privateKey: Data) throws -> Data {
+            try validatePrivateKeyLength(privateKey)
             do {
-                return try EllipticCurveDigitalSignatureAlgorithmModel.derivePublicKey(from: privateKeyData)
+                return try EllipticCurveDigitalSignatureAlgorithmModel.derivePublicKey(from: privateKey)
             } catch {
                 throw mapCryptographyError(error)
             }
         }
 
         public static func sign(
-            messageData: Data,
-            privateKeyData: Data,
+            message: Data,
+            privateKey: Data,
             format: Format,
-            noncePolicy: NoncePolicy = .requestForComments6979
+            nonce: NoncePolicy = .rfc6979
         ) throws -> Data {
-            try validatePrivateKeyLength(privateKeyData)
+            try validatePrivateKeyLength(privateKey)
             if case .schnorr = format {
-                try validateSchnorrDigestLength(messageData)
+                try validateSchnorrDigestLength(message)
             }
 
             do {
                 return try EllipticCurveDigitalSignatureAlgorithmModel.sign(
-                    message: messageData,
-                    with: privateKeyData,
+                    message: message,
+                    with: privateKey,
                     in: format.internalFormat,
-                    nonceFunction: noncePolicy.internalNoncePolicy
+                    nonceFunction: nonce.internalNoncePolicy
                 )
             } catch {
                 throw mapCryptographyError(error)
@@ -60,22 +60,22 @@ extension OpalCryptoFacade {
         }
 
         public static func verify(
-            signatureData: Data,
-            messageData: Data,
-            publicKeyData: Data,
+            signature: Data,
+            message: Data,
+            publicKey: Data,
             format: Format
         ) throws -> Bool {
-            try validateCompressedPublicKey(publicKeyData)
-            try validateSignatureLength(signatureData, format: format)
+            try validateCompressedPublicKey(publicKey)
+            try validateSignatureLength(signature, format: format)
             if case .schnorr = format {
-                try validateSchnorrDigestLength(messageData)
+                try validateSchnorrDigestLength(message)
             }
 
             do {
                 return try EllipticCurveDigitalSignatureAlgorithmModel.verify(
-                    signature: signatureData,
-                    message: messageData,
-                    publicKey: publicKeyData,
+                    signature: signature,
+                    message: message,
+                    publicKey: publicKey,
                     format: format.internalFormat
                 )
             } catch {

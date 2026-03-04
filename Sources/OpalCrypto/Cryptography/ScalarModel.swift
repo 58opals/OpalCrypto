@@ -72,8 +72,8 @@ struct ScalarModel: Sendable, Equatable {
     }
     
     @inlinable
-    func testBit(at index: Int) -> Bool {
-        value.testBit(at: index)
+    func isBitSet(at index: Int) -> Bool {
+        value.isBitSet(at: index)
     }
     
     var data32: Data {

@@ -24,7 +24,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             StandardsForEfficientCryptography256k1CurveModel.Constant.n.data32Bytes
         }
 
-        internal static func validatePrivateKeyData32Bytes(_ privateKeyData32Bytes: Data) -> Bool {
+        internal static func isPrivateKeyData32BytesValid(_ privateKeyData32Bytes: Data) -> Bool {
             (try? ScalarModel(data32: privateKeyData32Bytes, requireNonZero: true)) != nil
         }
 

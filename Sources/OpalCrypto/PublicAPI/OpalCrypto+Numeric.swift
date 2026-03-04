@@ -1,6 +1,6 @@
 import Foundation
 
-extension OpalCryptoFacade {
+extension OpalCrypto {
     public enum Numeric {
         public struct UInt256: Sendable, Equatable {
             internal let rawValue: Unsigned256BitIntegerModel
@@ -13,7 +13,7 @@ extension OpalCryptoFacade {
                 }
             }
 
-            public var data32Bytes: Data {
+            public var bytes32: Data {
                 rawValue.data32Bytes
             }
 
@@ -33,8 +33,8 @@ extension OpalCryptoFacade {
                 rawValue.mostSignificantBitIndex
             }
 
-            public func testBit(at index: Int) -> Bool {
-                rawValue.testBit(at: index)
+            public func isBitSet(at index: Int) -> Bool {
+                rawValue.isBitSet(at: index)
             }
 
             public func compare(to other: UInt256) -> ComparisonResult {
@@ -105,7 +105,7 @@ extension OpalCryptoFacade {
                 }
             }
 
-            public var data64Bytes: Data {
+            public var bytes64: Data {
                 rawValue.data64Bytes
             }
 

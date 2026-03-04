@@ -4,7 +4,7 @@ A Swift package that exposes cryptography through a strict facade-first public A
 
 ## Features
 
-`OpalCryptoFacade` is the only public namespace:
+`OpalCrypto` is the only public namespace:
 
 - `Signature`: derive secp256k1 public keys, sign, and verify with facade-owned formats and nonce policies.
 - `Hashing`: SHA-256 family helpers, SHA-160 helper, and HMAC-SHA512.
@@ -46,21 +46,21 @@ var privateKeyData = Data(repeating: 0x00, count: 32)
 privateKeyData[31] = 0x01
 let messageData = Data("opal-ecdsa-message".utf8)
 
-let publicKeyData = try OpalCryptoFacade.Signature.derivePublicKey(
-    fromPrivateKeyData: privateKeyData
+let publicKeyData = try OpalCrypto.Signature.derivePublicKey(
+    fromPrivateKey: privateKeyData
 )
 
-let signatureData = try OpalCryptoFacade.Signature.sign(
-    messageData: messageData,
-    privateKeyData: privateKeyData,
+let signatureData = try OpalCrypto.Signature.sign(
+    message: messageData,
+    privateKey: privateKeyData,
     format: .ecdsa(.der),
-    noncePolicy: .requestForComments6979
+    nonce: .rfc6979
 )
 
-let isValid = try OpalCryptoFacade.Signature.verify(
-    signatureData: signatureData,
-    messageData: messageData,
-    publicKeyData: publicKeyData,
+let isValid = try OpalCrypto.Signature.verify(
+    signature: signatureData,
+    message: messageData,
+    publicKey: publicKeyData,
     format: .ecdsa(.der)
 )
 ```
@@ -75,16 +75,16 @@ import OpalCrypto
 
 let payloadData = Data("opal-api-facade".utf8)
 
-let sha256 = OpalCryptoFacade.Hashing.makeSecureHashAlgorithm256(payloadData)
-let doubleSha256 = OpalCryptoFacade.Hashing.makeSecureHash256(payloadData)
-let hash160 = OpalCryptoFacade.Hashing.makeSecureHash160(payloadData)
+let sha256 = OpalCrypto.Hashing.computeSHA256(payloadData)
+let doubleSha256 = OpalCrypto.Hashing.computeHash256(payloadData)
+let hash160 = OpalCrypto.Hashing.computeHash160(payloadData)
 
-let base58Text = OpalCryptoFacade.Encoding.encodeBase58(payloadData)
-let decodedPayload = OpalCryptoFacade.Encoding.decodeBase58(base58Text)
+let base58Text = OpalCrypto.Encoding.encodeBase58(payloadData)
+let decodedPayload = OpalCrypto.Encoding.decodeBase58(base58Text)
 
-let derivedKey = try OpalCryptoFacade.KeyDerivation.derivePasswordBasedKeyDerivationFunction2Key(
-    passwordData: Data("password".utf8),
-    saltData: Data("salt".utf8),
+let derivedKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
+    password: Data("password".utf8),
+    salt: Data("salt".utf8),
     iterationCount: 4096,
     derivedKeyLength: 32
 )

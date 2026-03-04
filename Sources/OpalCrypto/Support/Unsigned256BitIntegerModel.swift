@@ -99,7 +99,7 @@ internal struct Unsigned256BitIntegerModel: Sendable {
     }
 
     @inlinable
-    internal func testBit(at index: Int) -> Bool {
+    internal func isBitSet(at index: Int) -> Bool {
         guard index >= 0, index < 256 else {
             return false
         }

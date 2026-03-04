@@ -1,6 +1,6 @@
 import Foundation
 
-extension OpalCryptoFacade {
+extension OpalCrypto {
     public enum Encoding {
         public static func encodeBase58(_ data: Data) -> String {
             Base58EncodingModel.encode(data)
@@ -18,7 +18,7 @@ extension OpalCryptoFacade {
             try Base32EncodingModel.decode(text, interpretedAsFiveBitValues: interpretedAsFiveBitValues)
         }
 
-        public static func computePolynomialModuloChecksum(_ values: [UInt8]) -> UInt64 {
+        public static func computePolymodChecksum(_ values: [UInt8]) -> UInt64 {
             PolynomialModuloChecksumModel.compute(values)
         }
     }

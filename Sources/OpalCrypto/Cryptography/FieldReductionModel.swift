@@ -14,7 +14,7 @@ enum FieldReductionModel {
             value.limbs[4], value.limbs[5], value.limbs[6], value.limbs[7]
         ]
         reduceUpperLimbs(into: &reducedLimbs, upper: upperLimbs)
-        while checkUpperLimbs(reducedLimbs) {
+        while hasUpperLimbs(reducedLimbs) {
             upperLimbs = [
                 reducedLimbs[4], reducedLimbs[5], reducedLimbs[6], reducedLimbs[7]
             ]
@@ -86,7 +86,7 @@ enum FieldReductionModel {
         }
     }
     
-    @usableFromInline static func checkUpperLimbs(_ limbs: InlineArray<8, UInt64>) -> Bool {
+    @usableFromInline static func hasUpperLimbs(_ limbs: InlineArray<8, UInt64>) -> Bool {
         (limbs[4] | limbs[5] | limbs[6] | limbs[7]) != 0
     }
 }

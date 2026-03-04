@@ -28,7 +28,7 @@ enum ScalarMultiplicationModel {
         var resultZero = JacobianPointModel.infinity
         var resultOne = JacobianPointModel(affine: point)
         for index in stride(from: 255, through: 0, by: -1) {
-            if scalar.testBit(at: index) {
+            if scalar.isBitSet(at: index) {
                 resultZero = resultZero.add(resultOne)
                 resultOne = resultOne.double()
             } else {

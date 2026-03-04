@@ -41,12 +41,12 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         onePrivateKey[31] = 0x01
 
         #expect(
-            !StandardsForEfficientCryptography256k1CurveModel.Operation.validatePrivateKeyData32Bytes(
+            !StandardsForEfficientCryptography256k1CurveModel.Operation.isPrivateKeyData32BytesValid(
                 zeroPrivateKey
             )
         )
         #expect(
-            StandardsForEfficientCryptography256k1CurveModel.Operation.validatePrivateKeyData32Bytes(
+            StandardsForEfficientCryptography256k1CurveModel.Operation.isPrivateKeyData32BytesValid(
                 onePrivateKey
             )
         )

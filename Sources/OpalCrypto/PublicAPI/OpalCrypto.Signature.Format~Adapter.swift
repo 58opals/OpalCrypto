@@ -1,6 +1,6 @@
 import Foundation
 
-extension OpalCryptoFacade.Signature.Format {
+extension OpalCrypto.Signature.Format {
     var internalFormat: EllipticCurveDigitalSignatureAlgorithmModel.SignatureFormat {
         switch self {
         case .ecdsa(let encoding):

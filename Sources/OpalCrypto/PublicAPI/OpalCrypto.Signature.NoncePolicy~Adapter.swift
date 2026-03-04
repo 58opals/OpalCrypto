@@ -1,13 +1,13 @@
 import Foundation
 
-extension OpalCryptoFacade.Signature.NoncePolicy {
+extension OpalCrypto.Signature.NoncePolicy {
     var internalNoncePolicy: NonceGenerationPolicy {
         switch self {
-        case .requestForComments6979:
+        case .rfc6979:
             return .requestForComments6979BitcoinCashDefault
-        case .bitcoinImprovementProposalSchnorrDeterministic:
+        case .bip340Deterministic:
             return .bitcoinImprovementProposalSchnorrDeterministic
-        case .systemRandom:
+        case .random:
             return .systemRandom
         }
     }
