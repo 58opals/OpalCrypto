@@ -1,4 +1,4 @@
-// ScalarMultiplicationModel+Endomorphism.swift
+// ScalarMultiplicationModel~Endomorphism.swift
 
 import Foundation
 

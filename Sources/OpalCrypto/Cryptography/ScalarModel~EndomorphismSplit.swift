@@ -1,4 +1,4 @@
-// ScalarModel+EndomorphismSplit.swift
+// ScalarModel~EndomorphismSplit.swift
 
 import Foundation
 

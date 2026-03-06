@@ -1,3 +1,5 @@
+// PublicKeyParserModel.swift
+
 import Foundation
 
 enum PublicKeyParserModel {

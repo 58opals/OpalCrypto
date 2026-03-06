@@ -1,3 +1,5 @@
+// OpalCrypto+Signature.swift
+
 import Foundation
 
 extension OpalCrypto {

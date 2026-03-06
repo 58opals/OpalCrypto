@@ -1,4 +1,4 @@
-// ScalarMultiplicationModel+GeneratorPrecompute.swift
+// ScalarMultiplicationModel~GeneratorPrecompute.swift
 
 import Foundation
 

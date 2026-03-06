@@ -1,3 +1,5 @@
+// OpalCrypto.Signature.Format~Adapter.swift
+
 import Foundation
 
 extension OpalCrypto.Signature.Format {

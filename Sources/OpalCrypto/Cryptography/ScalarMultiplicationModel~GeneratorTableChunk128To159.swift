@@ -1,4 +1,4 @@
-// ScalarMultiplicationModel~GeneratorTableChunk128_159.swift
+// ScalarMultiplicationModel~GeneratorTableChunk128To159.swift
 
 import Foundation
 

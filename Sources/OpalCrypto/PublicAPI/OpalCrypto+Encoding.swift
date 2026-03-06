@@ -1,3 +1,5 @@
+// OpalCrypto+Encoding.swift
+
 import Foundation
 
 extension OpalCrypto {

@@ -1,4 +1,4 @@
-//  StandardsForEfficientCryptography256k1CurveModel.swift
+// StandardsForEfficientCryptography256k1CurveModel.swift
 
 import Foundation
 

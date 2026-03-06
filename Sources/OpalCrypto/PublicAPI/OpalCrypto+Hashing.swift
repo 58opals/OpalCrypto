@@ -1,3 +1,5 @@
+// OpalCrypto+Hashing.swift
+
 import Foundation
 
 extension OpalCrypto {

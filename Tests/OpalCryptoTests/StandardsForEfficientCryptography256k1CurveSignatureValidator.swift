@@ -1,3 +1,5 @@
+// StandardsForEfficientCryptography256k1CurveSignatureValidator.swift
+
 import Foundation
 import Testing
 @testable import OpalCrypto
