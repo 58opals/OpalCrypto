@@ -32,7 +32,7 @@ extension OpalCrypto {
         public static func derivePublicKey(fromPrivateKey privateKey: Data) throws -> Data {
             try validatePrivateKeyLength(privateKey)
             do {
-                return try EllipticCurveDigitalSignatureAlgorithmModel.derivePublicKey(from: privateKey)
+                return try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKey)
             } catch {
                 throw mapCryptographyError(error)
             }
@@ -165,6 +165,27 @@ extension OpalCrypto {
                      .derMalformed,
                      .derNonCanonical,
                      .randomGenerationFailed:
+                    return .cryptographyFailure
+                }
+            }
+
+            if let secpFacadeError = error as? OpalCrypto.Secp256k1.Error {
+                switch secpFacadeError {
+                case .invalidPrivateKeyLength(let expected, let actual):
+                    return .invalidPrivateKeyLength(expected: expected, actual: actual)
+                case .invalidPrivateKey, .invalidDerivedKey:
+                    return .cryptographyFailure
+                case .invalidPublicKeyLength(let expected, let actual):
+                    return .invalidPublicKeyLength(expected: expected, actual: actual)
+                case .invalidPublicKeyPrefix(let actual):
+                    return .invalidPublicKeyPrefix(actual: actual)
+                case .invalidPublicKey,
+                     .invalidTweakLength,
+                     .invalidTweak,
+                     .invalidSignatureLength,
+                     .invalidSignature,
+                     .invalidDER,
+                     .nonCanonicalDER:
                     return .cryptographyFailure
                 }
             }

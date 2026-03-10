@@ -59,7 +59,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             format: PublicKeyFormat? = nil
         ) throws -> Data {
             let publicAffine = try parsePublicKeyAffine(publicKey)
-            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: true)
+            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
             let tweakPoint = ScalarMultiplicationModel.mulG(tweakScalar)
             let combined = JacobianPointModel(affine: publicAffine).add(tweakPoint)
             guard let derivedAffine = combined.convertToAffine() else {

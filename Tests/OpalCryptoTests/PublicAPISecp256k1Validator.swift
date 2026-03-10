@@ -1,0 +1,117 @@
+// PublicAPISecp256k1Validator.swift
+
+import Foundation
+import Testing
+@testable import OpalCrypto
+
+@Suite("Public API secp256k1 validation")
+struct PublicAPISecp256k1Validator {
+    @Test("Validate private keys and derive compressed public keys")
+    func validatePrivateKeysAndDeriveCompressedPublicKeys() throws {
+        let zeroPrivateKey = Data(repeating: 0x00, count: 32)
+        let onePrivateKey = makePrivateKey(1)
+
+        #expect(!OpalCrypto.Secp256k1.isPrivateKeyValid(zeroPrivateKey))
+        #expect(OpalCrypto.Secp256k1.isPrivateKeyValid(onePrivateKey))
+        #expect(
+            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: onePrivateKey)
+                == Data(hexadecimal: generatorPublicKeyHex)
+        )
+    }
+
+    @Test("Apply tweak-add to private and public keys consistently")
+    func applyTweakAddToPrivateAndPublicKeysConsistently() throws {
+        let onePrivateKey = makePrivateKey(1)
+        let twoPrivateKey = makePrivateKey(2)
+        let tweak = makePrivateKey(1)
+
+        let tweakedPrivateKey = try OpalCrypto.Secp256k1.tweakAddPrivateKey(onePrivateKey, tweak: tweak)
+        #expect(tweakedPrivateKey == twoPrivateKey)
+
+        let parentPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: onePrivateKey)
+        let expectedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: twoPrivateKey)
+        let tweakedPublicKey = try OpalCrypto.Secp256k1.tweakAddPublicKey(parentPublicKey, tweak: tweak)
+
+        #expect(tweakedPublicKey == expectedPublicKey)
+    }
+
+    @Test("Round-trip DER encoding and reject non-canonical DER")
+    func roundTripDerEncodingAndRejectNonCanonicalDer() throws {
+        let rawSignature = makePrivateKey(1) + makePrivateKey(2)
+        let derSignature = try OpalCrypto.Secp256k1.encodeDER(rawSignature)
+        #expect(try OpalCrypto.Secp256k1.decodeDER(derSignature) == rawSignature)
+
+        let nonCanonicalDer = Data([0x30, 0x07, 0x02, 0x02, 0x00, 0x01, 0x02, 0x01, 0x02])
+        do {
+            _ = try OpalCrypto.Secp256k1.decodeDER(nonCanonicalDer)
+            Issue.record("Expected non-canonical DER error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .nonCanonicalDER)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Normalize and query low-S signatures")
+    func normalizeAndQueryLowSSignatures() throws {
+        let highSData = StandardsForEfficientCryptography256k1CurveModel.Constant.n
+            .subtractWord(1)
+            .data32Bytes
+        let rawSignature = makePrivateKey(1) + highSData
+
+        #expect(!(try OpalCrypto.Secp256k1.isLowS(rawSignature)))
+
+        let normalizedSignature = try OpalCrypto.Secp256k1.normalizeLowS(rawSignature)
+        #expect(try OpalCrypto.Secp256k1.isLowS(normalizedSignature))
+        #expect(Data(normalizedSignature.suffix(32)) == makePrivateKey(1))
+    }
+
+    @Test("Batch compressed public-key derivation matches single derivation")
+    func batchCompressedPublicKeyDerivationMatchesSingleDerivation() async throws {
+        let privateKeys = [1, 2, 3, 4].map(makePrivateKey)
+        let batchPublicKeys = try await OpalCrypto.Secp256k1.deriveCompressedPublicKeys(
+            from: privateKeys
+        )
+        let singlePublicKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+        }
+
+        #expect(batchPublicKeys == singlePublicKeys)
+    }
+
+    private let generatorPublicKeyHex = """
+    0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+    """
+
+    private func makePrivateKey(_ value: UInt8) -> Data {
+        Data(repeating: 0x00, count: 31) + Data([value])
+    }
+}
+
+private extension Data {
+    init(hexadecimal: String) throws {
+        let normalized = hexadecimal.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count.isMultiple(of: 2) else {
+            throw HexadecimalDataError.invalidLength
+        }
+
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(normalized.count / 2)
+        var cursor = normalized.startIndex
+        while cursor < normalized.endIndex {
+            let nextCursor = normalized.index(cursor, offsetBy: 2)
+            let pair = normalized[cursor..<nextCursor]
+            guard let byte = UInt8(pair, radix: 16) else {
+                throw HexadecimalDataError.invalidCharacter
+            }
+            bytes.append(byte)
+            cursor = nextCursor
+        }
+        self = Data(bytes)
+    }
+}
+
+private enum HexadecimalDataError: Error {
+    case invalidLength
+    case invalidCharacter
+}

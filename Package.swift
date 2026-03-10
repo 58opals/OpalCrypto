@@ -19,7 +19,10 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "OpalCrypto"
+            name: "OpalCrypto",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "OpalCryptoTests",

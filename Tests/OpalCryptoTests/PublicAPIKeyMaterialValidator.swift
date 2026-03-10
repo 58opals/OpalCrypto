@@ -1,0 +1,116 @@
+// PublicAPIKeyMaterialValidator.swift
+
+import Foundation
+import Testing
+import OpalCrypto
+
+@Suite("Public API key material validation")
+struct PublicAPIKeyMaterialValidator {
+    @Test("Round-trip mainnet wallet import format and reject invalid variants")
+    func roundTripMainnetWalletImportFormatAndRejectInvalidVariants() throws {
+        let privateKey = Data(privateKeyBytes)
+
+        let compressedWalletImportFormat = try OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: true)
+        #expect(try compressedWalletImportFormat.serialize() == compressedWalletImportFormatString)
+        #expect(try OpalCrypto.Key.WIF(compressedWalletImportFormatString) == compressedWalletImportFormat)
+
+        let uncompressedWalletImportFormat = try OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: false)
+        #expect(try uncompressedWalletImportFormat.serialize() == uncompressedWalletImportFormatString)
+        #expect(try OpalCrypto.Key.WIF(uncompressedWalletImportFormatString) == uncompressedWalletImportFormat)
+
+        do {
+            _ = try OpalCrypto.Key.WIF(invalidChecksumWalletImportFormatString)
+            Issue.record("Expected invalid checksum error.")
+        } catch let error as OpalCrypto.Key.WIF.Error {
+            #expect(error == .invalidChecksum)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        do {
+            _ = try OpalCrypto.Key.WIF(testnetWalletImportFormatString)
+            Issue.record("Expected invalid version error.")
+        } catch let error as OpalCrypto.Key.WIF.Error {
+            #expect(error == .invalidVersion(actual: 0xef))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Round-trip extended keys and derive raw child indices")
+    func roundTripExtendedKeysAndDeriveRawChildIndices() throws {
+        let rootKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: Data(hexadecimal: seedHex))
+        #expect(rootKey.serialize() == rootPrivateKeyString)
+        #expect(rootKey.publicKey.serialize() == rootPublicKeyString)
+        #expect(try OpalCrypto.Key.ExtendedPrivateKey(rootPrivateKeyString) == rootKey)
+        #expect(try OpalCrypto.Key.ExtendedPublicKey(rootPublicKeyString) == rootKey.publicKey)
+
+        let hardenedChild = try rootKey.derived(indices: [0x8000_0000])
+        #expect(hardenedChild.serialize() == hardenedChildPrivateKeyString)
+        #expect(hardenedChild.publicKey.serialize() == hardenedChildPublicKeyString)
+
+        let grandchild = try rootKey.derived(indices: [0x8000_0000, 1])
+        #expect(grandchild.serialize() == grandchildPrivateGrandchildString)
+        #expect(grandchild.publicKey.serialize() == grandchildPublicGrandchildString)
+
+        let derivedFromPublic = try OpalCrypto.Key.ExtendedPublicKey(hardenedChildPublicKeyString)
+            .derived(indices: [1])
+        #expect(derivedFromPublic.serialize() == grandchildPublicGrandchildString)
+    }
+
+    @Test("Reject hardened public derivation")
+    func rejectHardenedPublicDerivation() throws {
+        let publicKey = try OpalCrypto.Key.ExtendedPublicKey(hardenedChildPublicKeyString)
+
+        do {
+            _ = try publicKey.derived(indices: [0x8000_0000])
+            Issue.record("Expected hardened public derivation error.")
+        } catch let error as OpalCrypto.Key.ExtendedPublicKey.Error {
+            #expect(error == .hardenedDerivationRequiresPrivateKey)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    private let privateKeyBytes = Array(repeating: UInt8(0x00), count: 31) + [0x01]
+    private let compressedWalletImportFormatString = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
+    private let uncompressedWalletImportFormatString = "5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf"
+    private let invalidChecksumWalletImportFormatString = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWm"
+    private let testnetWalletImportFormatString = "cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA"
+
+    private let seedHex = "000102030405060708090a0b0c0d0e0f"
+    private let rootPrivateKeyString = "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi"
+    private let rootPublicKeyString = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+    private let hardenedChildPrivateKeyString = "xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7"
+    private let hardenedChildPublicKeyString = "xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw"
+    private let grandchildPrivateGrandchildString = "xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs"
+    private let grandchildPublicGrandchildString = "xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ"
+}
+
+private extension Data {
+    init(hexadecimal: String) throws {
+        let normalized = hexadecimal.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count.isMultiple(of: 2) else {
+            throw HexadecimalDataError.invalidLength
+        }
+
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(normalized.count / 2)
+        var cursor = normalized.startIndex
+        while cursor < normalized.endIndex {
+            let nextCursor = normalized.index(cursor, offsetBy: 2)
+            let pair = normalized[cursor..<nextCursor]
+            guard let byte = UInt8(pair, radix: 16) else {
+                throw HexadecimalDataError.invalidCharacter
+            }
+            bytes.append(byte)
+            cursor = nextCursor
+        }
+        self = Data(bytes)
+    }
+}
+
+private enum HexadecimalDataError: Error {
+    case invalidLength
+    case invalidCharacter
+}
