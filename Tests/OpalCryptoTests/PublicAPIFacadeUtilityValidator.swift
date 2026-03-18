@@ -6,6 +6,11 @@ import OpalCrypto
 
 @Suite("Public API facade utility validation")
 struct PublicAPIFacadeUtilityValidator {
+    private let hash160ExpectedValue = Data([
+        0xA1, 0x0C, 0xE7, 0xD9, 0x53, 0x01, 0xB2, 0xFE, 0x80, 0x43,
+        0x1D, 0xF4, 0xF9, 0xE3, 0xD5, 0xD9, 0x72, 0x57, 0x07, 0x6D
+    ])
+
     @Test("Exercise hash, encoding, checksum, key-derivation, and numeric APIs")
     func exerciseHashEncodingKeyDerivationAndNumericAPIs() throws {
         let payloadData = Data("opal-api-facade".utf8)
@@ -29,7 +34,7 @@ struct PublicAPIFacadeUtilityValidator {
         #expect(base58Decoded == payloadData)
 
         let base32FiveBitInput = Data([0, 1, 2, 3, 4, 5, 30, 31])
-        let base32Encoded = OpalCrypto.Encoding.encodeBase32(
+        let base32Encoded = try OpalCrypto.Encoding.encodeBase32(
             base32FiveBitInput,
             interpretedAsFiveBitValues: true
         )
@@ -74,5 +79,76 @@ struct PublicAPIFacadeUtilityValidator {
         #expect(unsigned256.isBitSet(at: 0))
         #expect(unsigned512.bytes64.count == 64)
         #expect(fullWidthProduct.bytes64.count == 64)
+    }
+
+    @Test("Compute Hash160 known-answer value")
+    func computeHash160KnownAnswerValue() {
+        let payloadData = Data("opal-api-facade".utf8)
+        let secureHash160 = OpalCrypto.Hashing.computeHash160(payloadData)
+
+        #expect(secureHash160 == hash160ExpectedValue)
+    }
+
+    @Test("Exercise Base32 byte-mode round-trips with leading zero payloads")
+    func exerciseBase32ByteModeRoundTripsWithLeadingZeroPayloads() throws {
+        let payloads = [
+            Data([0x00]),
+            Data([0x00, 0x00, 0x01]),
+            Data([0x00, 0x10, 0xFF, 0x00])
+        ]
+
+        for payload in payloads {
+            let encoded = try OpalCrypto.Encoding.encodeBase32(
+                payload,
+                interpretedAsFiveBitValues: false
+            )
+            let decoded = try OpalCrypto.Encoding.decodeBase32(
+                encoded,
+                interpretedAsFiveBitValues: false
+            )
+            #expect(decoded == payload)
+        }
+    }
+
+    @Test("Reject invalid five-bit Base32 input bytes")
+    func rejectInvalidFiveBitBase32InputBytes() {
+        let invalidInputs = [
+            Data([0x20]),
+            Data([0xFF]),
+            Data([0x01, 0x20, 0x02])
+        ]
+
+        for invalidInput in invalidInputs {
+            do {
+                _ = try OpalCrypto.Encoding.encodeBase32(
+                    invalidInput,
+                    interpretedAsFiveBitValues: true
+                )
+                Issue.record("Expected invalid five-bit Base32 input error.")
+            } catch let error as OpalCrypto.Encoding.Error {
+                if case .invalidFiveBitValue(let actual) = error {
+                    #expect(invalidInput.contains(actual))
+                } else {
+                    Issue.record("Unexpected Base32 error: \(error)")
+                }
+            } catch {
+                Issue.record("Unexpected error type: \(error)")
+            }
+        }
+    }
+
+    @Test("Reject invalid Base32 decode characters through the public facade")
+    func rejectInvalidBase32DecodeCharactersThroughThePublicFacade() {
+        do {
+            _ = try OpalCrypto.Encoding.decodeBase32(
+                "!",
+                interpretedAsFiveBitValues: true
+            )
+            Issue.record("Expected invalid Base32 decode character error.")
+        } catch let error as OpalCrypto.Encoding.Error {
+            #expect(error == .invalidCharacterFound)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
     }
 }

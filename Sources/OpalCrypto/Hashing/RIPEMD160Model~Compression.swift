@@ -1,8 +1,8 @@
-// RipeMessageDigest160Model~Compression.swift
+// RIPEMD160Model~Compression.swift
 
 import Foundation
 
-extension RipeMessageDigest160Model {
+extension RIPEMD160Model {
     mutating func compress(_ X: UnsafePointer<UInt32>) {
         var (a1, b1, c1, d1, e1) = hashState
         var (a2, b2, c2, d2, e2) = hashState

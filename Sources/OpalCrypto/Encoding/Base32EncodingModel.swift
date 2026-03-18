@@ -10,17 +10,22 @@ internal struct Base32EncodingModel {
         "c", "e", "6", "m", "u", "a", "7", "l"
     ]
     private static let baseNumber: Int = characters.count
+    private static let zeroCharacter = characters[0]
 
-    internal static func encode(_ data: Data, interpretedAsFiveBitValues: Bool) -> String {
+    internal static func encode(_ data: Data, interpretedAsFiveBitValues: Bool) throws -> String {
         switch interpretedAsFiveBitValues {
         case true:
             var result = String()
             result.reserveCapacity(data.count)
             for value in data {
+                guard value < UInt8(characters.count) else {
+                    throw Error.invalidFiveBitValue(actual: value)
+                }
                 result.append(characters[Int(value)])
             }
             return result
         case false:
+            let leadingZeroByteCount = data.prefix(while: { $0 == 0 }).count
             var value = LargeUnsignedIntegerArithmeticModel(data)
             var charactersResult: [Character] = .init()
             charactersResult.reserveCapacity(Swift.max(1, data.count * 2))
@@ -28,7 +33,8 @@ internal struct Base32EncodingModel {
                 let remainder = value.divide(by: baseNumber)
                 charactersResult.append(characters[remainder])
             }
-            return String(charactersResult.reversed())
+            let leadingZeroPrefix = String(repeating: String(zeroCharacter), count: leadingZeroByteCount)
+            return leadingZeroPrefix + String(charactersResult.reversed())
         }
     }
 
@@ -46,10 +52,10 @@ internal struct Base32EncodingModel {
                 }
             }
         case false:
+            let normalizedCharacters = try string.map(normalizeCharacter)
+            let leadingZeroCharacterCount = normalizedCharacters.prefix(while: { $0 == zeroCharacter }).count
             var value = LargeUnsignedIntegerArithmeticModel(0)
-            for character in string {
-                let normalizedCharacter = try normalizeCharacter(character)
-
+            for normalizedCharacter in normalizedCharacters {
                 if let index = characters.firstIndex(of: normalizedCharacter) {
                     value.multiply(by: baseNumber)
                     value.add(index)
@@ -57,7 +63,8 @@ internal struct Base32EncodingModel {
                     throw Error.invalidCharacterFound
                 }
             }
-            data = value.serialize()
+            data = Data(repeating: 0x00, count: leadingZeroCharacterCount)
+            data.append(value.serialize())
         }
         return data
     }

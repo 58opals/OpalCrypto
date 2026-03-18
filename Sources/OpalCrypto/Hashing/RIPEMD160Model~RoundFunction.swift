@@ -1,8 +1,8 @@
-// RipeMessageDigest160Model~RoundFunction.swift
+// RIPEMD160Model~RoundFunction.swift
 
 import Foundation
 
-extension RipeMessageDigest160Model {
+extension RIPEMD160Model {
     func rotateLeft(_ x: UInt32, _ n: UInt32) -> UInt32 {
         (x << n) | (x >> (32 - n))
     }

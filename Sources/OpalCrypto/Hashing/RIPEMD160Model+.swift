@@ -1,8 +1,8 @@
-// RipeMessageDigest160Model+.swift
+// RIPEMD160Model+.swift
 
 import Foundation
 
-extension RipeMessageDigest160Model {
+extension RIPEMD160Model {
     static func hash(_ data: Data) -> Data {
         var ripeMessageDigest = Self()
         ripeMessageDigest.update(data: data)
@@ -11,7 +11,7 @@ extension RipeMessageDigest160Model {
 }
 
 // MARK: - RIPEMD-160 Hashing
-extension RipeMessageDigest160Model {
+extension RIPEMD160Model {
     mutating func update(data: Data) {
         withUnsafeTemporaryAllocation(of: UInt32.self, capacity: 16) { words in
             words.initialize(repeating: 0)

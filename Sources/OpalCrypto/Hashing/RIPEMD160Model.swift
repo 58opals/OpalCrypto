@@ -1,8 +1,8 @@
-// RipeMessageDigest160Model.swift
+// RIPEMD160Model.swift
 
 import Foundation
 
-struct RipeMessageDigest160Model {
+struct RIPEMD160Model {
     var hashState: (UInt32, UInt32, UInt32, UInt32, UInt32)
     var messageBuffer: Data
     var processedBytesCount: Int64 // Total number of bytes processed.
