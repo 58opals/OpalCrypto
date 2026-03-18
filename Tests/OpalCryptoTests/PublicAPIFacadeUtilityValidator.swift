@@ -6,7 +6,7 @@ import OpalCrypto
 
 @Suite("Public API facade utility validation")
 struct PublicAPIFacadeUtilityValidator {
-    private let hash160ExpectedValue = Data([
+    private let hash160ShortPayloadExpectedValue = Data([
         0xA1, 0x0C, 0xE7, 0xD9, 0x53, 0x01, 0xB2, 0xFE, 0x80, 0x43,
         0x1D, 0xF4, 0xF9, 0xE3, 0xD5, 0xD9, 0x72, 0x57, 0x07, 0x6D
     ])
@@ -81,12 +81,34 @@ struct PublicAPIFacadeUtilityValidator {
         #expect(fullWidthProduct.bytes64.count == 64)
     }
 
-    @Test("Compute Hash160 known-answer value")
-    func computeHash160KnownAnswerValue() {
-        let payloadData = Data("opal-api-facade".utf8)
-        let secureHash160 = OpalCrypto.Hashing.computeHash160(payloadData)
+    @Test("Compute Hash160 known-answer values across padding boundaries")
+    func computeHash160KnownAnswerValuesAcrossPaddingBoundaries() throws {
+        let vectors: [(payload: Data, expectedDigest: Data)] = [
+            (
+                Data("opal-api-facade".utf8),
+                hash160ShortPayloadExpectedValue
+            ),
+            (
+                Data((0..<55).map { UInt8($0) }),
+                try Data(hexadecimal: "bf13f7b98f39c80e64ac320ce6550f2f1faa1ce1")
+            ),
+            (
+                Data((0..<56).map { UInt8($0) }),
+                try Data(hexadecimal: "6e02e5a92245d871fa8b65679d9f2457164ecd6f")
+            ),
+            (
+                Data((0..<64).map { UInt8($0) }),
+                try Data(hexadecimal: "dd21d9434f79e153b82e7d204ea5279200d0d022")
+            ),
+            (
+                Data((0..<80).map { UInt8($0) }),
+                try Data(hexadecimal: "b925a791a40f5bf59ef303b00f7c9970818dbe2b")
+            )
+        ]
 
-        #expect(secureHash160 == hash160ExpectedValue)
+        for vector in vectors {
+            #expect(OpalCrypto.Hashing.computeHash160(vector.payload) == vector.expectedDigest)
+        }
     }
 
     @Test("Exercise Base32 byte-mode round-trips with leading zero payloads")
@@ -110,30 +132,85 @@ struct PublicAPIFacadeUtilityValidator {
         }
     }
 
-    @Test("Reject invalid five-bit Base32 input bytes")
-    func rejectInvalidFiveBitBase32InputBytes() {
-        let invalidInputs = [
-            Data([0x20]),
-            Data([0xFF]),
-            Data([0x01, 0x20, 0x02])
+    @Test("Encode Base32 byte-mode using canonical known-answer strings")
+    func encodeBase32ByteModeUsingCanonicalKnownAnswerStrings() throws {
+        let vectors: [(payload: Data, expectedEncoding: String)] = [
+            (Data([0x00]), "q"),
+            (Data([0x00, 0x00, 0x01]), "qqp"),
+            (Data([0x00, 0x10, 0xFF, 0x00]), "qpplcq")
+        ]
+
+        for vector in vectors {
+            let encoded = try OpalCrypto.Encoding.encodeBase32(
+                vector.payload,
+                interpretedAsFiveBitValues: false
+            )
+            #expect(encoded == vector.expectedEncoding)
+        }
+    }
+
+    @Test("Decode Base32 byte-mode known-answer strings with leading zero prefixes")
+    func decodeBase32ByteModeKnownAnswerStringsWithLeadingZeroPrefixes() throws {
+        let vectors: [(encoded: String, expectedPayload: Data)] = [
+            ("q", Data([0x00])),
+            ("qqp", Data([0x00, 0x00, 0x01])),
+            ("qqqz", Data([0x00, 0x00, 0x00, 0x02])),
+            ("qq0n4", Data([0x00, 0x00, 0x3E, 0x75]))
+        ]
+
+        for vector in vectors {
+            let decoded = try OpalCrypto.Encoding.decodeBase32(
+                vector.encoded,
+                interpretedAsFiveBitValues: false
+            )
+            #expect(decoded == vector.expectedPayload)
+        }
+    }
+
+    @Test("Reject invalid single-byte five-bit Base32 input bytes exactly")
+    func rejectInvalidSingleByteFiveBitBase32InputBytesExactly() {
+        let invalidInputs: [(input: Data, expectedActual: UInt8)] = [
+            (Data([0x20]), 0x20),
+            (Data([0xFF]), 0xFF)
         ]
 
         for invalidInput in invalidInputs {
             do {
                 _ = try OpalCrypto.Encoding.encodeBase32(
-                    invalidInput,
+                    invalidInput.input,
                     interpretedAsFiveBitValues: true
                 )
                 Issue.record("Expected invalid five-bit Base32 input error.")
             } catch let error as OpalCrypto.Encoding.Error {
                 if case .invalidFiveBitValue(let actual) = error {
-                    #expect(invalidInput.contains(actual))
+                    #expect(actual == invalidInput.expectedActual)
                 } else {
                     Issue.record("Unexpected Base32 error: \(error)")
                 }
             } catch {
                 Issue.record("Unexpected error type: \(error)")
             }
+        }
+    }
+
+    @Test("Reject mixed five-bit Base32 input at the exact offending byte")
+    func rejectMixedFiveBitBase32InputAtTheExactOffendingByte() {
+        let invalidInput = Data([0x01, 0x20, 0x02])
+
+        do {
+            _ = try OpalCrypto.Encoding.encodeBase32(
+                invalidInput,
+                interpretedAsFiveBitValues: true
+            )
+            Issue.record("Expected invalid five-bit Base32 input error.")
+        } catch let error as OpalCrypto.Encoding.Error {
+            if case .invalidFiveBitValue(let actual) = error {
+                #expect(actual == 0x20)
+            } else {
+                Issue.record("Unexpected Base32 error: \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -151,4 +228,32 @@ struct PublicAPIFacadeUtilityValidator {
             Issue.record("Unexpected error type: \(error)")
         }
     }
+}
+
+private extension Data {
+    init(hexadecimal: String) throws {
+        let normalized = hexadecimal.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count.isMultiple(of: 2) else {
+            throw HexadecimalDataError.invalidLength
+        }
+
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(normalized.count / 2)
+        var cursor = normalized.startIndex
+        while cursor < normalized.endIndex {
+            let nextCursor = normalized.index(cursor, offsetBy: 2)
+            let pair = normalized[cursor..<nextCursor]
+            guard let byte = UInt8(pair, radix: 16) else {
+                throw HexadecimalDataError.invalidCharacter
+            }
+            bytes.append(byte)
+            cursor = nextCursor
+        }
+        self = Data(bytes)
+    }
+}
+
+private enum HexadecimalDataError: Error {
+    case invalidLength
+    case invalidCharacter
 }
