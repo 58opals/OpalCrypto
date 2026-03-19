@@ -1,19 +1,10 @@
 # OpalCrypto
 
-A Swift package that exposes cryptography through a strict facade-first public API.
+OpalCrypto is the BCH cryptography toolkit for Swift apps and packages. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
-## Features
+## Audience
 
-`OpalCrypto` is the only public namespace:
-
-- `Signature`: derive secp256k1 public keys, sign, and verify with facade-owned formats and nonce policies.
-- `Hashing`: SHA-256 family helpers, Hash160 (SHA-256 then RIPEMD-160), and HMAC-SHA512.
-- `Encoding`: Base58 encode/decode, Bech32-style Base32 primitives, and polymod checksum.
-- `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
-- `KeyDerivation`: PBKDF2 key derivation.
-- `Numeric`: facade wrappers `UInt256`, `UInt512`, and `BigUnsignedInteger`.
-
-The Base32 and polymod APIs use the Bech32 alphabet (`qpzry9x8gf2tvdw0s3jn54khce6mua7l`) and are intentionally low-level. `interpretedAsFiveBitValues: true` treats each byte as a five-bit symbol, while `false` performs byte-mode radix conversion and preserves leading zero bytes on round-trip.
+Use OpalCrypto when you are building Swift BCH software and need stable cryptographic capabilities behind one public facade instead of wiring lower-level primitives directly into app or package code.
 
 ## Requirements
 
@@ -25,95 +16,58 @@ The Base32 and polymod APIs use the Bech32 alphabet (`qpzry9x8gf2tvdw0s3jn54khce
   - `tvOS 26`
   - `visionOS 26`
 
-## Installation (SwiftPM)
+## Installation
 
-Add OpalCrypto to your package dependencies:
+The current public facade surface is published from the `develop` branch.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "main")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "develop")
 ]
 ```
 
 Then add `"OpalCrypto"` to the target dependency list where you need it.
 
-## Quickstart
-
-### Example A: Derive Public Key, Sign, and Verify
+## Quick Start
 
 ```swift
 import Foundation
 import OpalCrypto
 
-var privateKeyData = Data(repeating: 0x00, count: 32)
-privateKeyData[31] = 0x01
-let messageData = Data("opal-ecdsa-message".utf8)
+var privateKey = Data(repeating: 0x00, count: 32)
+privateKey[31] = 0x01
+let message = Data("opal-ecdsa-message".utf8)
 
-let publicKeyData = try OpalCrypto.Signature.derivePublicKey(
-    fromPrivateKey: privateKeyData
+let publicKey = try OpalCrypto.Signature.derivePublicKey(
+    fromPrivateKey: privateKey
 )
-
-let signatureData = try OpalCrypto.Signature.sign(
-    message: messageData,
-    privateKey: privateKeyData,
-    format: .ecdsa(.der),
-    nonce: .rfc6979
+let signature = try OpalCrypto.Signature.sign(
+    message: message,
+    privateKey: privateKey,
+    format: .ecdsa(.der)
 )
-
 let isValid = try OpalCrypto.Signature.verify(
-    signature: signatureData,
-    message: messageData,
-    publicKey: publicKeyData,
+    signature: signature,
+    message: message,
+    publicKey: publicKey,
     format: .ecdsa(.der)
 )
 ```
 
-For Schnorr signatures, use `format: .schnorr` and pass 32-byte digest data.
+For Schnorr signatures, use `format: .schnorr` and pass a 32-byte digest as the message input.
 
-### Example B: Hash, Base58 Round-trip, and PBKDF2
+## Key Capabilities
 
-```swift
-import Foundation
-import OpalCrypto
+- `Signature`: secp256k1 public-key derivation plus ECDSA and Schnorr signing and verification with facade-owned formats and nonce policies.
+- `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
+- `Hashing`: SHA-256, Hash256, Hash160, and HMAC-SHA512 helpers.
+- `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives.
+- `KeyDerivation`: PBKDF2 key derivation.
+- `Numeric`: `UInt256`, `UInt512`, and `BigUnsignedInteger` facade wrappers.
 
-let payloadData = Data("opal-api-facade".utf8)
-
-let sha256 = OpalCrypto.Hashing.computeSHA256(payloadData)
-let doubleSha256 = OpalCrypto.Hashing.computeHash256(payloadData)
-let hash160 = OpalCrypto.Hashing.computeHash160(payloadData)
-
-let base58Text = OpalCrypto.Encoding.encodeBase58(payloadData)
-let decodedPayload = OpalCrypto.Encoding.decodeBase58(base58Text)
-
-let derivedKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
-    password: Data("password".utf8),
-    salt: Data("salt".utf8),
-    iterationCount: 4096,
-    derivedKeyLength: 32
-)
-```
-
-### Example C: Mnemonic, Extended Key, and WIF
-
-```swift
-import Foundation
-import OpalCrypto
-
-let mnemonic = try OpalCrypto.Key.Mnemonic(
-    phrase: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
-    language: .english
-)
-let seed = try mnemonic.deriveSeed(passphrase: "TREZOR")
-let rootKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: seed)
-let walletImportFormat = try OpalCrypto.Key.WIF(
-    privateKey: rootKey.privateKey,
-    isCompressed: true
-).serialize()
-```
+The Base32 APIs use the Bech32 alphabet and stay intentionally low-level; `interpretedAsFiveBitValues` switches between five-bit symbol input and byte-mode radix conversion.
 
 ## Testing
-
-Run the package test suite:
 
 ```bash
 swift test
