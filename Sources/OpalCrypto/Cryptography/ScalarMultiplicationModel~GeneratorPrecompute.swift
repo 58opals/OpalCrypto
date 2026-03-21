@@ -14,7 +14,7 @@ extension ScalarMultiplicationModel {
         makeOddMultiplesAffineTable(for: generator.applyEndomorphism())
     }()
     
-    private static func makeOddMultiplesAffineTable(for basePoint: AffinePointModel) -> InlineArray<8, AffinePointModel> {
+    static func makeOddMultiplesAffineTable(for basePoint: AffinePointModel) -> InlineArray<8, AffinePointModel> {
         var jacobianPoints: [JacobianPointModel] = .init()
         jacobianPoints.reserveCapacity(windowedNonAdjacentFormOddMultipleCount)
         

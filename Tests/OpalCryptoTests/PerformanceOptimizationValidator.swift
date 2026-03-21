@@ -56,10 +56,62 @@ struct PerformanceOptimizationValidator {
         )
         let compressedPoint = try PublicKeyParserModel.parsePublicKey(compressedPublicKey)
         let uncompressedPublicKey = compressedPoint.encodeUncompressed65()
-        let uncompressedPoint = try PublicKeyParserModel.parsePublicKey(uncompressedPublicKey)
+        let compressedVerificationKey = try OpalCrypto.Signature.VerificationKey(
+            publicKey: compressedPublicKey
+        )
+        let uncompressedVerificationKey = try OpalCrypto.Signature.VerificationKey(
+            publicKey: uncompressedPublicKey
+        )
 
-        #expect(compressedPoint.encodeCompressed33() == compressedPublicKey)
-        #expect(uncompressedPoint == compressedPoint)
+        #expect(compressedVerificationKey == uncompressedVerificationKey)
+        #expect(compressedVerificationKey.publicKey == compressedPublicKey)
+    }
+
+    @Test("Joint generator and cached-key multiplication matches separate multiplication")
+    func jointGeneratorAndCachedKeyMultiplicationMatchesSeparateMultiplication() throws {
+        let publicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: makePrivateKey(11)
+        )
+        let verificationKeyModel = try VerificationKeyModel(publicKeyData: publicKey)
+        let generatorScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .parseTweakScalar(
+                makePrivateKey(13),
+                requireNonZero: false
+            )
+        let verificationKeyScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .parseTweakScalar(
+                makePrivateKey(17),
+                requireNonZero: false
+            )
+
+        let expectedPoint = ScalarMultiplicationModel.mulG(generatorScalar).add(
+            ScalarMultiplicationModel.mulWithDoubleAndAddLadder(
+                verificationKeyScalar,
+                verificationKeyModel.affinePoint
+            )
+        )
+        let actualPoint = ScalarMultiplicationModel.mulJointGeneratorAndVerificationKey(
+            generatorScalar: generatorScalar,
+            verificationKeyScalar: verificationKeyScalar,
+            verificationKeyModel: verificationKeyModel
+        )
+
+        #expect(actualPoint.convertToAffine() == expectedPoint.convertToAffine())
+    }
+
+    @Test("Extended public and private derivation remain aligned with cached public-key fast paths")
+    func extendedPublicAndPrivateDerivationRemainAlignedWithCachedPublicKeyFastPaths() throws {
+        let seed = Data((0..<16).map(UInt8.init))
+        let rootPrivateKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: seed)
+        let hardenedPrivateChild = try rootPrivateKey.derived(indices: [0x8000_0000])
+        let derivedFromPrivate = try rootPrivateKey.derived(
+            indices: [0x8000_0000, 1, 2, 3]
+        ).publicKey
+        let derivedFromPublic = try hardenedPrivateChild.publicKey.derived(
+            indices: [1, 2, 3]
+        )
+
+        #expect(derivedFromPublic == derivedFromPrivate)
     }
 
     private func makePrivateKey(_ value: Int) -> Data {

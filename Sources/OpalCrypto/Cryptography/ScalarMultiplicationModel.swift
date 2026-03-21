@@ -23,8 +23,15 @@ enum ScalarMultiplicationModel {
         return affineTable
     }()
     
-    @inlinable
     static func mul(_ scalar: ScalarModel, _ point: AffinePointModel) -> JacobianPointModel {
+        let verificationKeyModel = VerificationKeyModel(affinePoint: point)
+        return mul(scalar, verificationKeyModel)
+    }
+
+    static func mulWithDoubleAndAddLadder(
+        _ scalar: ScalarModel,
+        _ point: AffinePointModel
+    ) -> JacobianPointModel {
         var resultZero = JacobianPointModel.infinity
         var resultOne = JacobianPointModel(affine: point)
         for index in stride(from: 255, through: 0, by: -1) {

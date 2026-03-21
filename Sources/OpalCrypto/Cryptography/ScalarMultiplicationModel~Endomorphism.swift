@@ -8,24 +8,13 @@ extension ScalarMultiplicationModel {
         let split = scalar.splitForEndomorphism()
         let firstDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(split.firstScalar, width: windowedNonAdjacentFormWidth)
         let secondDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(split.secondScalar, width: windowedNonAdjacentFormWidth)
-        
-        let maximumCount = max(firstDigits.count, secondDigits.count)
-        guard maximumCount > 0 else {
-            return .infinity
-        }
-        
-        var result = JacobianPointModel.infinity
-        for index in stride(from: maximumCount - 1, through: 0, by: -1) {
-            result = result.double()
-            
-            if index < firstDigits.count {
-                result = addWindowedDigit(firstDigits[index], using: generatorOddMultiplesAffine, to: result)
-            }
-            if index < secondDigits.count {
-                result = addWindowedDigit(secondDigits[index], using: generatorEndomorphismOddMultiplesAffine, to: result)
-            }
-        }
-        return result
+
+        return multiplyWindowedDigits(
+            primaryDigits: firstDigits,
+            primaryTable: generatorOddMultiplesAffine,
+            secondaryDigits: secondDigits,
+            secondaryTable: generatorEndomorphismOddMultiplesAffine
+        )
     }
     
     @inlinable

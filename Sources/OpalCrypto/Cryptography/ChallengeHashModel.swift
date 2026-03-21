@@ -13,13 +13,37 @@ enum ChallengeHashModel {
         r: FieldElementModel,
         publicKey: AffinePointModel
     ) throws -> ScalarModel {
+        try makeChallengeScalar(
+            digest32: digest32,
+            r: r,
+            compressedPublicKeyData: publicKey.encodeCompressed33()
+        )
+    }
+
+    static func makeChallengeScalar(
+        digest32: Data,
+        r: FieldElementModel,
+        verificationKeyModel: VerificationKeyModel
+    ) throws -> ScalarModel {
+        try makeChallengeScalar(
+            digest32: digest32,
+            r: r,
+            compressedPublicKeyData: verificationKeyModel.compressedPublicKeyData
+        )
+    }
+
+    private static func makeChallengeScalar(
+        digest32: Data,
+        r: FieldElementModel,
+        compressedPublicKeyData: Data
+    ) throws -> ScalarModel {
         guard digest32.count == 32 else {
             throw Error.invalidDigestLength(actual: digest32.count)
         }
         var input = Data()
         input.reserveCapacity(97)
         input.appendUnsigned256BitIntegerBigEndian(r.value)
-        publicKey.appendCompressed33Bytes(to: &input)
+        input.append(compressedPublicKeyData)
         input.append(digest32)
         let hashData = SecureHashAlgorithm256Model.hash(input)
         let hashValue = try Unsigned256BitIntegerModel(contiguousBytes32: hashData)

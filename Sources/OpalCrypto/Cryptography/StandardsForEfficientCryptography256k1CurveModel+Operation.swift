@@ -58,15 +58,31 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             tweakData32Bytes: Data,
             format: PublicKeyFormat? = nil
         ) throws -> Data {
-            let publicAffine = try parsePublicKeyAffine(publicKey)
-            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
-            let tweakPoint = ScalarMultiplicationModel.mulG(tweakScalar)
-            let combined = JacobianPointModel(affine: publicAffine).add(tweakPoint)
-            guard let derivedAffine = combined.convertToAffine() else {
-                throw Error.invalidDerivedPublicKey
-            }
+            let verificationKeyModel = try makeVerificationKey(publicKey: publicKey)
             let resolvedFormat = try resolveFormat(from: publicKey, format: format)
-            return encodePublicKey(derivedAffine, format: resolvedFormat)
+            return try tweakAddPublicKey(
+                verificationKeyModel,
+                tweakData32Bytes: tweakData32Bytes,
+                format: resolvedFormat
+            )
+        }
+
+        internal static func tweakAddPublicKey(
+            _ verificationKeyModel: VerificationKeyModel,
+            tweakData32Bytes: Data,
+            format: PublicKeyFormat
+        ) throws -> Data {
+            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
+            let derivedVerificationKeyModel = try tweakAddVerificationKey(
+                verificationKeyModel,
+                tweakScalar: tweakScalar
+            )
+            switch format {
+            case .compressed:
+                return derivedVerificationKeyModel.compressedPublicKeyData
+            case .uncompressed:
+                return derivedVerificationKeyModel.affinePoint.encodeUncompressed65()
+            }
         }
     }
 }

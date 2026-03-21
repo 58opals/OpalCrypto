@@ -13,7 +13,22 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         guard compressedPublicKey.count == 33 else { throw Error.invalidCompressedPublicKeyLength }
         let prefix = compressedPublicKey[0]
         guard prefix == 0x02 || prefix == 0x03 else { throw Error.invalidCompressedPublicKeyPrefix }
+        let verificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .makeVerificationKey(publicKey: compressedPublicKey)
+        return try verify(
+            signature: signature,
+            message: message,
+            verificationKeyModel: verificationKeyModel,
+            format: format
+        )
+    }
 
+    internal static func verify(
+        signature: Data,
+        message: Data,
+        verificationKeyModel: VerificationKeyModel,
+        format: SignatureFormat
+    ) throws -> Bool {
         switch format {
         case .ecdsa(let ecdsaFormat):
             let digestData32Bytes = SecureHashAlgorithm256Model.hash(message)
@@ -25,7 +40,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
                 return try StandardsForEfficientCryptography256k1CurveModel.verify(
                     signature: ecdsaSignature,
                     digestData32Bytes: digestData32Bytes,
-                    publicKey: compressedPublicKey
+                    verificationKeyModel: verificationKeyModel
                 )
             case .compact:
                 let ecdsaSignature = try StandardsForEfficientCryptography256k1CurveModel.Signature(
@@ -34,13 +49,13 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
                 return try StandardsForEfficientCryptography256k1CurveModel.verify(
                     signature: ecdsaSignature,
                     digestData32Bytes: digestData32Bytes,
-                    publicKey: compressedPublicKey
+                    verificationKeyModel: verificationKeyModel
                 )
             case .distinguishedEncodingRules:
                 return try StandardsForEfficientCryptography256k1CurveModel.verify(
                     distinguishedEncodingRulesEncodedSignature: signature,
                     digestData32Bytes: digestData32Bytes,
-                    publicKey: compressedPublicKey
+                    verificationKeyModel: verificationKeyModel
                 )
             }
         case .schnorr:
@@ -49,7 +64,7 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
             return try SchnorrSignatureModel.verify(
                 signature: schnorrSignature,
                 digestData32Bytes: message,
-                publicKey: publicKey
+                verificationKeyModel: verificationKeyModel
             )
         }
     }

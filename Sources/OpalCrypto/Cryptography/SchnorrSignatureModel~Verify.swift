@@ -8,17 +8,27 @@ internal extension SchnorrSignatureModel {
         digestData32Bytes: Data,
         publicKey: Data
     ) throws -> Bool {
-        guard digestData32Bytes.count == 32 else {
-            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
-        }
-        guard publicKey.count == 33 || publicKey.count == 65 else {
-            throw Error.invalidPublicKeyLength(actual: publicKey.count)
-        }
-        let publicKeyPoint: AffinePointModel
+        let verificationKeyModel: VerificationKeyModel
         do {
-            publicKeyPoint = try PublicKeyParserModel.parsePublicKey(publicKey)
+            verificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .makeVerificationKey(publicKey: publicKey)
         } catch {
             return false
+        }
+        return try verify(
+            signature: signature,
+            digestData32Bytes: digestData32Bytes,
+            verificationKeyModel: verificationKeyModel
+        )
+    }
+
+    static func verify(
+        signature: Signature,
+        digestData32Bytes: Data,
+        verificationKeyModel: VerificationKeyModel
+    ) throws -> Bool {
+        guard digestData32Bytes.count == 32 else {
+            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
         }
         let signatureRFieldElement: FieldElementModel
         do {
@@ -37,14 +47,16 @@ internal extension SchnorrSignatureModel {
             challengeScalar = try ChallengeHashModel.makeChallengeScalar(
                 digest32: digestData32Bytes,
                 r: signatureRFieldElement,
-                publicKey: publicKeyPoint
+                verificationKeyModel: verificationKeyModel
             )
         } catch {
             return false
         }
-        let sTimesGenerator = ScalarMultiplicationModel.mulG(signatureSScalar)
-        let eTimesPublicKey = ScalarMultiplicationModel.mul(challengeScalar, publicKeyPoint)
-        let candidatePoint = sTimesGenerator.add(eTimesPublicKey.negate())
+        let candidatePoint = ScalarMultiplicationModel.mulJointGeneratorAndVerificationKey(
+            generatorScalar: signatureSScalar,
+            verificationKeyScalar: challengeScalar.negateModN(),
+            verificationKeyModel: verificationKeyModel
+        )
         guard !candidatePoint.isInfinity else {
             return false
         }

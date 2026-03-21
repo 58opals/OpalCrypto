@@ -149,6 +149,69 @@ struct PublicAPIFacadeSignatureValidator {
         #expect(isValid)
     }
 
+    @Test("Verification-key ECDSA verify matches raw public-key verify")
+    func verificationKeyEcdsaVerifyMatchesRawPublicKeyVerify() throws {
+        var privateKeyData = Data(repeating: 0x00, count: 32)
+        privateKeyData[31] = 0x05
+        let messageData = Data("opal-ecdsa-cached-verify".utf8)
+        let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
+            fromPrivateKey: privateKeyData
+        )
+        let signatureData = try OpalCrypto.Signature.sign(
+            message: messageData,
+            privateKey: privateKeyData,
+            format: .ecdsa(.der)
+        )
+
+        let rawResult = try OpalCrypto.Signature.verify(
+            signature: signatureData,
+            message: messageData,
+            publicKey: verificationKey.publicKey,
+            format: .ecdsa(.der)
+        )
+        let cachedResult = try OpalCrypto.Signature.verify(
+            signature: signatureData,
+            message: messageData,
+            verificationKey: verificationKey,
+            format: .ecdsa(.der)
+        )
+
+        #expect(rawResult == cachedResult)
+        #expect(cachedResult)
+    }
+
+    @Test("Verification-key Schnorr verify matches raw public-key verify")
+    func verificationKeySchnorrVerifyMatchesRawPublicKeyVerify() throws {
+        var privateKeyData = Data(repeating: 0x00, count: 32)
+        privateKeyData[31] = 0x06
+        let digestData32Bytes = Data(repeating: 0x6C, count: 32)
+        let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
+            fromPrivateKey: privateKeyData
+        )
+        let signatureData = try OpalCrypto.Signature.sign(
+            message: digestData32Bytes,
+            privateKey: privateKeyData,
+            format: .schnorr,
+            nonce: .bip340Deterministic
+        )
+
+        let rawResult = try OpalCrypto.Signature.verify(
+            signature: signatureData,
+            message: digestData32Bytes,
+            publicKey: verificationKey.publicKey,
+            format: .schnorr
+        )
+        let cachedResult = try OpalCrypto.Signature.verify(
+            signature: signatureData,
+            message: digestData32Bytes,
+            verificationKey: verificationKey,
+            format: .schnorr
+        )
+
+        #expect(rawResult == cachedResult)
+        #expect(cachedResult)
+    }
+
     @Test("Reject sign with invalid private key length through facade error")
     func rejectSignWithInvalidPrivateKeyLengthThroughFacadeError() {
         let messageData = Data("opal-ecdsa-message".utf8)

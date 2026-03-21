@@ -66,17 +66,25 @@ extension OpalCrypto.Key {
 
         public func derived(indices: [UInt32]) throws -> ExtendedPrivateKey {
             var currentPayload = payload
+            var currentCompressedPublicKeyData = compressedPublicKeyData
             for index in indices {
                 do {
-                    currentPayload = try ExtendedKeyDerivationModel.derivePrivateChild(
+                    let childMaterial = try ExtendedKeyDerivationModel
+                        .derivePrivateChildMaterial(
                         from: currentPayload,
+                        parentCompressedPublicKeyData: currentCompressedPublicKeyData,
                         index: index
                     )
+                    currentPayload = childMaterial.payload
+                    currentCompressedPublicKeyData = childMaterial.compressedPublicKeyData
                 } catch let error as ExtendedKeyDerivationModel.Error {
                     throw Self.mapDerivationError(error)
                 }
             }
-            return try ExtendedPrivateKey(payload: currentPayload)
+            return ExtendedPrivateKey(
+                payload: currentPayload,
+                compressedPublicKeyData: currentCompressedPublicKeyData
+            )
         }
 
         internal init(payload: ExtendedKeyPayloadModel) throws {
@@ -86,6 +94,14 @@ extension OpalCrypto.Key {
             let publicPayload = try ExtendedKeyDerivationModel.makePublicKey(from: payload)
             self.payload = payload
             self.compressedPublicKeyData = publicPayload.keyData
+        }
+
+        internal init(
+            payload: ExtendedKeyPayloadModel,
+            compressedPublicKeyData: Data
+        ) {
+            self.payload = payload
+            self.compressedPublicKeyData = compressedPublicKeyData
         }
 
         private static func makePayload(from serialized: String) throws -> ExtendedKeyPayloadModel {

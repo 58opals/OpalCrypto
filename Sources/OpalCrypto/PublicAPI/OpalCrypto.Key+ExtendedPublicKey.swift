@@ -21,6 +21,7 @@ extension OpalCrypto.Key {
         }
 
         internal let payload: ExtendedKeyPayloadModel
+        internal let verificationKeyModel: VerificationKeyModel
 
         public var chainCode: Data { payload.chainCode }
         public var depth: UInt8 { payload.depth }
@@ -42,21 +43,39 @@ extension OpalCrypto.Key {
 
         public func derived(indices: [UInt32]) throws -> ExtendedPublicKey {
             var currentPayload = payload
+            var currentVerificationKeyModel = verificationKeyModel
             for index in indices {
                 do {
-                    currentPayload = try ExtendedKeyDerivationModel.derivePublicChild(
+                    let childMaterial = try ExtendedKeyDerivationModel
+                        .derivePublicChildMaterial(
                         from: currentPayload,
+                        verificationKeyModel: currentVerificationKeyModel,
                         index: index
                     )
+                    currentPayload = childMaterial.payload
+                    currentVerificationKeyModel = childMaterial.verificationKeyModel
                 } catch let error as ExtendedKeyDerivationModel.Error {
                     throw Self.mapDerivationError(error)
                 }
             }
-            return ExtendedPublicKey(payload: currentPayload)
+            return ExtendedPublicKey(
+                payload: currentPayload,
+                verificationKeyModel: currentVerificationKeyModel
+            )
         }
 
         internal init(payload: ExtendedKeyPayloadModel) {
             self.payload = payload
+            self.verificationKeyModel = try! StandardsForEfficientCryptography256k1CurveModel
+                .Operation.makeVerificationKey(publicKey: payload.keyData)
+        }
+
+        internal init(
+            payload: ExtendedKeyPayloadModel,
+            verificationKeyModel: VerificationKeyModel
+        ) {
+            self.payload = payload
+            self.verificationKeyModel = verificationKeyModel
         }
 
         internal init(
@@ -74,6 +93,26 @@ extension OpalCrypto.Key {
                 chainCode: chainCode,
                 keyData: publicKey
             )
+            self.verificationKeyModel = try! StandardsForEfficientCryptography256k1CurveModel
+                .Operation.makeVerificationKey(publicKey: publicKey)
+        }
+
+        internal init(
+            depth: UInt8,
+            parentFingerprint: Data,
+            childIndex: UInt32,
+            chainCode: Data,
+            verificationKeyModel: VerificationKeyModel
+        ) {
+            self.payload = try! ExtendedKeyPayloadModel(
+                kind: .publicKey,
+                depth: depth,
+                parentFingerprint: parentFingerprint,
+                childIndex: childIndex,
+                chainCode: chainCode,
+                keyData: verificationKeyModel.compressedPublicKeyData
+            )
+            self.verificationKeyModel = verificationKeyModel
         }
 
         private static func makePayload(from serialized: String) throws -> ExtendedKeyPayloadModel {

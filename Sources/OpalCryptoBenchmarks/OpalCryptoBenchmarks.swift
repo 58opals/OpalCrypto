@@ -71,6 +71,16 @@ enum OpalCryptoBenchmarks {
             return isValid ? 1 : 0
         }
 
+        checksum ^= try runSyncBenchmark(name: "ECDSA verify (cached key)", iterations: 200) {
+            let isValid = try OpalCrypto.Signature.verify(
+                signature: context.ecdsaSignature,
+                message: context.ecdsaMessage,
+                verificationKey: context.verificationKey,
+                format: .ecdsa(.der)
+            )
+            return isValid ? 1 : 0
+        }
+
         checksum ^= try runSyncBenchmark(name: "Schnorr sign", iterations: 200) {
             let signature = try OpalCrypto.Signature.sign(
                 message: context.schnorrDigest,
@@ -89,6 +99,42 @@ enum OpalCryptoBenchmarks {
                 format: .schnorr
             )
             return isValid ? 1 : 0
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Schnorr verify (cached key)", iterations: 200) {
+            let isValid = try OpalCrypto.Signature.verify(
+                signature: context.schnorrSignature,
+                message: context.schnorrDigest,
+                verificationKey: context.verificationKey,
+                format: .schnorr
+            )
+            return isValid ? 1 : 0
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Verification-key construction", iterations: 400) {
+            let verificationKey = try OpalCrypto.Signature.VerificationKey(
+                publicKey: context.compressedPublicKey
+            )
+            return verificationKey.publicKey.count ^ Int(verificationKey.publicKey[0])
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Generic point multiplication", iterations: 200) {
+            let multipliedPublicKey = try PerformanceBenchmarkSupportModel
+                .multiplyVerificationKey(
+                    scalarData32Bytes: context.genericPointMultiplicationScalar,
+                    verificationKey: context.verificationKey
+                )
+            return multipliedPublicKey.count ^ Int(multipliedPublicKey.first ?? 0)
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Joint multiplication", iterations: 200) {
+            let multipliedPublicKey = try PerformanceBenchmarkSupportModel
+                .jointMultiplyGeneratorAndVerificationKey(
+                    generatorScalarData32Bytes: context.jointGeneratorScalar,
+                    verificationKeyScalarData32Bytes: context.jointVerificationKeyScalar,
+                    verificationKey: context.verificationKey
+                )
+            return multipliedPublicKey.count ^ Int(multipliedPublicKey.first ?? 0)
         }
 
         checksum ^= try runSyncBenchmark(name: "PBKDF2", iterations: 60) {
@@ -155,6 +201,14 @@ enum OpalCryptoBenchmarks {
             return Int(child.depth) ^ Int(child.privateKey[0])
         }
 
+        checksum ^= try runSyncBenchmark(
+            name: "Extended public-key derivation (repeated)",
+            iterations: 120
+        ) {
+            let child = try context.rootExtendedPublicKey.derived(indices: [1, 2, 3, 4])
+            return Int(child.depth) ^ Int(child.publicKey[0])
+        }
+
         print("Checksum: \(checksum)")
     }
 
@@ -166,6 +220,7 @@ enum OpalCryptoBenchmarks {
         let ecdsaMessage: Data
         let schnorrDigest: Data
         let compressedPublicKey: Data
+        let verificationKey: OpalCrypto.Signature.VerificationKey
         let ecdsaSignature: Data
         let schnorrSignature: Data
         let mnemonic: OpalCrypto.Key.Mnemonic
@@ -174,6 +229,10 @@ enum OpalCryptoBenchmarks {
         let base58EncodedPayload: String
         let base32EncodedPayload: String
         let rootExtendedPrivateKey: OpalCrypto.Key.ExtendedPrivateKey
+        let rootExtendedPublicKey: OpalCrypto.Key.ExtendedPublicKey
+        let genericPointMultiplicationScalar: Data
+        let jointGeneratorScalar: Data
+        let jointVerificationKeyScalar: Data
 
         static func make() throws -> BenchmarkContext {
             let singlePrivateKey = makePrivateKey(index: 1)
@@ -185,6 +244,9 @@ enum OpalCryptoBenchmarks {
                 Data("opalcrypto-benchmark-schnorr".utf8)
             )
             let compressedPublicKey = try OpalCrypto.Signature.derivePublicKey(
+                fromPrivateKey: singlePrivateKey
+            )
+            let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
                 fromPrivateKey: singlePrivateKey
             )
             let ecdsaSignature = try OpalCrypto.Signature.sign(
@@ -214,6 +276,10 @@ enum OpalCryptoBenchmarks {
             let rootExtendedPrivateKey = try OpalCrypto.Key.ExtendedPrivateKey.root(
                 seed: try mnemonic.deriveSeed(passphrase: "benchmark")
             )
+            let rootExtendedPublicKey = rootExtendedPrivateKey.publicKey
+            let genericPointMultiplicationScalar = makePrivateKey(index: 17)
+            let jointGeneratorScalar = makePrivateKey(index: 19)
+            let jointVerificationKeyScalar = makePrivateKey(index: 23)
 
             return BenchmarkContext(
                 singlePrivateKey: singlePrivateKey,
@@ -223,6 +289,7 @@ enum OpalCryptoBenchmarks {
                 ecdsaMessage: ecdsaMessage,
                 schnorrDigest: schnorrDigest,
                 compressedPublicKey: compressedPublicKey,
+                verificationKey: verificationKey,
                 ecdsaSignature: ecdsaSignature,
                 schnorrSignature: schnorrSignature,
                 mnemonic: mnemonic,
@@ -230,7 +297,11 @@ enum OpalCryptoBenchmarks {
                 basePayload: basePayload,
                 base58EncodedPayload: base58EncodedPayload,
                 base32EncodedPayload: base32EncodedPayload,
-                rootExtendedPrivateKey: rootExtendedPrivateKey
+                rootExtendedPrivateKey: rootExtendedPrivateKey,
+                rootExtendedPublicKey: rootExtendedPublicKey,
+                genericPointMultiplicationScalar: genericPointMultiplicationScalar,
+                jointGeneratorScalar: jointGeneratorScalar,
+                jointVerificationKeyScalar: jointVerificationKeyScalar
             )
         }
 

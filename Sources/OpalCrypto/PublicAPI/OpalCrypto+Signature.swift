@@ -38,6 +38,21 @@ extension OpalCrypto {
             }
         }
 
+        public static func deriveVerificationKey(
+            fromPrivateKey privateKey: Data
+        ) throws -> VerificationKey {
+            try validatePrivateKeyLength(privateKey)
+            do {
+                let verificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel
+                    .Operation.makeVerificationKey(
+                        fromPrivateKeyData32Bytes: privateKey
+                    )
+                return VerificationKey(verificationKeyModel: verificationKeyModel)
+            } catch {
+                throw mapCryptographyError(error)
+            }
+        }
+
         public static func sign(
             message: Data,
             privateKey: Data,
@@ -72,12 +87,51 @@ extension OpalCrypto {
             if case .schnorr = format {
                 try validateSchnorrDigestLength(message)
             }
+            let verificationKey: VerificationKey
+            do {
+                verificationKey = try VerificationKey(publicKey: publicKey)
+            } catch let error as VerificationKey.Error {
+                throw mapVerificationKeyError(error)
+            }
 
+            return try verifyValidated(
+                signature: signature,
+                message: message,
+                verificationKey: verificationKey,
+                format: format
+            )
+        }
+
+        public static func verify(
+            signature: Data,
+            message: Data,
+            verificationKey: VerificationKey,
+            format: Format
+        ) throws -> Bool {
+            try validateSignatureLength(signature, format: format)
+            if case .schnorr = format {
+                try validateSchnorrDigestLength(message)
+            }
+
+            return try verifyValidated(
+                signature: signature,
+                message: message,
+                verificationKey: verificationKey,
+                format: format
+            )
+        }
+
+        private static func verifyValidated(
+            signature: Data,
+            message: Data,
+            verificationKey: VerificationKey,
+            format: Format
+        ) throws -> Bool {
             do {
                 return try EllipticCurveDigitalSignatureAlgorithmModel.verify(
                     signature: signature,
                     message: message,
-                    publicKey: publicKey,
+                    verificationKeyModel: verificationKey.verificationKeyModel,
                     format: format.internalFormat
                 )
             } catch {
@@ -191,6 +245,19 @@ extension OpalCrypto {
             }
 
             return .cryptographyFailure
+        }
+
+        private static func mapVerificationKeyError(
+            _ error: VerificationKey.Error
+        ) -> Error {
+            switch error {
+            case .invalidPublicKeyLength(let actual):
+                return .invalidPublicKeyLength(expected: 33, actual: actual)
+            case .invalidPublicKeyPrefix(let actual):
+                return .invalidPublicKeyPrefix(actual: actual)
+            case .invalidPublicKey:
+                return .cryptographyFailure
+            }
         }
     }
 }

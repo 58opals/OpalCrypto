@@ -53,6 +53,22 @@ internal enum ExtendedKeyDerivationModel {
         from privateKeyPayload: ExtendedKeyPayloadModel,
         index: UInt32
     ) throws -> ExtendedKeyPayloadModel {
+        let parentCompressedPublicKeyData = try compressedPublicKey(from: privateKeyPayload)
+        return try derivePrivateChildMaterial(
+            from: privateKeyPayload,
+            parentCompressedPublicKeyData: parentCompressedPublicKeyData,
+            index: index
+        ).payload
+    }
+
+    internal static func derivePrivateChildMaterial(
+        from privateKeyPayload: ExtendedKeyPayloadModel,
+        parentCompressedPublicKeyData: Data,
+        index: UInt32
+    ) throws -> (
+        payload: ExtendedKeyPayloadModel,
+        compressedPublicKeyData: Data
+    ) {
         guard privateKeyPayload.kind == .privateKey else {
             throw Error.invalidKeyKind
         }
@@ -60,13 +76,12 @@ internal enum ExtendedKeyDerivationModel {
             throw Error.depthOverflow
         }
 
-        let parentPublicKey = try compressedPublicKey(from: privateKeyPayload)
         var digestInput = Data()
         if isHardened(index) {
             digestInput.append(0x00)
             digestInput.append(privateKeyPayload.keyData)
         } else {
-            digestInput.append(parentPublicKey)
+            digestInput.append(parentCompressedPublicKeyData)
         }
         digestInput.appendUInt32BigEndian(index)
 
@@ -93,20 +108,39 @@ internal enum ExtendedKeyDerivationModel {
             throw Error.invalidDerivedKey
         }
 
-        return try ExtendedKeyPayloadModel(
+        let childPayload = try ExtendedKeyPayloadModel(
             kind: .privateKey,
             depth: privateKeyPayload.depth + 1,
-            parentFingerprint: fingerprint(publicKey: parentPublicKey),
+            parentFingerprint: fingerprint(publicKey: parentCompressedPublicKeyData),
             childIndex: index,
             chainCode: childChainCode,
             keyData: childPrivateKey
         )
+        let childCompressedPublicKeyData = try compressedPublicKey(from: childPayload)
+        return (childPayload, childCompressedPublicKeyData)
     }
 
     internal static func derivePublicChild(
         from publicKeyPayload: ExtendedKeyPayloadModel,
         index: UInt32
     ) throws -> ExtendedKeyPayloadModel {
+        let verificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel
+            .Operation.makeVerificationKey(publicKey: publicKeyPayload.keyData)
+        return try derivePublicChildMaterial(
+            from: publicKeyPayload,
+            verificationKeyModel: verificationKeyModel,
+            index: index
+        ).payload
+    }
+
+    internal static func derivePublicChildMaterial(
+        from publicKeyPayload: ExtendedKeyPayloadModel,
+        verificationKeyModel: VerificationKeyModel,
+        index: UInt32
+    ) throws -> (
+        payload: ExtendedKeyPayloadModel,
+        verificationKeyModel: VerificationKeyModel
+    ) {
         guard publicKeyPayload.kind == .publicKey else {
             throw Error.invalidKeyKind
         }
@@ -118,7 +152,7 @@ internal enum ExtendedKeyDerivationModel {
         }
 
         var digestInput = Data()
-        digestInput.append(publicKeyPayload.keyData)
+        digestInput.append(verificationKeyModel.compressedPublicKeyData)
         digestInput.appendUInt32BigEndian(index)
         let digest = HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model.hash(
             digestInput,
@@ -128,30 +162,30 @@ internal enum ExtendedKeyDerivationModel {
         let chainCodeStartIndex = digest.index(digest.startIndex, offsetBy: 32)
         let tweak = digest[digest.startIndex..<chainCodeStartIndex]
         let childChainCode = Data(digest[chainCodeStartIndex..<digest.endIndex])
-        let childPublicKey: Data
+        let childVerificationKeyModel: VerificationKeyModel
         do {
             let tweakScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
                 .parseTweakScalar(contiguousBytes32: tweak, requireNonZero: false)
-            let publicAffine = try StandardsForEfficientCryptography256k1CurveModel.Operation
-                .parsePublicKeyAffine(publicKeyPayload.keyData)
-            let tweakPoint = ScalarMultiplicationModel.mulG(tweakScalar)
-            let combined = JacobianPointModel(affine: publicAffine).add(tweakPoint)
-            guard let derivedAffine = combined.convertToAffine() else {
-                throw Error.invalidDerivedKey
-            }
-            childPublicKey = derivedAffine.encodeCompressed33()
+            childVerificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel
+                .Operation.tweakAddVerificationKey(
+                    verificationKeyModel,
+                    tweakScalar: tweakScalar
+                )
         } catch {
             throw Error.invalidDerivedKey
         }
 
-        return try ExtendedKeyPayloadModel(
+        let childPayload = try ExtendedKeyPayloadModel(
             kind: .publicKey,
             depth: publicKeyPayload.depth + 1,
-            parentFingerprint: fingerprint(publicKey: publicKeyPayload.keyData),
+            parentFingerprint: fingerprint(
+                publicKey: verificationKeyModel.compressedPublicKeyData
+            ),
             childIndex: index,
             chainCode: childChainCode,
-            keyData: childPublicKey
+            keyData: childVerificationKeyModel.compressedPublicKeyData
         )
+        return (childPayload, childVerificationKeyModel)
     }
 
     private static func compressedPublicKey(from payload: ExtendedKeyPayloadModel) throws -> Data {
