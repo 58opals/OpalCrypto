@@ -38,10 +38,11 @@ internal enum ExtendedKeyDerivationModel {
         guard privateKeyPayload.kind == .privateKey else {
             throw Error.invalidKeyKind
         }
-        let privateKeyScalar: ScalarModel
+        let parsedPrivateKeyModel: ParsedPrivateKeyModel
         do {
-            privateKeyScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
-                .parsePrivateKeyScalar(privateKeyPayload.keyData, requireNonZero: true)
+            parsedPrivateKeyModel = try ParsedPrivateKeyModel(
+                privateKeyData32Bytes: privateKeyPayload.keyData
+            )
         } catch {
             throw Error.invalidDerivedKey
         }
@@ -51,7 +52,7 @@ internal enum ExtendedKeyDerivationModel {
             parentFingerprintUInt32BigEndian: privateKeyPayload.parentFingerprintUInt32BigEndian,
             childIndex: privateKeyPayload.childIndex,
             chainCode: privateKeyPayload.chainCode,
-            publicKeyData33Bytes: try compressedPublicKey(fromPrivateKeyScalar: privateKeyScalar)
+            publicKeyData33Bytes: parsedPrivateKeyModel.compressedPublicKeyData
         )
     }
 
@@ -59,28 +60,28 @@ internal enum ExtendedKeyDerivationModel {
         from privateKeyPayload: ExtendedKeyPayloadModel,
         index: UInt32
     ) throws -> ExtendedKeyPayloadModel {
-        let parentCompressedPublicKeyData = try compressedPublicKey(from: privateKeyPayload)
-        let parentCompressedPublicKeyFingerprintUInt32BigEndian = fingerprintUInt32BigEndian(
-            publicKey: parentCompressedPublicKeyData
-        )
+        let parsedPrivateKeyModel: ParsedPrivateKeyModel
+        do {
+            parsedPrivateKeyModel = try ParsedPrivateKeyModel(
+                privateKeyData32Bytes: privateKeyPayload.keyData
+            )
+        } catch {
+            throw Error.invalidDerivedKey
+        }
         return try derivePrivateChildMaterial(
             from: privateKeyPayload,
-            parentCompressedPublicKeyData: parentCompressedPublicKeyData,
-            parentCompressedPublicKeyFingerprintUInt32BigEndian:
-                parentCompressedPublicKeyFingerprintUInt32BigEndian,
+            parsedPrivateKeyModel: parsedPrivateKeyModel,
             index: index
         ).payload
     }
 
     internal static func derivePrivateChildMaterial(
         from privateKeyPayload: ExtendedKeyPayloadModel,
-        parentCompressedPublicKeyData: Data,
-        parentCompressedPublicKeyFingerprintUInt32BigEndian: UInt32,
+        parsedPrivateKeyModel: ParsedPrivateKeyModel,
         index: UInt32
     ) throws -> (
         payload: ExtendedKeyPayloadModel,
-        compressedPublicKeyData: Data,
-        compressedPublicKeyFingerprintUInt32BigEndian: UInt32
+        parsedPrivateKeyModel: ParsedPrivateKeyModel
     ) {
         guard privateKeyPayload.kind == .privateKey else {
             throw Error.invalidKeyKind
@@ -90,7 +91,7 @@ internal enum ExtendedKeyDerivationModel {
         }
 
         let digestInput = makePrivateChildDigestInput(
-            parentCompressedPublicKeyData: parentCompressedPublicKeyData,
+            parentCompressedPublicKeyData: parsedPrivateKeyModel.compressedPublicKeyData,
             parentPrivateKeyData32Bytes: privateKeyPayload.keyData,
             index: index
         )
@@ -105,11 +106,9 @@ internal enum ExtendedKeyDerivationModel {
 
         let childPrivateKeyScalar: ScalarModel
         do {
-            let privateKeyScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
-                .parsePrivateKeyScalar(privateKeyPayload.keyData, requireNonZero: true)
             let tweakScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
                 .parseTweakScalar(contiguousBytes32: tweak, requireNonZero: false)
-            let derivedScalar = privateKeyScalar.addModN(tweakScalar)
+            let derivedScalar = parsedPrivateKeyModel.scalar.addModN(tweakScalar)
             guard !derivedScalar.isZero else {
                 throw Error.invalidDerivedKey
             }
@@ -119,25 +118,24 @@ internal enum ExtendedKeyDerivationModel {
         }
 
         let childPrivateKey = childPrivateKeyScalar.data32Bytes
-        let childCompressedPublicKeyData = try compressedPublicKey(
-            fromPrivateKeyScalar: childPrivateKeyScalar
-        )
+        let childParsedPrivateKeyModel: ParsedPrivateKeyModel
+        do {
+            childParsedPrivateKeyModel = try ParsedPrivateKeyModel(
+                trustedScalar: childPrivateKeyScalar
+            )
+        } catch {
+            throw Error.invalidDerivedKey
+        }
 
         let childPayload = ExtendedKeyPayloadModel.makeTrustedDerivedPrivateKey(
             depth: privateKeyPayload.depth + 1,
-            parentFingerprintUInt32BigEndian: parentCompressedPublicKeyFingerprintUInt32BigEndian,
+            parentFingerprintUInt32BigEndian:
+                parsedPrivateKeyModel.compressedPublicKeyFingerprintUInt32BigEndian,
             childIndex: index,
             chainCode: childChainCode,
             privateKeyData32Bytes: childPrivateKey
         )
-        let childCompressedPublicKeyFingerprintUInt32BigEndian = fingerprintUInt32BigEndian(
-            publicKey: childCompressedPublicKeyData
-        )
-        return (
-            childPayload,
-            childCompressedPublicKeyData,
-            childCompressedPublicKeyFingerprintUInt32BigEndian
-        )
+        return (childPayload, childParsedPrivateKeyModel)
     }
 
     internal static func derivePublicChild(
@@ -204,33 +202,6 @@ internal enum ExtendedKeyDerivationModel {
             publicKeyData33Bytes: childParsedPublicKeyModel.compressedPublicKeyData
         )
         return (childPayload, childParsedPublicKeyModel)
-    }
-
-    private static func compressedPublicKey(from payload: ExtendedKeyPayloadModel) throws -> Data {
-        guard payload.kind == .privateKey else {
-            throw Error.invalidKeyKind
-        }
-        do {
-            let privateKeyScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
-                .parsePrivateKeyScalar(payload.keyData, requireNonZero: true)
-            return try compressedPublicKey(fromPrivateKeyScalar: privateKeyScalar)
-        } catch {
-            throw Error.invalidDerivedKey
-        }
-    }
-
-    private static func compressedPublicKey(
-        fromPrivateKeyScalar privateKeyScalar: ScalarModel
-    ) throws -> Data {
-        let publicPoint = ScalarMultiplicationModel.mulG(privateKeyScalar)
-        guard let publicAffine = publicPoint.convertToAffine() else {
-            throw Error.invalidDerivedKey
-        }
-        return publicAffine.encodeCompressed33()
-    }
-
-    private static func fingerprintUInt32BigEndian(publicKey: Data) -> UInt32 {
-        SecureHash160Model.hash(publicKey).uint32BigEndian(at: 0)
     }
 
     private static func makePrivateChildDigestInput(

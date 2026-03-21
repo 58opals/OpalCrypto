@@ -33,11 +33,27 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             format: PublicKeyFormat = .compressed
         ) throws -> Data {
             let privateKeyScalar = try parsePrivateKeyScalar(privateKeyData32Bytes, requireNonZero: true)
+            switch format {
+            case .compressed:
+                return try deriveCompressedPublicKey(fromPrivateKeyScalar: privateKeyScalar)
+            case .uncompressed:
+                break
+            }
             let publicPoint = ScalarMultiplicationModel.mulG(privateKeyScalar)
             guard let publicAffine = publicPoint.convertToAffine() else {
                 throw Error.invalidDerivedPublicKey
             }
             return encodePublicKey(publicAffine, format: format)
+        }
+
+        internal static func deriveCompressedPublicKey(
+            fromPrivateKeyScalar privateKeyScalar: ScalarModel
+        ) throws -> Data {
+            let publicPoint = ScalarMultiplicationModel.mulG(privateKeyScalar)
+            guard let publicAffine = publicPoint.convertToAffine() else {
+                throw Error.invalidDerivedPublicKey
+            }
+            return publicAffine.encodeCompressed33()
         }
 
         internal static func tweakAddPrivateKeyData32Bytes(

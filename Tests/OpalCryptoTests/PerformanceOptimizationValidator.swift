@@ -71,6 +71,21 @@ struct PerformanceOptimizationValidator {
         )
     }
 
+    @Test("Parsed private-key model caches the compressed public key and HDKD fingerprint")
+    func parsedPrivateKeyModelCachesTheCompressedPublicKeyAndHdkdFingerprint() throws {
+        let privateKey = makePrivateKey(9)
+        let expectedCompressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: privateKey
+        )
+        let parsedPrivateKeyModel = try ParsedPrivateKeyModel(privateKeyData32Bytes: privateKey)
+
+        #expect(parsedPrivateKeyModel.compressedPublicKeyData == expectedCompressedPublicKey)
+        #expect(
+            parsedPrivateKeyModel.compressedPublicKeyFingerprintUInt32BigEndian
+                == SecureHash160Model.hash(expectedCompressedPublicKey).uint32BigEndian(at: 0)
+        )
+    }
+
     @Test("Trusted extended-key payload factories match validated constructors on known-good inputs")
     func trustedExtendedKeyPayloadFactoriesMatchValidatedConstructorsOnKnownGoodInputs() throws {
         let privateKey = makePrivateKey(41)
@@ -232,8 +247,8 @@ struct PerformanceOptimizationValidator {
         #expect(cachedTweakedPublicKey == rawTweakedPublicKey)
     }
 
-    @Test("Extended public and private derivation remain aligned with cached public-key fast paths")
-    func extendedPublicAndPrivateDerivationRemainAlignedWithCachedPublicKeyFastPaths() throws {
+    @Test("Extended public and private derivation remain aligned with cached key fast paths")
+    func extendedPublicAndPrivateDerivationRemainAlignedWithCachedKeyFastPaths() throws {
         let seed = Data((0..<16).map(UInt8.init))
         let rootPrivateKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: seed)
         let hardenedPrivateChild = try rootPrivateKey.derived(indices: [0x8000_0000])
@@ -245,6 +260,33 @@ struct PerformanceOptimizationValidator {
         )
 
         #expect(derivedFromPublic == derivedFromPrivate)
+    }
+
+    @Test("Batch compressed public-key derivation from parsed scalars matches data-based and single-key derivation")
+    func batchCompressedPublicKeyDerivationFromParsedScalarsMatchesDataBasedAndSingleKeyDerivation()
+        async throws {
+        let privateKeys = (1...256).map(makePrivateKey)
+        let privateKeyScalars = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .parsePrivateKeyScalars(
+                fromPrivateKeys32: privateKeys,
+                assumingValidPrivateKeys: false
+            )
+        let scalarBatchPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeyScalars: privateKeyScalars,
+                executionMode: .automatic
+            )
+        let dataBatchPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                executionMode: .automatic
+            )
+        let singlePublicKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+        }
+
+        #expect(scalarBatchPublicKeys == dataBatchPublicKeys)
+        #expect(scalarBatchPublicKeys == singlePublicKeys)
     }
 
     @Test("Forced serial and forced parallel batch derivation return identical ordered results")
@@ -263,6 +305,37 @@ struct PerformanceOptimizationValidator {
             )
 
         #expect(forcedSerialPublicKeys == forcedParallelPublicKeys)
+    }
+
+    @Test("Automatic batch derivation matches forced parallel results at the tuned thresholds")
+    func automaticBatchDerivationMatchesForcedParallelResultsAtTheTunedThresholds() async throws {
+        let privateKeys256 = (1...256).map(makePrivateKey)
+        let privateKeys1024 = (1...1024).map(makePrivateKey)
+
+        let automaticPublicKeys256 = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys256,
+                executionMode: .automatic
+            )
+        let forcedParallelPublicKeys256 = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys256,
+                executionMode: .parallel
+            )
+        let automaticPublicKeys1024 = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys1024,
+                executionMode: .automatic
+            )
+        let forcedParallelPublicKeys1024 =
+            try await StandardsForEfficientCryptography256k1CurveModel.Operation
+            .deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys1024,
+                executionMode: .parallel
+            )
+
+        #expect(automaticPublicKeys256 == forcedParallelPublicKeys256)
+        #expect(automaticPublicKeys1024 == forcedParallelPublicKeys1024)
     }
 
     private func makePrivateKey(_ value: Int) -> Data {

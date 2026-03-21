@@ -61,6 +61,15 @@ enum OpalCryptoBenchmarks {
         }
 
         checksum ^= try await runAsyncBenchmark(
+            name: "Batch compressed public-key derivation from scalars (256)",
+            iterations: 8
+        ) {
+            let publicKeys = try await PerformanceBenchmarkSupportModel
+                .deriveCompressedPublicKeysFromScalars(from: context.batch256PrivateKeys)
+            return publicKeys.count ^ Int(publicKeys[0][0])
+        }
+
+        checksum ^= try await runAsyncBenchmark(
             name: "Batch compressed public-key derivation (1024)",
             iterations: 3
         ) {
@@ -85,6 +94,15 @@ enum OpalCryptoBenchmarks {
         ) {
             let publicKeys = try await PerformanceBenchmarkSupportModel
                 .deriveCompressedPublicKeysParallel(from: context.batch1024PrivateKeys)
+            return publicKeys.count ^ Int(publicKeys[0][0])
+        }
+
+        checksum ^= try await runAsyncBenchmark(
+            name: "Batch compressed public-key derivation from scalars (1024)",
+            iterations: 3
+        ) {
+            let publicKeys = try await PerformanceBenchmarkSupportModel
+                .deriveCompressedPublicKeysFromScalars(from: context.batch1024PrivateKeys)
             return publicKeys.count ^ Int(publicKeys[0][0])
         }
 
@@ -159,6 +177,13 @@ enum OpalCryptoBenchmarks {
                 publicKey: context.compressedPublicKey
             )
             return parsedPublicKey.count ^ Int(parsedPublicKey[0])
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Parsed private-key construction", iterations: 400) {
+            let parsedPrivateKey = try PerformanceBenchmarkSupportModel.constructParsedPrivateKey(
+                privateKey: context.singlePrivateKey
+            )
+            return parsedPrivateKey.count ^ Int(parsedPrivateKey[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Generic point multiplication", iterations: 200) {

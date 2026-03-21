@@ -20,28 +20,59 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         executionMode: CompressedPublicKeyBatchDerivationExecutionMode
     ) async throws -> [Data] {
         guard !privateKeys32.isEmpty else { return .init() }
+        let privateKeyScalars = try parsePrivateKeyScalars(
+            fromPrivateKeys32: privateKeys32,
+            assumingValidPrivateKeys: assumingValidPrivateKeys
+        )
+        return try await deriveCompressedPublicKeys(
+            fromPrivateKeyScalars: privateKeyScalars,
+            executionMode: executionMode
+        )
+    }
 
+    internal static func deriveCompressedPublicKeys(
+        fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
+        executionMode: CompressedPublicKeyBatchDerivationExecutionMode
+    ) async throws -> [Data] {
+        guard !privateKeyScalars.isEmpty else { return .init() }
         let taskCount = batchDerivationTaskCount(
-            totalCount: privateKeys32.count,
+            totalCount: privateKeyScalars.count,
             executionMode: executionMode
         )
         guard taskCount >= 2 else {
             return try deriveCompressedPublicKeysSingleChunk(
-                fromPrivateKeys32: privateKeys32,
-                assumingValidPrivateKeys: assumingValidPrivateKeys
+                fromPrivateKeyScalars: privateKeyScalars
             )
         }
-        let chunkSize = (privateKeys32.count + taskCount - 1) / taskCount
+        let chunkSize = (privateKeyScalars.count + taskCount - 1) / taskCount
         return try await deriveCompressedPublicKeysInParallel(
-            fromPrivateKeys32: privateKeys32,
-            assumingValidPrivateKeys: assumingValidPrivateKeys,
+            fromPrivateKeyScalars: privateKeyScalars,
             chunkSize: chunkSize
         )
+    }
+
+    internal static func parsePrivateKeyScalars(
+        fromPrivateKeys32 privateKeys32: [Data],
+        assumingValidPrivateKeys: Bool
+    ) throws -> [ScalarModel] {
+        var privateKeyScalars: [ScalarModel] = .init()
+        privateKeyScalars.reserveCapacity(privateKeys32.count)
+
+        for privateKey32 in privateKeys32 {
+            let privateKeyScalar = if assumingValidPrivateKeys {
+                try parsePrivateKeyScalarUnchecked(privateKey32, requireNonZero: true)
+            } else {
+                try parsePrivateKeyScalar(privateKey32, requireNonZero: true)
+            }
+            privateKeyScalars.append(privateKeyScalar)
+        }
+
+        return privateKeyScalars
     }
 }
 
 private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
-    static let minimumAutomaticParallelKeyCount = 512
+    static let minimumAutomaticParallelKeyCount = 256
     static let minimumKeysPerTask = 256
 
     static func batchDerivationTaskCount(
@@ -56,21 +87,33 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
             guard totalCount >= minimumAutomaticParallelKeyCount else {
                 return 1
             }
-            return min(processorCount, totalCount / minimumKeysPerTask)
+            return parallelBatchDerivationTaskCount(
+                totalCount: totalCount,
+                processorCount: processorCount
+            )
         case .serial:
             return 1
         case .parallel:
-            let targetTaskCount = max(2, (totalCount + minimumKeysPerTask - 1) / minimumKeysPerTask)
-            return min(processorCount, totalCount, targetTaskCount)
+            return parallelBatchDerivationTaskCount(
+                totalCount: totalCount,
+                processorCount: processorCount
+            )
         }
     }
 
+    static func parallelBatchDerivationTaskCount(
+        totalCount: Int,
+        processorCount: Int
+    ) -> Int {
+        let targetTaskCount = max(2, (totalCount + minimumKeysPerTask - 1) / minimumKeysPerTask)
+        return min(processorCount, targetTaskCount)
+    }
+
     static func deriveCompressedPublicKeysInParallel(
-        fromPrivateKeys32 privateKeys32: [Data],
-        assumingValidPrivateKeys: Bool,
+        fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
         chunkSize: Int
     ) async throws -> [Data] {
-        let totalCount = privateKeys32.count
+        let totalCount = privateKeyScalars.count
         let chunkCount = (totalCount + chunkSize - 1) / chunkSize
         return try await withThrowingTaskGroup(of: CompressedPublicKeyChunkResult.self) { group in
             for chunkIndex in 0..<chunkCount {
@@ -81,10 +124,9 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
                     return CompressedPublicKeyChunkResult(
                         chunkIndex: chunkIndex,
                         compressedPublicKeys: try deriveCompressedPublicKeysSingleChunk(
-                            fromPrivateKeys32: privateKeys32,
+                            fromPrivateKeyScalars: privateKeyScalars,
                             startIndex: startIndex,
-                            endIndex: endIndex,
-                            assumingValidPrivateKeys: assumingValidPrivateKeys
+                            endIndex: endIndex
                         )
                     )
                 }
@@ -109,33 +151,25 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     }
 
     static func deriveCompressedPublicKeysSingleChunk(
-        fromPrivateKeys32 privateKeys32: [Data],
-        assumingValidPrivateKeys: Bool
+        fromPrivateKeyScalars privateKeyScalars: [ScalarModel]
     ) throws -> [Data] {
         try deriveCompressedPublicKeysSingleChunk(
-            fromPrivateKeys32: privateKeys32,
+            fromPrivateKeyScalars: privateKeyScalars,
             startIndex: 0,
-            endIndex: privateKeys32.count,
-            assumingValidPrivateKeys: assumingValidPrivateKeys
+            endIndex: privateKeyScalars.count
         )
     }
 
     static func deriveCompressedPublicKeysSingleChunk(
-        fromPrivateKeys32 privateKeys32: [Data],
+        fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
         startIndex: Int,
-        endIndex: Int,
-        assumingValidPrivateKeys: Bool
+        endIndex: Int
     ) throws -> [Data] {
         var jacobianPoints: [JacobianPointModel] = .init()
         jacobianPoints.reserveCapacity(endIndex - startIndex)
 
         for index in startIndex..<endIndex {
-            let privateKeyScalar = if assumingValidPrivateKeys {
-                try parsePrivateKeyScalarUnchecked(privateKeys32[index], requireNonZero: true)
-            } else {
-                try parsePrivateKeyScalar(privateKeys32[index], requireNonZero: true)
-            }
-            jacobianPoints.append(ScalarMultiplicationModel.mulG(privateKeyScalar))
+            jacobianPoints.append(ScalarMultiplicationModel.mulG(privateKeyScalars[index]))
         }
 
         let affinePoints = JacobianPointModel.convertBatchToAffine(jacobianPoints)

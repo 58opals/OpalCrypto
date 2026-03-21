@@ -19,8 +19,7 @@ extension OpalCrypto.Key {
         }
 
         internal let payload: ExtendedKeyPayloadModel
-        internal let compressedPublicKeyData: Data
-        internal let compressedPublicKeyFingerprintUInt32BigEndian: UInt32
+        internal let parsedPrivateKeyModel: ParsedPrivateKeyModel
 
         public var chainCode: Data { payload.chainCode }
         public var depth: UInt8 { payload.depth }
@@ -34,7 +33,7 @@ extension OpalCrypto.Key {
                 parentFingerprintUInt32BigEndian: payload.parentFingerprintUInt32BigEndian,
                 childIndex: payload.childIndex,
                 chainCode: payload.chainCode,
-                publicKey: compressedPublicKeyData
+                publicKey: parsedPrivateKeyModel.compressedPublicKeyData
             )
         }
 
@@ -67,32 +66,24 @@ extension OpalCrypto.Key {
 
         public func derived(indices: [UInt32]) throws -> ExtendedPrivateKey {
             var currentPayload = payload
-            var currentCompressedPublicKeyData = compressedPublicKeyData
-            var currentCompressedPublicKeyFingerprintUInt32BigEndian =
-                compressedPublicKeyFingerprintUInt32BigEndian
+            var currentParsedPrivateKeyModel = parsedPrivateKeyModel
             for index in indices {
                 do {
                     let childMaterial = try ExtendedKeyDerivationModel
                         .derivePrivateChildMaterial(
                         from: currentPayload,
-                        parentCompressedPublicKeyData: currentCompressedPublicKeyData,
-                        parentCompressedPublicKeyFingerprintUInt32BigEndian:
-                            currentCompressedPublicKeyFingerprintUInt32BigEndian,
+                        parsedPrivateKeyModel: currentParsedPrivateKeyModel,
                         index: index
                     )
                     currentPayload = childMaterial.payload
-                    currentCompressedPublicKeyData = childMaterial.compressedPublicKeyData
-                    currentCompressedPublicKeyFingerprintUInt32BigEndian =
-                        childMaterial.compressedPublicKeyFingerprintUInt32BigEndian
+                    currentParsedPrivateKeyModel = childMaterial.parsedPrivateKeyModel
                 } catch let error as ExtendedKeyDerivationModel.Error {
                     throw Self.mapDerivationError(error)
                 }
             }
             return ExtendedPrivateKey(
                 payload: currentPayload,
-                compressedPublicKeyData: currentCompressedPublicKeyData,
-                compressedPublicKeyFingerprintUInt32BigEndian:
-                    currentCompressedPublicKeyFingerprintUInt32BigEndian
+                parsedPrivateKeyModel: currentParsedPrivateKeyModel
             )
         }
 
@@ -100,23 +91,22 @@ extension OpalCrypto.Key {
             guard payload.kind == .privateKey else {
                 throw Error.invalidVersion(actual: ExtendedKeyPayloadModel.publicVersion)
             }
-            let publicPayload = try ExtendedKeyDerivationModel.makePublicKey(from: payload)
             self.payload = payload
-            self.compressedPublicKeyData = publicPayload.keyData
-            self.compressedPublicKeyFingerprintUInt32BigEndian = SecureHash160Model
-                .hash(publicPayload.keyData)
-                .uint32BigEndian(at: 0)
+            do {
+                self.parsedPrivateKeyModel = try ParsedPrivateKeyModel(
+                    privateKeyData32Bytes: payload.keyData
+                )
+            } catch {
+                throw Error.invalidPrivateKey
+            }
         }
 
         internal init(
             payload: ExtendedKeyPayloadModel,
-            compressedPublicKeyData: Data,
-            compressedPublicKeyFingerprintUInt32BigEndian: UInt32
+            parsedPrivateKeyModel: ParsedPrivateKeyModel
         ) {
             self.payload = payload
-            self.compressedPublicKeyData = compressedPublicKeyData
-            self.compressedPublicKeyFingerprintUInt32BigEndian =
-                compressedPublicKeyFingerprintUInt32BigEndian
+            self.parsedPrivateKeyModel = parsedPrivateKeyModel
         }
 
         private static func makePayload(from serialized: String) throws -> ExtendedKeyPayloadModel {
