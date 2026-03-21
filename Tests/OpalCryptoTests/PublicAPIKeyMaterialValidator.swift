@@ -72,6 +72,40 @@ struct PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Extended-key serialization preserves parent fingerprint and child index")
+    func extendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
+        let rootKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: Data(hexadecimal: seedHex))
+        let hardenedChild = try rootKey.derived(indices: [0x8000_0000])
+        let reparsedHardenedChild = try OpalCrypto.Key.ExtendedPrivateKey(
+            hardenedChild.serialize()
+        )
+        let expectedRootFingerprint = Data(
+            OpalCrypto.Hashing.computeHash160(rootKey.publicKey.publicKey).prefix(4)
+        )
+
+        #expect(hardenedChild.parentFingerprint == expectedRootFingerprint)
+        #expect(hardenedChild.childIndex == 0x8000_0000)
+        #expect(reparsedHardenedChild.parentFingerprint == hardenedChild.parentFingerprint)
+        #expect(reparsedHardenedChild.childIndex == hardenedChild.childIndex)
+
+        let publicGrandchild = try OpalCrypto.Key.ExtendedPublicKey(
+            hardenedChildPublicKeyString
+        ).derived(indices: [1])
+        let reparsedPublicGrandchild = try OpalCrypto.Key.ExtendedPublicKey(
+            publicGrandchild.serialize()
+        )
+        let expectedParentFingerprint = Data(
+            OpalCrypto.Hashing.computeHash160(
+                (try OpalCrypto.Key.ExtendedPublicKey(hardenedChildPublicKeyString)).publicKey
+            ).prefix(4)
+        )
+
+        #expect(publicGrandchild.parentFingerprint == expectedParentFingerprint)
+        #expect(publicGrandchild.childIndex == 1)
+        #expect(reparsedPublicGrandchild.parentFingerprint == publicGrandchild.parentFingerprint)
+        #expect(reparsedPublicGrandchild.childIndex == publicGrandchild.childIndex)
+    }
+
     private let privateKeyBytes = Array(repeating: UInt8(0x00), count: 31) + [0x01]
     private let compressedWalletImportFormatString = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
     private let uncompressedWalletImportFormatString = "5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf"

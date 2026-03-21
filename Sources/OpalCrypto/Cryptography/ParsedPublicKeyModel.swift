@@ -11,7 +11,11 @@ struct ParsedPublicKeyModel: Sendable, Equatable {
 
     let compressedPublicKeyData: Data
     let affinePoint: AffinePointModel
-    let fingerprintData4Bytes: Data
+    let fingerprintUInt32BigEndian: UInt32
+
+    var fingerprintData4Bytes: Data {
+        Data(bigEndianUInt32: fingerprintUInt32BigEndian)
+    }
 
     init(publicKeyData: Data) throws {
         let affinePoint: AffinePointModel
@@ -50,9 +54,9 @@ struct ParsedPublicKeyModel: Sendable, Equatable {
     ) {
         self.compressedPublicKeyData = compressedPublicKeyData
         self.affinePoint = affinePoint
-        self.fingerprintData4Bytes = Data(
-            SecureHash160Model.hash(compressedPublicKeyData).prefix(4)
-        )
+        self.fingerprintUInt32BigEndian = SecureHash160Model
+            .hash(compressedPublicKeyData)
+            .uint32BigEndian(at: 0)
     }
 
     static func == (

@@ -245,6 +245,22 @@ enum OpalCryptoBenchmarks {
         }
 
         checksum ^= try runSyncBenchmark(
+            name: "Extended private-key derivation (single hop)",
+            iterations: 200
+        ) {
+            let child = try context.rootExtendedPrivateKey.derived(indices: [1])
+            return Int(child.depth) ^ Int(child.privateKey[0])
+        }
+
+        checksum ^= try runSyncBenchmark(
+            name: "Extended public-key derivation (single hop)",
+            iterations: 200
+        ) {
+            let child = try context.rootExtendedPublicKey.derived(indices: [1])
+            return Int(child.depth) ^ Int(child.publicKey[0])
+        }
+
+        checksum ^= try runSyncBenchmark(
             name: "Extended public-key derivation (repeated)",
             iterations: 120
         ) {

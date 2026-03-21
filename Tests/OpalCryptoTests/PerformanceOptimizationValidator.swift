@@ -66,9 +66,53 @@ struct PerformanceOptimizationValidator {
         #expect(compressedParsedPublicKeyModel == uncompressedParsedPublicKeyModel)
         #expect(compressedParsedPublicKeyModel.compressedPublicKeyData == compressedPublicKey)
         #expect(
-            compressedParsedPublicKeyModel.fingerprintData4Bytes
-                == Data(SecureHash160Model.hash(compressedPublicKey).prefix(4))
+            compressedParsedPublicKeyModel.fingerprintUInt32BigEndian
+                == SecureHash160Model.hash(compressedPublicKey).uint32BigEndian(at: 0)
         )
+    }
+
+    @Test("Trusted extended-key payload factories match validated constructors on known-good inputs")
+    func trustedExtendedKeyPayloadFactoriesMatchValidatedConstructorsOnKnownGoodInputs() throws {
+        let privateKey = makePrivateKey(41)
+        let publicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKey)
+        let parentFingerprint = UInt32(0x1234_5678)
+        let chainCode = Data((0..<32).map { UInt8(($0 * 9) & 0xff) })
+
+        let validatedPrivatePayload = try ExtendedKeyPayloadModel(
+            kind: .privateKey,
+            depth: 1,
+            parentFingerprintUInt32BigEndian: parentFingerprint,
+            childIndex: 7,
+            chainCode: chainCode,
+            keyData: privateKey
+        )
+        let trustedPrivatePayload = ExtendedKeyPayloadModel.makeTrustedDerivedPrivateKey(
+            depth: 1,
+            parentFingerprintUInt32BigEndian: parentFingerprint,
+            childIndex: 7,
+            chainCode: chainCode,
+            privateKeyData32Bytes: privateKey
+        )
+        let validatedPublicPayload = try ExtendedKeyPayloadModel(
+            kind: .publicKey,
+            depth: 1,
+            parentFingerprintUInt32BigEndian: parentFingerprint,
+            childIndex: 7,
+            chainCode: chainCode,
+            keyData: publicKey
+        )
+        let trustedPublicPayload = ExtendedKeyPayloadModel.makeTrustedDerivedPublicKey(
+            depth: 1,
+            parentFingerprintUInt32BigEndian: parentFingerprint,
+            childIndex: 7,
+            chainCode: chainCode,
+            publicKeyData33Bytes: publicKey
+        )
+
+        #expect(validatedPrivatePayload == trustedPrivatePayload)
+        #expect(validatedPrivatePayload.serialize() == trustedPrivatePayload.serialize())
+        #expect(validatedPublicPayload == trustedPublicPayload)
+        #expect(validatedPublicPayload.serialize() == trustedPublicPayload.serialize())
     }
 
     @Test("Joint generator and cached-key multiplication matches separate multiplication")

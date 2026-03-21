@@ -3,6 +3,12 @@
 import Foundation
 
 extension Data {
+    internal init(bigEndianUInt32 value: UInt32) {
+        self = Data()
+        reserveCapacity(4)
+        appendUInt32BigEndian(value)
+    }
+
     internal mutating func appendUInt32BigEndian(_ value: UInt32) {
         append(contentsOf: [
             UInt8((value >> 24) & 0xff),

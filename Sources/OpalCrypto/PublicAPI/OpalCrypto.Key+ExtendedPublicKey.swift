@@ -80,7 +80,7 @@ extension OpalCrypto.Key {
 
         internal init(
             depth: UInt8,
-            parentFingerprint: Data,
+            parentFingerprintUInt32BigEndian: UInt32,
             childIndex: UInt32,
             chainCode: Data,
             publicKey: Data
@@ -88,7 +88,7 @@ extension OpalCrypto.Key {
             self.payload = try! ExtendedKeyPayloadModel(
                 kind: .publicKey,
                 depth: depth,
-                parentFingerprint: parentFingerprint,
+                parentFingerprintUInt32BigEndian: parentFingerprintUInt32BigEndian,
                 childIndex: childIndex,
                 chainCode: chainCode,
                 keyData: publicKey
@@ -99,7 +99,7 @@ extension OpalCrypto.Key {
 
         internal init(
             depth: UInt8,
-            parentFingerprint: Data,
+            parentFingerprintUInt32BigEndian: UInt32,
             childIndex: UInt32,
             chainCode: Data,
             parsedPublicKeyModel: ParsedPublicKeyModel
@@ -107,7 +107,7 @@ extension OpalCrypto.Key {
             self.payload = try! ExtendedKeyPayloadModel(
                 kind: .publicKey,
                 depth: depth,
-                parentFingerprint: parentFingerprint,
+                parentFingerprintUInt32BigEndian: parentFingerprintUInt32BigEndian,
                 childIndex: childIndex,
                 chainCode: chainCode,
                 keyData: parsedPublicKeyModel.compressedPublicKeyData
