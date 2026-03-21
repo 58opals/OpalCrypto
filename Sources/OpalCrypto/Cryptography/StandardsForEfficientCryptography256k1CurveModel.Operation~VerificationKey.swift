@@ -6,13 +6,9 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     static func makeVerificationKey(
         publicKey: Data
     ) throws -> VerificationKeyModel {
-        do {
-            return try VerificationKeyModel(publicKeyData: publicKey)
-        } catch VerificationKeyModel.Error.invalidPublicKeyLength(let actual) {
-            throw Error.invalidPublicKeyLength(actual: actual)
-        } catch {
-            throw Error.invalidPublicKeyValue
-        }
+        VerificationKeyModel(
+            parsedPublicKeyModel: try makeParsedPublicKey(publicKey: publicKey)
+        )
     }
 
     static func makeVerificationKey(
@@ -33,13 +29,11 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         _ verificationKeyModel: VerificationKeyModel,
         tweakScalar: ScalarModel
     ) throws -> VerificationKeyModel {
-        let tweakPoint = ScalarMultiplicationModel.mulG(tweakScalar)
-        let combined = JacobianPointModel(affine: verificationKeyModel.affinePoint).add(
-            tweakPoint
+        VerificationKeyModel(
+            parsedPublicKeyModel: try tweakAddParsedPublicKey(
+                verificationKeyModel.parsedPublicKeyModel,
+                tweakScalar: tweakScalar
+            )
         )
-        guard let derivedAffine = combined.convertToAffine() else {
-            throw Error.invalidDerivedPublicKey
-        }
-        return VerificationKeyModel(affinePoint: derivedAffine)
     }
 }

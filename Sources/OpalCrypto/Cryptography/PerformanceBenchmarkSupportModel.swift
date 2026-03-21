@@ -3,6 +3,14 @@
 import Foundation
 
 package enum PerformanceBenchmarkSupportModel {
+    package static func constructParsedPublicKey(
+        publicKey: Data
+    ) throws -> Data {
+        try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .makeParsedPublicKey(publicKey: publicKey)
+            .compressedPublicKeyData
+    }
+
     package static func multiplyVerificationKey(
         scalarData32Bytes: Data,
         verificationKey: OpalCrypto.Signature.VerificationKey
@@ -46,5 +54,25 @@ package enum PerformanceBenchmarkSupportModel {
             return Data()
         }
         return affinePoint.encodeCompressed33()
+    }
+
+    package static func deriveCompressedPublicKeysSerial(
+        from privateKeys: [Data]
+    ) async throws -> [Data] {
+        try await StandardsForEfficientCryptography256k1CurveModel.Operation
+            .deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                executionMode: .serial
+            )
+    }
+
+    package static func deriveCompressedPublicKeysParallel(
+        from privateKeys: [Data]
+    ) async throws -> [Data] {
+        try await StandardsForEfficientCryptography256k1CurveModel.Operation
+            .deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                executionMode: .parallel
+            )
     }
 }

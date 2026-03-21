@@ -9,46 +9,48 @@ struct VerificationKeyModel: Sendable, Equatable {
         case invalidPublicKey
     }
 
-    let compressedPublicKeyData: Data
-    let affinePoint: AffinePointModel
+    let parsedPublicKeyModel: ParsedPublicKeyModel
     let oddMultiplesAffine: InlineArray<8, AffinePointModel>
     let endomorphismOddMultiplesAffine: InlineArray<8, AffinePointModel>
 
+    var compressedPublicKeyData: Data {
+        parsedPublicKeyModel.compressedPublicKeyData
+    }
+
+    var affinePoint: AffinePointModel {
+        parsedPublicKeyModel.affinePoint
+    }
+
+    var fingerprintData4Bytes: Data {
+        parsedPublicKeyModel.fingerprintData4Bytes
+    }
+
     init(publicKeyData: Data) throws {
-        let affinePoint: AffinePointModel
         do {
-            affinePoint = try PublicKeyParserModel.parsePublicKey(publicKeyData)
-        } catch PublicKeyParserModel.Error.invalidLength(let actual) {
+            self.init(parsedPublicKeyModel: try ParsedPublicKeyModel(publicKeyData: publicKeyData))
+        } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
             throw Error.invalidPublicKeyLength(actual: actual)
-        } catch PublicKeyParserModel.Error.invalidPrefix(let byte) {
-            throw Error.invalidPublicKeyPrefix(actual: byte)
+        } catch ParsedPublicKeyModel.Error.invalidPublicKeyPrefix(let actual) {
+            throw Error.invalidPublicKeyPrefix(actual: actual)
         } catch {
             throw Error.invalidPublicKey
         }
-
-        self.init(affinePoint: affinePoint)
     }
 
     init(affinePoint: AffinePointModel) {
-        let compressedPublicKeyData = affinePoint.encodeCompressed33()
         self.init(
-            affinePoint: affinePoint,
-            compressedPublicKeyData: compressedPublicKeyData
+            parsedPublicKeyModel: ParsedPublicKeyModel(affinePoint: affinePoint)
         )
     }
 
-    init(
-        affinePoint: AffinePointModel,
-        compressedPublicKeyData: Data
-    ) {
-        self.compressedPublicKeyData = compressedPublicKeyData
-        self.affinePoint = affinePoint
+    init(parsedPublicKeyModel: ParsedPublicKeyModel) {
+        self.parsedPublicKeyModel = parsedPublicKeyModel
         self.oddMultiplesAffine = ScalarMultiplicationModel.makeOddMultiplesAffineTable(
-            for: affinePoint
+            for: parsedPublicKeyModel.affinePoint
         )
         self.endomorphismOddMultiplesAffine = ScalarMultiplicationModel
             .makeOddMultiplesAffineTable(
-                for: affinePoint.applyEndomorphism()
+                for: parsedPublicKeyModel.affinePoint.applyEndomorphism()
             )
     }
 
@@ -56,6 +58,6 @@ struct VerificationKeyModel: Sendable, Equatable {
         lhs: VerificationKeyModel,
         rhs: VerificationKeyModel
     ) -> Bool {
-        lhs.compressedPublicKeyData == rhs.compressedPublicKeyData
+        lhs.parsedPublicKeyModel == rhs.parsedPublicKeyModel
     }
 }

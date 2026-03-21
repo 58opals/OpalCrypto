@@ -48,23 +48,27 @@ struct PerformanceOptimizationValidator {
         #expect(koreanWordLists.allSatisfy { $0 == referenceKoreanWordList })
     }
 
-    @Test("Internal public-key parsing round-trips compressed and uncompressed encodings")
-    func internalPublicKeyParsingRoundTripsCompressedAndUncompressedEncodings() throws {
+    @Test("Parsed public-key model canonicalizes encodings and caches the HDKD fingerprint")
+    func parsedPublicKeyModelCanonicalizesEncodingsAndCachesTheHdkdFingerprint() throws {
         let privateKey = makePrivateKey(7)
         let compressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
             from: privateKey
         )
         let compressedPoint = try PublicKeyParserModel.parsePublicKey(compressedPublicKey)
         let uncompressedPublicKey = compressedPoint.encodeUncompressed65()
-        let compressedVerificationKey = try OpalCrypto.Signature.VerificationKey(
-            publicKey: compressedPublicKey
+        let compressedParsedPublicKeyModel = try ParsedPublicKeyModel(
+            publicKeyData: compressedPublicKey
         )
-        let uncompressedVerificationKey = try OpalCrypto.Signature.VerificationKey(
-            publicKey: uncompressedPublicKey
+        let uncompressedParsedPublicKeyModel = try ParsedPublicKeyModel(
+            publicKeyData: uncompressedPublicKey
         )
 
-        #expect(compressedVerificationKey == uncompressedVerificationKey)
-        #expect(compressedVerificationKey.publicKey == compressedPublicKey)
+        #expect(compressedParsedPublicKeyModel == uncompressedParsedPublicKeyModel)
+        #expect(compressedParsedPublicKeyModel.compressedPublicKeyData == compressedPublicKey)
+        #expect(
+            compressedParsedPublicKeyModel.fingerprintData4Bytes
+                == Data(SecureHash160Model.hash(compressedPublicKey).prefix(4))
+        )
     }
 
     @Test("Joint generator and cached-key multiplication matches separate multiplication")
@@ -99,6 +103,91 @@ struct PerformanceOptimizationValidator {
         #expect(actualPoint.convertToAffine() == expectedPoint.convertToAffine())
     }
 
+    @Test("Verification-key verification parity survives the parsed-key cache split")
+    func verificationKeyVerificationParitySurvivesTheParsedKeyCacheSplit() throws {
+        let privateKey = makePrivateKey(29)
+        let message = Data("opal-ecdsa-cache-split".utf8)
+        let digest = Data(repeating: 0x29, count: 32)
+        let compressedPublicKey = try OpalCrypto.Signature.derivePublicKey(
+            fromPrivateKey: privateKey
+        )
+        let verificationKeyModel = VerificationKeyModel(
+            parsedPublicKeyModel: try ParsedPublicKeyModel(publicKeyData: compressedPublicKey)
+        )
+        let ecdsaSignature = try OpalCrypto.Signature.sign(
+            message: message,
+            privateKey: privateKey,
+            format: .ecdsa(.der)
+        )
+        let schnorrSignature = try OpalCrypto.Signature.sign(
+            message: digest,
+            privateKey: privateKey,
+            format: .schnorr,
+            nonce: .bip340Deterministic
+        )
+
+        let rawEcdsaResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+            signature: ecdsaSignature,
+            message: message,
+            publicKey: compressedPublicKey,
+            format: .ecdsa(.distinguishedEncodingRules)
+        )
+        let cachedEcdsaResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+            signature: ecdsaSignature,
+            message: message,
+            verificationKeyModel: verificationKeyModel,
+            format: .ecdsa(.distinguishedEncodingRules)
+        )
+        let rawSchnorrResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+            signature: schnorrSignature,
+            message: digest,
+            publicKey: compressedPublicKey,
+            format: .schnorr
+        )
+        let cachedSchnorrResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+            signature: schnorrSignature,
+            message: digest,
+            verificationKeyModel: verificationKeyModel,
+            format: .schnorr
+        )
+
+        #expect(rawEcdsaResult == cachedEcdsaResult)
+        #expect(rawSchnorrResult == cachedSchnorrResult)
+        #expect(cachedEcdsaResult)
+        #expect(cachedSchnorrResult)
+    }
+
+    @Test("Parsed public-key tweak-add matches the raw and cached verification-key paths")
+    func parsedPublicKeyTweakAddMatchesTheRawAndCachedVerificationKeyPaths() throws {
+        let privateKey = makePrivateKey(31)
+        let tweak = makePrivateKey(37)
+        let compressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: privateKey
+        )
+        let parsedPublicKeyModel = try ParsedPublicKeyModel(publicKeyData: compressedPublicKey)
+        let verificationKeyModel = VerificationKeyModel(parsedPublicKeyModel: parsedPublicKeyModel)
+
+        let rawTweakedPublicKey = try OpalCrypto.Secp256k1.tweakAddPublicKey(
+            compressedPublicKey,
+            tweak: tweak
+        )
+        let parsedTweakedPublicKey = try StandardsForEfficientCryptography256k1CurveModel
+            .Operation.tweakAddPublicKey(
+                parsedPublicKeyModel,
+                tweakData32Bytes: tweak,
+                format: .compressed
+            )
+        let cachedTweakedPublicKey = try StandardsForEfficientCryptography256k1CurveModel
+            .Operation.tweakAddPublicKey(
+                verificationKeyModel,
+                tweakData32Bytes: tweak,
+                format: .compressed
+            )
+
+        #expect(parsedTweakedPublicKey == rawTweakedPublicKey)
+        #expect(cachedTweakedPublicKey == rawTweakedPublicKey)
+    }
+
     @Test("Extended public and private derivation remain aligned with cached public-key fast paths")
     func extendedPublicAndPrivateDerivationRemainAlignedWithCachedPublicKeyFastPaths() throws {
         let seed = Data((0..<16).map(UInt8.init))
@@ -112,6 +201,24 @@ struct PerformanceOptimizationValidator {
         )
 
         #expect(derivedFromPublic == derivedFromPrivate)
+    }
+
+    @Test("Forced serial and forced parallel batch derivation return identical ordered results")
+    func forcedSerialAndForcedParallelBatchDerivationReturnIdenticalOrderedResults() async throws {
+        let privateKeys = (1...1024).map(makePrivateKey)
+
+        let forcedSerialPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                executionMode: .serial
+            )
+        let forcedParallelPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                executionMode: .parallel
+            )
+
+        #expect(forcedSerialPublicKeys == forcedParallelPublicKeys)
     }
 
     private func makePrivateKey(_ value: Int) -> Data {

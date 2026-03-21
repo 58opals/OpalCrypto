@@ -58,13 +58,31 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             tweakData32Bytes: Data,
             format: PublicKeyFormat? = nil
         ) throws -> Data {
-            let verificationKeyModel = try makeVerificationKey(publicKey: publicKey)
+            let parsedPublicKeyModel = try makeParsedPublicKey(publicKey: publicKey)
             let resolvedFormat = try resolveFormat(from: publicKey, format: format)
             return try tweakAddPublicKey(
-                verificationKeyModel,
+                parsedPublicKeyModel,
                 tweakData32Bytes: tweakData32Bytes,
                 format: resolvedFormat
             )
+        }
+
+        internal static func tweakAddPublicKey(
+            _ parsedPublicKeyModel: ParsedPublicKeyModel,
+            tweakData32Bytes: Data,
+            format: PublicKeyFormat
+        ) throws -> Data {
+            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
+            let derivedParsedPublicKeyModel = try tweakAddParsedPublicKey(
+                parsedPublicKeyModel,
+                tweakScalar: tweakScalar
+            )
+            switch format {
+            case .compressed:
+                return derivedParsedPublicKeyModel.compressedPublicKeyData
+            case .uncompressed:
+                return derivedParsedPublicKeyModel.affinePoint.encodeUncompressed65()
+            }
         }
 
         internal static func tweakAddPublicKey(
@@ -72,17 +90,11 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             tweakData32Bytes: Data,
             format: PublicKeyFormat
         ) throws -> Data {
-            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
-            let derivedVerificationKeyModel = try tweakAddVerificationKey(
-                verificationKeyModel,
-                tweakScalar: tweakScalar
+            try tweakAddPublicKey(
+                verificationKeyModel.parsedPublicKeyModel,
+                tweakData32Bytes: tweakData32Bytes,
+                format: format
             )
-            switch format {
-            case .compressed:
-                return derivedVerificationKeyModel.compressedPublicKeyData
-            case .uncompressed:
-                return derivedVerificationKeyModel.affinePoint.encodeUncompressed65()
-            }
         }
     }
 }

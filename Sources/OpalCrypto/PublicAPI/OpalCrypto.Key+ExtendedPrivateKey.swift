@@ -20,6 +20,7 @@ extension OpalCrypto.Key {
 
         internal let payload: ExtendedKeyPayloadModel
         internal let compressedPublicKeyData: Data
+        internal let compressedPublicKeyFingerprintData4Bytes: Data
 
         public var chainCode: Data { payload.chainCode }
         public var depth: UInt8 { payload.depth }
@@ -67,23 +68,31 @@ extension OpalCrypto.Key {
         public func derived(indices: [UInt32]) throws -> ExtendedPrivateKey {
             var currentPayload = payload
             var currentCompressedPublicKeyData = compressedPublicKeyData
+            var currentCompressedPublicKeyFingerprintData4Bytes =
+                compressedPublicKeyFingerprintData4Bytes
             for index in indices {
                 do {
                     let childMaterial = try ExtendedKeyDerivationModel
                         .derivePrivateChildMaterial(
                         from: currentPayload,
                         parentCompressedPublicKeyData: currentCompressedPublicKeyData,
+                        parentCompressedPublicKeyFingerprintData4Bytes:
+                            currentCompressedPublicKeyFingerprintData4Bytes,
                         index: index
                     )
                     currentPayload = childMaterial.payload
                     currentCompressedPublicKeyData = childMaterial.compressedPublicKeyData
+                    currentCompressedPublicKeyFingerprintData4Bytes =
+                        childMaterial.compressedPublicKeyFingerprintData4Bytes
                 } catch let error as ExtendedKeyDerivationModel.Error {
                     throw Self.mapDerivationError(error)
                 }
             }
             return ExtendedPrivateKey(
                 payload: currentPayload,
-                compressedPublicKeyData: currentCompressedPublicKeyData
+                compressedPublicKeyData: currentCompressedPublicKeyData,
+                compressedPublicKeyFingerprintData4Bytes:
+                    currentCompressedPublicKeyFingerprintData4Bytes
             )
         }
 
@@ -94,14 +103,19 @@ extension OpalCrypto.Key {
             let publicPayload = try ExtendedKeyDerivationModel.makePublicKey(from: payload)
             self.payload = payload
             self.compressedPublicKeyData = publicPayload.keyData
+            self.compressedPublicKeyFingerprintData4Bytes = Data(
+                SecureHash160Model.hash(publicPayload.keyData).prefix(4)
+            )
         }
 
         internal init(
             payload: ExtendedKeyPayloadModel,
-            compressedPublicKeyData: Data
+            compressedPublicKeyData: Data,
+            compressedPublicKeyFingerprintData4Bytes: Data
         ) {
             self.payload = payload
             self.compressedPublicKeyData = compressedPublicKeyData
+            self.compressedPublicKeyFingerprintData4Bytes = compressedPublicKeyFingerprintData4Bytes
         }
 
         private static func makePayload(from serialized: String) throws -> ExtendedKeyPayloadModel {
