@@ -23,22 +23,27 @@ internal struct Unsigned256BitIntegerModel: Sendable {
     @usableFromInline static let one = Unsigned256BitIntegerModel(limbs: [1, 0, 0, 0])
 
     internal init(data32Bytes: Data) throws {
-        guard data32Bytes.count == 32 else {
-            throw Error.invalidDataLength(expected: 32, actual: data32Bytes.count)
-        }
-        var temporaryLimbs: InlineArray<4, UInt64> = .init(repeating: 0)
-        data32Bytes.withUnsafeBytes { rawBuffer in
+        try self.init(contiguousBytes32: data32Bytes)
+    }
+
+    internal init<Bytes: ContiguousBytes>(contiguousBytes32 bytes: Bytes) throws {
+        let temporaryLimbs = try bytes.withUnsafeBytes { rawBuffer throws in
+            guard rawBuffer.count == 32 else {
+                throw Error.invalidDataLength(expected: 32, actual: rawBuffer.count)
+            }
+            var resolvedLimbs: InlineArray<4, UInt64> = .init(repeating: 0)
             for index in 0..<4 {
                 let word = rawBuffer.loadUnaligned(fromByteOffset: index * 8, as: UInt64.self)
-                temporaryLimbs[3 - index] = UInt64(bigEndian: word)
+                resolvedLimbs[3 - index] = UInt64(bigEndian: word)
             }
+            return resolvedLimbs
         }
         limbs = temporaryLimbs
     }
 
     @inlinable
     init(data32: Data) throws {
-        try self.init(data32Bytes: data32)
+        try self.init(contiguousBytes32: data32)
     }
 
     @inlinable

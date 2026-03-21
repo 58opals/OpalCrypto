@@ -13,12 +13,21 @@ struct ScalarModel: Sendable, Equatable {
     
     static let zero = ScalarModel(unchecked: Unsigned256BitIntegerModel(limbs: [0, 0, 0, 0]))
     static let one = ScalarModel(unchecked: Unsigned256BitIntegerModel(limbs: [1, 0, 0, 0]))
-    
+
     init(data32: Data, requireNonZero: Bool = false) throws {
-        guard data32.count == 32 else {
-            throw Error.invalidDataLength(expected: 32, actual: data32.count)
+        try self.init(contiguousBytes32: data32, requireNonZero: requireNonZero)
+    }
+
+    init<Bytes: ContiguousBytes>(
+        contiguousBytes32 bytes: Bytes,
+        requireNonZero: Bool = false
+    ) throws {
+        let parsed: Unsigned256BitIntegerModel
+        do {
+            parsed = try Unsigned256BitIntegerModel(contiguousBytes32: bytes)
+        } catch Unsigned256BitIntegerModel.Error.invalidDataLength(let expected, let actual) {
+            throw Error.invalidDataLength(expected: expected, actual: actual)
         }
-        let parsed = try Unsigned256BitIntegerModel(data32: data32)
         guard parsed.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.n) == .orderedAscending else {
             throw Error.invalidScalarValue
         }

@@ -10,8 +10,9 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         guard !privateKeys32.isEmpty else { return .init() }
 
         let maximumChunkSize = 256
+        let minimumParallelKeyCount = 128
         let totalCount = privateKeys32.count
-        if totalCount <= 64 {
+        if totalCount < minimumParallelKeyCount {
             return try deriveCompressedPublicKeysSingleChunk(
                 fromPrivateKeys32: privateKeys32,
                 assumingValidPrivateKeys: assumingValidPrivateKeys
@@ -52,25 +53,25 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
                     }
 
                     return CompressedPublicKeyChunkResult(
-                        startIndex: startIndex,
+                        chunkIndex: chunkIndex,
                         compressedPublicKeys: compressedPublicKeys
                     )
                 }
             }
 
-            var chunkResults: [CompressedPublicKeyChunkResult] = .init()
-            chunkResults.reserveCapacity(chunkCount)
+            var chunkResults = Array<[Data]?>(repeating: nil, count: chunkCount)
 
             for try await chunkResult in group {
-                chunkResults.append(chunkResult)
+                chunkResults[chunkResult.chunkIndex] = chunkResult.compressedPublicKeys
             }
-
-            chunkResults.sort { $0.startIndex < $1.startIndex }
 
             var compressedPublicKeys: [Data] = .init()
             compressedPublicKeys.reserveCapacity(totalCount)
             for chunkResult in chunkResults {
-                compressedPublicKeys.append(contentsOf: chunkResult.compressedPublicKeys)
+                guard let chunkResult else {
+                    throw Error.invalidDerivedPublicKey
+                }
+                compressedPublicKeys.append(contentsOf: chunkResult)
             }
             return compressedPublicKeys
         }

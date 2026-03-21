@@ -4,7 +4,7 @@ import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     struct CompressedPublicKeyChunkResult: Sendable {
-        let startIndex: Int
+        let chunkIndex: Int
         let compressedPublicKeys: [Data]
     }
 }

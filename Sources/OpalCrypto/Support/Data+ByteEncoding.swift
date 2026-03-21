@@ -12,6 +12,22 @@ extension Data {
         ])
     }
 
+    internal mutating func appendUInt64BigEndian(_ value: UInt64) {
+        var bigEndianValue = value.bigEndian
+        Swift.withUnsafeBytes(of: &bigEndianValue) { rawBuffer in
+            append(contentsOf: rawBuffer)
+        }
+    }
+
+    internal mutating func appendUnsigned256BitIntegerBigEndian(
+        _ value: Unsigned256BitIntegerModel
+    ) {
+        appendUInt64BigEndian(value.limbs[3])
+        appendUInt64BigEndian(value.limbs[2])
+        appendUInt64BigEndian(value.limbs[1])
+        appendUInt64BigEndian(value.limbs[0])
+    }
+
     internal func uint32BigEndian(at offset: Int) -> UInt32 {
         precondition(offset >= 0)
         precondition(offset + 4 <= count)

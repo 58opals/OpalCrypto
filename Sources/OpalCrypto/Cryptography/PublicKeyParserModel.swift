@@ -28,8 +28,8 @@ enum PublicKeyParserModel {
             throw Error.invalidPrefix(byte: prefix)
         }
 
-        let xData = data.dropFirst()
-        let xCoordinate = try FieldElementModel(data32: Data(xData))
+        let xData = data[data.index(after: data.startIndex)..<data.endIndex]
+        let xCoordinate = try FieldElementModel(contiguousBytes32: xData)
         let ySquared = xCoordinate.square().mul(xCoordinate).add(.seven)
         guard var yCoordinate = ySquared.sqrt() else {
             throw Error.invalidPoint
@@ -55,10 +55,12 @@ enum PublicKeyParserModel {
             throw Error.invalidPrefix(byte: prefix)
         }
 
-        let xData = data.subdata(in: 1..<33)
-        let yData = data.subdata(in: 33..<65)
-        let xCoordinate = try FieldElementModel(data32: xData)
-        let yCoordinate = try FieldElementModel(data32: yData)
+        let xStartIndex = data.index(after: data.startIndex)
+        let yStartIndex = data.index(xStartIndex, offsetBy: 32)
+        let xData = data[xStartIndex..<yStartIndex]
+        let yData = data[yStartIndex..<data.endIndex]
+        let xCoordinate = try FieldElementModel(contiguousBytes32: xData)
+        let yCoordinate = try FieldElementModel(contiguousBytes32: yData)
         let point = AffinePointModel(x: xCoordinate, y: yCoordinate)
         guard point.isOnCurve else {
             throw Error.invalidPoint

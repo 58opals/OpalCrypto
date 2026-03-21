@@ -12,6 +12,13 @@ internal struct Base58EncodingModel {
         "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
     ]
     private static let baseNumber: Int = characters.count
+    private static let asciiLookup: [Int16] = {
+        var lookup = Array(repeating: Int16(-1), count: 128)
+        for (index, character) in characters.enumerated() {
+            lookup[Int(character.asciiValue!)] = Int16(index)
+        }
+        return lookup
+    }()
     
     internal static func encode(_ data: Data) -> String {
         var value = LargeUnsignedIntegerArithmeticModel(data)
@@ -33,12 +40,12 @@ internal struct Base58EncodingModel {
     internal static func decode(_ base58: String) -> Data? {
         var total = LargeUnsignedIntegerArithmeticModel.zero
         
-        for character in base58 {
-            guard let characterIndex = characters.firstIndex(of: character) else { return nil }
-            
-            let value = characters.distance(from: characters.startIndex, to: characterIndex)
+        for asciiValue in base58.utf8 {
+            guard asciiValue < 128 else { return nil }
+            let value = asciiLookup[Int(asciiValue)]
+            guard value >= 0 else { return nil }
             total.multiply(by: baseNumber)
-            total.add(value)
+            total.add(Int(value))
         }
         
         var bytes: [UInt8] = .init()

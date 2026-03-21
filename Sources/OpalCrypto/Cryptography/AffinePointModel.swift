@@ -11,17 +11,30 @@ struct AffinePointModel: Sendable, Equatable {
         let right = x.square().mul(x).add(.seven)
         return left == right
     }
+
+    func appendCompressed33Bytes(to data: inout Data) {
+        data.append(y.isOdd ? 0x03 : 0x02)
+        data.appendUnsigned256BitIntegerBigEndian(x.value)
+    }
+
+    func appendUncompressed65Bytes(to data: inout Data) {
+        data.append(0x04)
+        data.appendUnsigned256BitIntegerBigEndian(x.value)
+        data.appendUnsigned256BitIntegerBigEndian(y.value)
+    }
     
     func encodeCompressed33() -> Data {
         var output = Data()
         output.reserveCapacity(33)
-        output.append(y.isOdd ? 0x03 : 0x02)
-        output.append(x.data32)
+        appendCompressed33Bytes(to: &output)
         return output
     }
     
     func encodeUncompressed65() -> Data {
-        Data([0x04]) + x.data32 + y.data32
+        var output = Data()
+        output.reserveCapacity(65)
+        appendUncompressed65Bytes(to: &output)
+        return output
     }
     
     func negate() -> AffinePointModel {

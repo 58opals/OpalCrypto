@@ -11,6 +11,17 @@ internal struct Base32EncodingModel {
     ]
     private static let baseNumber: Int = characters.count
     private static let zeroCharacter = characters[0]
+    private static let asciiLookup: [Int16] = {
+        var lookup = Array(repeating: Int16(-1), count: 128)
+        for (index, character) in characters.enumerated() {
+            let asciiValue = character.asciiValue!
+            lookup[Int(asciiValue)] = Int16(index)
+            if (0x61...0x7A).contains(asciiValue) {
+                lookup[Int(asciiValue - 0x20)] = Int16(index)
+            }
+        }
+        return lookup
+    }()
 
     internal static func encode(_ data: Data, interpretedAsFiveBitValues: Bool) throws -> String {
         switch interpretedAsFiveBitValues {
@@ -42,43 +53,40 @@ internal struct Base32EncodingModel {
         var data = Data()
         switch interpretedAsFiveBitValues {
         case true:
-            for character in string {
-                let normalizedCharacter = try normalizeCharacter(character)
-
-                if let index = characters.firstIndex(of: normalizedCharacter) {
-                    data.append(UInt8(index))
-                } else {
+            data.reserveCapacity(string.count)
+            for asciiValue in string.utf8 {
+                guard asciiValue < 128 else {
                     throw Error.invalidCharacterFound
                 }
+                let index = asciiLookup[Int(asciiValue)]
+                guard index >= 0 else {
+                    throw Error.invalidCharacterFound
+                }
+                data.append(UInt8(index))
             }
         case false:
-            let normalizedCharacters = try string.map(normalizeCharacter)
-            let leadingZeroCharacterCount = normalizedCharacters.prefix(while: { $0 == zeroCharacter }).count
             var value = LargeUnsignedIntegerArithmeticModel(0)
-            for normalizedCharacter in normalizedCharacters {
-                if let index = characters.firstIndex(of: normalizedCharacter) {
-                    value.multiply(by: baseNumber)
-                    value.add(index)
-                } else {
+            var leadingZeroCharacterCount = 0
+            var isReadingLeadingZeroes = true
+            for asciiValue in string.utf8 {
+                guard asciiValue < 128 else {
                     throw Error.invalidCharacterFound
                 }
+                let index = asciiLookup[Int(asciiValue)]
+                guard index >= 0 else {
+                    throw Error.invalidCharacterFound
+                }
+                if isReadingLeadingZeroes, index == 0 {
+                    leadingZeroCharacterCount += 1
+                } else {
+                    isReadingLeadingZeroes = false
+                }
+                value.multiply(by: baseNumber)
+                value.add(Int(index))
             }
             data = Data(repeating: 0x00, count: leadingZeroCharacterCount)
             data.append(value.serialize())
         }
         return data
-    }
-
-    private static func normalizeCharacter(_ character: Character) throws -> Character {
-        guard let asciiValue = character.asciiValue else { return character }
-
-        switch asciiValue {
-        case 0x41...0x5A:
-            let normalizedAsciiValue = asciiValue &+ 0x20
-            let scalar = UnicodeScalar(normalizedAsciiValue)
-            return Character(scalar)
-        default:
-            return character
-        }
     }
 }

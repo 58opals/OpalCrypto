@@ -7,8 +7,18 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         _ data: Data,
         requireNonZero: Bool
     ) throws -> ScalarModel {
+        try parsePrivateKeyScalar(contiguousBytes32: data, requireNonZero: requireNonZero)
+    }
+
+    static func parsePrivateKeyScalar<Bytes: ContiguousBytes>(
+        contiguousBytes32 bytes: Bytes,
+        requireNonZero: Bool
+    ) throws -> ScalarModel {
         do {
-            return try ScalarModel(data32: data, requireNonZero: requireNonZero)
+            return try ScalarModel(
+                contiguousBytes32: bytes,
+                requireNonZero: requireNonZero
+            )
         } catch ScalarModel.Error.invalidDataLength(let expected, let actual) {
             precondition(expected == 32)
             throw Error.invalidPrivateKeyLength(actual: actual)
@@ -21,8 +31,18 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         _ data: Data,
         requireNonZero: Bool
     ) throws -> ScalarModel {
+        try parsePrivateKeyScalarUnchecked(
+            contiguousBytes32: data,
+            requireNonZero: requireNonZero
+        )
+    }
+
+    static func parsePrivateKeyScalarUnchecked<Bytes: ContiguousBytes>(
+        contiguousBytes32 bytes: Bytes,
+        requireNonZero: Bool
+    ) throws -> ScalarModel {
         do {
-            let parsed = try Unsigned256BitIntegerModel(data32: data)
+            let parsed = try Unsigned256BitIntegerModel(contiguousBytes32: bytes)
             let scalar = ScalarModel(unchecked: parsed)
             guard !requireNonZero || !scalar.isZero else {
                 throw ScalarModel.Error.zeroNotAllowed
@@ -40,8 +60,18 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         _ data: Data,
         requireNonZero: Bool
     ) throws -> ScalarModel {
+        try parseTweakScalar(contiguousBytes32: data, requireNonZero: requireNonZero)
+    }
+
+    static func parseTweakScalar<Bytes: ContiguousBytes>(
+        contiguousBytes32 bytes: Bytes,
+        requireNonZero: Bool
+    ) throws -> ScalarModel {
         do {
-            return try ScalarModel(data32: data, requireNonZero: requireNonZero)
+            return try ScalarModel(
+                contiguousBytes32: bytes,
+                requireNonZero: requireNonZero
+            )
         } catch ScalarModel.Error.invalidDataLength(let expected, let actual) {
             precondition(expected == 32)
             throw Error.invalidTweakLength(actual: actual)

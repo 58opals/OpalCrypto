@@ -25,10 +25,16 @@ struct FieldElementModel: Sendable, Equatable {
     }
     
     init(data32: Data) throws {
-        guard data32.count == 32 else {
-            throw Error.invalidDataLength(expected: 32, actual: data32.count)
+        try self.init(contiguousBytes32: data32)
+    }
+
+    init<Bytes: ContiguousBytes>(contiguousBytes32 bytes: Bytes) throws {
+        let parsed: Unsigned256BitIntegerModel
+        do {
+            parsed = try Unsigned256BitIntegerModel(contiguousBytes32: bytes)
+        } catch Unsigned256BitIntegerModel.Error.invalidDataLength(let expected, let actual) {
+            throw Error.invalidDataLength(expected: expected, actual: actual)
         }
-        let parsed = try Unsigned256BitIntegerModel(data32: data32)
         try self.init(value: parsed)
     }
     

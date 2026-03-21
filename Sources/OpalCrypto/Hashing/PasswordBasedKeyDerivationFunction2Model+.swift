@@ -4,20 +4,11 @@ import Foundation
 import CryptoKit
 
 extension PasswordBasedKeyDerivationFunction2Model {
-    func makeBlockNumberBytes(from value: Int) -> Array<UInt8> {
-        var blockNumberBytes = Array<UInt8>(repeating: 0, count: 4)
-        blockNumberBytes[0] = UInt8((value >> 24) & 0xff)
-        blockNumberBytes[1] = UInt8((value >> 16) & 0xff)
-        blockNumberBytes[2] = UInt8((value >> 8) & 0xff)
-        blockNumberBytes[3] = UInt8(value & 0xff)
-        return blockNumberBytes
-    }
-
-    func computeBlock(_ salt: Data, blockNumber: Int) throws -> Array<UInt8> {
+    func computeBlock(blockNumber: Int) throws -> Array<UInt8> {
         var blockInput = Data()
         blockInput.reserveCapacity(salt.count + 4)
         blockInput.append(salt)
-        blockInput.append(contentsOf: makeBlockNumberBytes(from: blockNumber))
+        blockInput.appendUInt32BigEndian(UInt32(blockNumber))
 
         let firstAuthenticationCode = HMAC<SHA512>.authenticationCode(for: blockInput, using: symmetricKey)
 

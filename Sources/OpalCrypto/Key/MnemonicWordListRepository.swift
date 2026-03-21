@@ -8,19 +8,19 @@ internal enum MnemonicWordListRepository {
         internal let indexLookup: [String: Int]
     }
 
-    private static let lock = NSLock()
-    nonisolated(unsafe) private static var cachedWordLists: [OpalCrypto.Key.Mnemonic.Word.Language: WordListData] = [:]
+    private static let cache = MnemonicWordListCacheModel()
 
     internal static func load(
         _ language: OpalCrypto.Key.Mnemonic.Word.Language
     ) throws -> WordListData {
-        lock.lock()
-        if let cachedWordList = cachedWordLists[language] {
-            lock.unlock()
-            return cachedWordList
+        try cache.load(language: language) {
+            try makeWordListData(language: language)
         }
-        lock.unlock()
+    }
 
+    private static func makeWordListData(
+        language: OpalCrypto.Key.Mnemonic.Word.Language
+    ) throws -> WordListData {
         guard let resourceURL = Bundle.module.url(
             forResource: language.resourceName,
             withExtension: "txt"
@@ -30,9 +30,8 @@ internal enum MnemonicWordListRepository {
 
         let resourceContents = try String(contentsOf: resourceURL, encoding: .utf8)
         let words = resourceContents
-            .components(separatedBy: .newlines)
-            .map(MnemonicCodecModel.normalizeWord)
-            .filter { !$0.isEmpty }
+            .split(whereSeparator: \.isNewline)
+            .map { MnemonicCodecModel.normalizeWord(String($0)) }
         guard words.count == 2048 else {
             throw OpalCrypto.Key.Mnemonic.Error.invalidWordList(
                 language: language,
@@ -48,13 +47,7 @@ internal enum MnemonicWordListRepository {
             )
         }
 
-        let wordList = WordListData(words: words, indexLookup: indexLookup)
-
-        lock.lock()
-        cachedWordLists[language] = wordList
-        lock.unlock()
-
-        return wordList
+        return WordListData(words: words, indexLookup: indexLookup)
     }
 }
 

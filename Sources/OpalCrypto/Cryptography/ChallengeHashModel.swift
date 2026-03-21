@@ -16,14 +16,13 @@ enum ChallengeHashModel {
         guard digest32.count == 32 else {
             throw Error.invalidDigestLength(actual: digest32.count)
         }
-        let publicKeyData = publicKey.encodeCompressed33()
-        let rData = r.data32
         var input = Data()
-        input.append(rData)
-        input.append(publicKeyData)
+        input.reserveCapacity(97)
+        input.appendUnsigned256BitIntegerBigEndian(r.value)
+        publicKey.appendCompressed33Bytes(to: &input)
         input.append(digest32)
-        let hashData = Data(SecureHashAlgorithm256Model.hash(input))
-        let hashValue = try Unsigned256BitIntegerModel(data32: hashData)
+        let hashData = SecureHashAlgorithm256Model.hash(input)
+        let hashValue = try Unsigned256BitIntegerModel(contiguousBytes32: hashData)
         var reducedValue = hashValue
         if reducedValue.compare(to: StandardsForEfficientCryptography256k1CurveModel.Constant.n) != .orderedAscending {
             reducedValue = reducedValue.subtract(StandardsForEfficientCryptography256k1CurveModel.Constant.n).difference

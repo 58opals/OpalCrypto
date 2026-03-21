@@ -36,14 +36,20 @@ internal struct PasswordBasedKeyDerivationFunction2Model {
     }
     
     internal func deriveKey() throws -> Data {
-        var derivedKey = Array<UInt8>(repeating: 0, count: self.blockCount * sha512BlockSize)
-        var derivedKeyIndex = 0
+        var derivedKey = Data()
+        derivedKey.reserveCapacity(self.derivedKeyLength)
+        var remainingByteCount = derivedKeyLength
         for blockIndex in 1...self.blockCount {
-            let block = try computeBlock(self.salt, blockNumber: blockIndex)
-            let endIndex = derivedKeyIndex + block.count
-            derivedKey.replaceSubrange(derivedKeyIndex..<endIndex, with: block)
-            derivedKeyIndex = endIndex
+            let block = try computeBlock(blockNumber: blockIndex)
+            if remainingByteCount >= block.count {
+                derivedKey.append(contentsOf: block)
+                remainingByteCount -= block.count
+            } else {
+                derivedKey.append(contentsOf: block.prefix(remainingByteCount))
+                remainingByteCount = 0
+                break
+            }
         }
-        return Data(Array(derivedKey.prefix(self.derivedKeyLength)))
+        return derivedKey
     }
 }

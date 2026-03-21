@@ -25,9 +25,8 @@ internal enum MnemonicCodecModel {
         language: OpalCrypto.Key.Mnemonic.Word.Language?
     ) throws -> ParsedMnemonic {
         let normalizedWords = normalizePhrase(phrase)
-            .components(separatedBy: .whitespacesAndNewlines)
-            .map(normalizeWord)
-            .filter { !$0.isEmpty }
+            .split(whereSeparator: \.isWhitespace)
+            .map { normalizeWord(String($0)) }
         return try parse(words: normalizedWords, language: language)
     }
 
@@ -109,27 +108,39 @@ internal enum MnemonicCodecModel {
         length: OpalCrypto.Key.Mnemonic.Length
     ) throws -> Data {
         let wordList = try MnemonicWordListRepository.load(language)
-        var bits: [Bool] = []
-        bits.reserveCapacity(words.count * 11)
-
+        let entropyBitCount = length.entropyByteCount * 8
         for word in words {
-            guard let wordIndex = wordList.indexLookup[word] else {
+            guard wordList.indexLookup[word] != nil else {
                 throw OpalCrypto.Key.Mnemonic.Error.invalidWord(word)
             }
+        }
+
+        var entropy = Data(repeating: 0, count: length.entropyByteCount)
+        var entropyWriteBitIndex = 0
+        var actualChecksumValue: UInt8 = 0
+
+        for word in words {
+            let wordIndex = wordList.indexLookup[word]!
             for shift in stride(from: 10, through: 0, by: -1) {
-                bits.append(((wordIndex >> shift) & 1) == 1)
+                let bit = (wordIndex >> shift) & 1
+                if entropyWriteBitIndex < entropyBitCount {
+                    if bit == 1 {
+                        entropy[entropyWriteBitIndex / 8] |= UInt8(
+                            1 << (7 - (entropyWriteBitIndex % 8))
+                        )
+                    }
+                    entropyWriteBitIndex += 1
+                } else {
+                    actualChecksumValue = (actualChecksumValue << 1) | UInt8(bit)
+                }
             }
         }
 
-        let entropyBitCount = length.entropyByteCount * 8
-        var entropy = Data(repeating: 0, count: length.entropyByteCount)
-        for bitIndex in 0..<entropyBitCount where bits[bitIndex] {
-            entropy[bitIndex / 8] |= UInt8(1 << (7 - (bitIndex % 8)))
-        }
-
-        let checksumBits = checksumBits(from: entropy, count: length.checksumBitCount)
-        let actualChecksum = Array(bits[entropyBitCount..<(entropyBitCount + length.checksumBitCount)])
-        guard checksumBits == actualChecksum else {
+        let expectedChecksumValue = checksumValue(
+            from: entropy,
+            count: length.checksumBitCount
+        )
+        guard expectedChecksumValue == actualChecksumValue else {
             throw OpalCrypto.Key.Mnemonic.Error.invalidChecksum
         }
         return entropy
@@ -144,33 +155,46 @@ internal enum MnemonicCodecModel {
             throw OpalCrypto.Key.Mnemonic.Error.invalidEntropyLength(actual: entropy.count)
         }
 
-        var bits: [Bool] = []
-        bits.reserveCapacity(entropy.count * 8 + length.checksumBitCount)
-        for byte in entropy {
-            for shift in stride(from: 7, through: 0, by: -1) {
-                bits.append(((byte >> shift) & 1) == 1)
-            }
-        }
-        bits.append(contentsOf: checksumBits(from: entropy, count: length.checksumBitCount))
+        let entropyBitCount = entropy.count * 8
+        let checksum = checksumValue(from: entropy, count: length.checksumBitCount)
+        var resolvedWords: [String] = .init()
+        resolvedWords.reserveCapacity(length.rawValue)
 
-        return stride(from: 0, to: bits.count, by: 11).map { startIndex in
+        for wordIndexPosition in 0..<length.rawValue {
             var wordIndex = 0
+            let startBitIndex = wordIndexPosition * 11
             for offset in 0..<11 {
+                let bitIndex = startBitIndex + offset
                 wordIndex <<= 1
-                if bits[startIndex + offset] {
-                    wordIndex |= 1
+                if bitIndex < entropyBitCount {
+                    let entropyByte = entropy[bitIndex / 8]
+                    if ((entropyByte >> (7 - (bitIndex % 8))) & 1) == 1 {
+                        wordIndex |= 1
+                    }
+                } else {
+                    let checksumBitIndex = bitIndex - entropyBitCount
+                    if ((checksum >> (length.checksumBitCount - 1 - checksumBitIndex)) & 1) == 1 {
+                        wordIndex |= 1
+                    }
                 }
             }
-            return wordList[wordIndex]
+            resolvedWords.append(wordList[wordIndex])
         }
+
+        return resolvedWords
     }
 
-    private static func checksumBits(from entropy: Data, count: Int) -> [Bool] {
+    private static func checksumValue(from entropy: Data, count: Int) -> UInt8 {
         let checksum = SecureHashAlgorithm256Model.hash(entropy)
-        return (0..<count).map { bitIndex in
+        var value: UInt8 = 0
+        for bitIndex in 0..<count {
+            value <<= 1
             let byte = checksum[bitIndex / 8]
-            return ((byte >> (7 - (bitIndex % 8))) & 1) == 1
+            if ((byte >> (7 - (bitIndex % 8))) & 1) == 1 {
+                value |= 1
+            }
         }
+        return value
     }
 
     private static func length(forWordCount count: Int) throws -> OpalCrypto.Key.Mnemonic.Length {

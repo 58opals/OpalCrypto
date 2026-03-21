@@ -15,6 +15,10 @@ let package = Package(
         .library(
             name: "OpalCrypto",
             targets: ["OpalCrypto"]
+        ),
+        .executable(
+            name: "OpalCryptoBenchmarks",
+            targets: ["OpalCryptoBenchmarks"]
         )
     ],
     targets: [
@@ -23,6 +27,10 @@ let package = Package(
             resources: [
                 .process("Resources")
             ]
+        ),
+        .executableTarget(
+            name: "OpalCryptoBenchmarks",
+            dependencies: ["OpalCrypto"]
         ),
         .testTarget(
             name: "OpalCryptoTests",

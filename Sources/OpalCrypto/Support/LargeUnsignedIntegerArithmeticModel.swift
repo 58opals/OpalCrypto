@@ -45,20 +45,40 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     
     internal func serialize() -> Data {
         guard !words.isEmpty else { return Data() }
+        let mostSignificantWord = words[words.count - 1]
+        let mostSignificantByteCount: Int
+        switch mostSignificantWord {
+        case 0x0000_0000...0x0000_00ff:
+            mostSignificantByteCount = 1
+        case 0x0000_0100...0x0000_ffff:
+            mostSignificantByteCount = 2
+        case 0x0001_0000...0x00ff_ffff:
+            mostSignificantByteCount = 3
+        default:
+            mostSignificantByteCount = 4
+        }
+
         var data = Data()
-        for (index, word) in words.reversed().enumerated() {
-            var bytes: [UInt8] = [
-                UInt8((word >> 24) & 0xff),
-                UInt8((word >> 16) & 0xff),
-                UInt8((word >> 8) & 0xff),
-                UInt8(word & 0xff)
-            ]
-            if index == 0 {
-                while bytes.first == 0 && bytes.count > 1 {
-                    bytes.removeFirst()
+        data.reserveCapacity((words.count - 1) * 4 + mostSignificantByteCount)
+        for index in words.indices.reversed() {
+            let word = words[index]
+            if index == words.count - 1 {
+                if mostSignificantByteCount >= 4 {
+                    data.append(UInt8((word >> 24) & 0xff))
                 }
+                if mostSignificantByteCount >= 3 {
+                    data.append(UInt8((word >> 16) & 0xff))
+                }
+                if mostSignificantByteCount >= 2 {
+                    data.append(UInt8((word >> 8) & 0xff))
+                }
+                data.append(UInt8(word & 0xff))
+            } else {
+                data.append(UInt8((word >> 24) & 0xff))
+                data.append(UInt8((word >> 16) & 0xff))
+                data.append(UInt8((word >> 8) & 0xff))
+                data.append(UInt8(word & 0xff))
             }
-            data.append(contentsOf: bytes)
         }
         return data
     }
@@ -66,19 +86,57 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     internal func shiftLeft(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
         guard bits > 0 else { return self }
         precondition(bits % 8 == 0, "Shift must be a multiple of 8.")
-        var data = serialize()
-        data.append(contentsOf: repeatElement(0, count: bits / 8))
-        return LargeUnsignedIntegerArithmeticModel(data)
+        guard !words.isEmpty else { return .zero }
+
+        let byteShift = bits / 8
+        let wordShift = byteShift / 4
+        let intraWordByteShift = byteShift % 4
+        let intraWordBitShift = intraWordByteShift * 8
+        var shiftedWords = Array(
+            repeating: UInt32(0),
+            count: words.count + wordShift + (intraWordBitShift == 0 ? 0 : 1)
+        )
+
+        for index in words.indices {
+            let destinationIndex = index + wordShift
+            if intraWordBitShift == 0 {
+                shiftedWords[destinationIndex] = words[index]
+            } else {
+                let value = UInt64(words[index]) << intraWordBitShift
+                shiftedWords[destinationIndex] |= UInt32(value & 0xffff_ffff)
+                shiftedWords[destinationIndex + 1] |= UInt32(value >> 32)
+            }
+        }
+
+        return LargeUnsignedIntegerArithmeticModel(words: shiftedWords)
     }
     
     internal func shiftRight(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
         guard bits > 0 else { return self }
         precondition(bits % 8 == 0, "Shift must be a multiple of 8.")
-        var data = serialize()
-        let bytesToRemove = bits / 8
-        guard bytesToRemove < data.count else { return .zero }
-        data.removeLast(bytesToRemove)
-        return LargeUnsignedIntegerArithmeticModel(data)
+        let byteShift = bits / 8
+        let wordShift = byteShift / 4
+        let intraWordByteShift = byteShift % 4
+        let intraWordBitShift = intraWordByteShift * 8
+
+        guard wordShift < words.count else { return .zero }
+        if intraWordBitShift == 0 {
+            return LargeUnsignedIntegerArithmeticModel(words: Array(words[wordShift...]))
+        }
+
+        var shiftedWords: [UInt32] = .init()
+        shiftedWords.reserveCapacity(words.count - wordShift)
+        let carryBitShift = 32 - intraWordBitShift
+
+        for index in wordShift..<words.count {
+            var shiftedWord = words[index] >> intraWordBitShift
+            if index + 1 < words.count {
+                shiftedWord |= words[index + 1] << carryBitShift
+            }
+            shiftedWords.append(shiftedWord)
+        }
+
+        return LargeUnsignedIntegerArithmeticModel(words: shiftedWords)
     }
     
     internal static func < (lhs: LargeUnsignedIntegerArithmeticModel, rhs: LargeUnsignedIntegerArithmeticModel) -> Bool {

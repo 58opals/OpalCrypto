@@ -21,13 +21,14 @@ internal enum ExtendedKeyDerivationModel {
             seed,
             key: Data("Bitcoin seed".utf8)
         )
+        let chainCodeStartIndex = digest.index(digest.startIndex, offsetBy: 32)
         return try ExtendedKeyPayloadModel(
             kind: .privateKey,
             depth: 0,
             parentFingerprint: Data(repeating: 0x00, count: 4),
             childIndex: 0,
-            chainCode: Data(digest.suffix(32)),
-            keyData: Data(digest.prefix(32))
+            chainCode: Data(digest[chainCodeStartIndex..<digest.endIndex]),
+            keyData: Data(digest[digest.startIndex..<chainCodeStartIndex])
         )
     }
 
@@ -73,16 +74,21 @@ internal enum ExtendedKeyDerivationModel {
             digestInput,
             key: privateKeyPayload.chainCode
         )
-        let tweak = Data(digest.prefix(32))
-        let childChainCode = Data(digest.suffix(32))
+        let chainCodeStartIndex = digest.index(digest.startIndex, offsetBy: 32)
+        let tweak = digest[digest.startIndex..<chainCodeStartIndex]
+        let childChainCode = Data(digest[chainCodeStartIndex..<digest.endIndex])
 
         let childPrivateKey: Data
         do {
-            childPrivateKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
-                .tweakAddPrivateKeyData32Bytes(
-                    privateKeyPayload.keyData,
-                    tweakData32Bytes: tweak
-                )
+            let privateKeyScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parsePrivateKeyScalar(privateKeyPayload.keyData, requireNonZero: true)
+            let tweakScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parseTweakScalar(contiguousBytes32: tweak, requireNonZero: false)
+            let derivedScalar = privateKeyScalar.addModN(tweakScalar)
+            guard !derivedScalar.isZero else {
+                throw Error.invalidDerivedKey
+            }
+            childPrivateKey = derivedScalar.data32Bytes
         } catch {
             throw Error.invalidDerivedKey
         }
@@ -119,15 +125,21 @@ internal enum ExtendedKeyDerivationModel {
             key: publicKeyPayload.chainCode
         )
 
-        let tweak = Data(digest.prefix(32))
-        let childChainCode = Data(digest.suffix(32))
+        let chainCodeStartIndex = digest.index(digest.startIndex, offsetBy: 32)
+        let tweak = digest[digest.startIndex..<chainCodeStartIndex]
+        let childChainCode = Data(digest[chainCodeStartIndex..<digest.endIndex])
         let childPublicKey: Data
         do {
-            childPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation.tweakAddPublicKey(
-                publicKeyPayload.keyData,
-                tweakData32Bytes: tweak,
-                format: .compressed
-            )
+            let tweakScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parseTweakScalar(contiguousBytes32: tweak, requireNonZero: false)
+            let publicAffine = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parsePublicKeyAffine(publicKeyPayload.keyData)
+            let tweakPoint = ScalarMultiplicationModel.mulG(tweakScalar)
+            let combined = JacobianPointModel(affine: publicAffine).add(tweakPoint)
+            guard let derivedAffine = combined.convertToAffine() else {
+                throw Error.invalidDerivedKey
+            }
+            childPublicKey = derivedAffine.encodeCompressed33()
         } catch {
             throw Error.invalidDerivedKey
         }
