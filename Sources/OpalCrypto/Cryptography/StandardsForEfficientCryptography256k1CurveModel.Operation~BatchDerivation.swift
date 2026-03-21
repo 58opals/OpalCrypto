@@ -40,8 +40,10 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
             executionMode: executionMode
         )
         guard taskCount >= 2 else {
-            return try deriveCompressedPublicKeysSingleChunk(
-                fromPrivateKeyScalars: privateKeyScalars
+            return try encodeCompressedPublicKeys(
+                fromJacobianPoints: derivePublicKeyJacobianPoints(
+                    fromPrivateKeyScalars: privateKeyScalars
+                )
             )
         }
         let chunkSize = (privateKeyScalars.count + taskCount - 1) / taskCount
@@ -68,6 +70,22 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         }
 
         return privateKeyScalars
+    }
+
+    internal static func derivePublicKeyJacobianPoints(
+        fromPrivateKeyScalars privateKeyScalars: [ScalarModel]
+    ) -> [JacobianPointModel] {
+        derivePublicKeyJacobianPoints(
+            fromPrivateKeyScalars: privateKeyScalars,
+            startIndex: 0,
+            endIndex: privateKeyScalars.count
+        )
+    }
+
+    internal static func encodeCompressedPublicKeys(
+        fromJacobianPoints jacobianPoints: [JacobianPointModel]
+    ) throws -> [Data] {
+        encodeCompressedPublicKeysFromNonInfinityJacobianPoints(jacobianPoints)
     }
 }
 
@@ -109,21 +127,21 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         return min(processorCount, targetTaskCount)
     }
 
-    static func deriveCompressedPublicKeysInParallel(
+    static func derivePublicKeyJacobianPointsInParallel(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
         chunkSize: Int
-    ) async throws -> [Data] {
+    ) async throws -> [JacobianPointModel] {
         let totalCount = privateKeyScalars.count
         let chunkCount = (totalCount + chunkSize - 1) / chunkSize
-        return try await withThrowingTaskGroup(of: CompressedPublicKeyChunkResult.self) { group in
+        return try await withThrowingTaskGroup(of: JacobianPointChunkResult.self) { group in
             for chunkIndex in 0..<chunkCount {
                 let startIndex = chunkIndex * chunkSize
                 let endIndex = min(startIndex + chunkSize, totalCount)
 
                 group.addTask {
-                    return CompressedPublicKeyChunkResult(
+                    return JacobianPointChunkResult(
                         chunkIndex: chunkIndex,
-                        compressedPublicKeys: try deriveCompressedPublicKeysSingleChunk(
+                        jacobianPoints: derivePublicKeyJacobianPoints(
                             fromPrivateKeyScalars: privateKeyScalars,
                             startIndex: startIndex,
                             endIndex: endIndex
@@ -132,10 +150,54 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
                 }
             }
 
-            var chunkResults = Array<[Data]?>(repeating: nil, count: chunkCount)
+            var chunkResults = Array<[JacobianPointModel]?>(repeating: nil, count: chunkCount)
 
             for try await chunkResult in group {
-                chunkResults[chunkResult.chunkIndex] = chunkResult.compressedPublicKeys
+                chunkResults[chunkResult.chunkIndex] = chunkResult.jacobianPoints
+            }
+
+            var jacobianPoints: [JacobianPointModel] = .init()
+            jacobianPoints.reserveCapacity(totalCount)
+            for chunkResult in chunkResults {
+                guard let chunkResult else {
+                    throw Error.invalidDerivedPublicKey
+                }
+                jacobianPoints.append(contentsOf: chunkResult)
+            }
+            return jacobianPoints
+        }
+    }
+
+    static func deriveCompressedPublicKeysInParallel(
+        fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
+        chunkSize: Int
+    ) async throws -> [Data] {
+        let totalCount = privateKeyScalars.count
+        let chunkCount = (totalCount + chunkSize - 1) / chunkSize
+        return try await withThrowingTaskGroup(of: (Int, [Data]).self) { group in
+            for chunkIndex in 0..<chunkCount {
+                let startIndex = chunkIndex * chunkSize
+                let endIndex = min(startIndex + chunkSize, totalCount)
+
+                group.addTask {
+                    let jacobianPoints = derivePublicKeyJacobianPoints(
+                        fromPrivateKeyScalars: privateKeyScalars,
+                        startIndex: startIndex,
+                        endIndex: endIndex
+                    )
+                    return (
+                        chunkIndex,
+                        try encodeCompressedPublicKeys(
+                            fromJacobianPoints: jacobianPoints
+                        )
+                    )
+                }
+            }
+
+            var chunkResults = Array<[Data]?>(repeating: nil, count: chunkCount)
+
+            for try await (chunkIndex, compressedPublicKeys) in group {
+                chunkResults[chunkIndex] = compressedPublicKeys
             }
 
             var compressedPublicKeys: [Data] = .init()
@@ -150,21 +212,11 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         }
     }
 
-    static func deriveCompressedPublicKeysSingleChunk(
-        fromPrivateKeyScalars privateKeyScalars: [ScalarModel]
-    ) throws -> [Data] {
-        try deriveCompressedPublicKeysSingleChunk(
-            fromPrivateKeyScalars: privateKeyScalars,
-            startIndex: 0,
-            endIndex: privateKeyScalars.count
-        )
-    }
-
-    static func deriveCompressedPublicKeysSingleChunk(
+    static func derivePublicKeyJacobianPoints(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
         startIndex: Int,
         endIndex: Int
-    ) throws -> [Data] {
+    ) -> [JacobianPointModel] {
         var jacobianPoints: [JacobianPointModel] = .init()
         jacobianPoints.reserveCapacity(endIndex - startIndex)
 
@@ -172,15 +224,20 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
             jacobianPoints.append(ScalarMultiplicationModel.mulG(privateKeyScalars[index]))
         }
 
-        let affinePoints = JacobianPointModel.convertBatchToAffine(jacobianPoints)
+        return jacobianPoints
+    }
+
+    static func encodeCompressedPublicKeysFromNonInfinityJacobianPoints(
+        _ jacobianPoints: [JacobianPointModel]
+    ) -> [Data] {
+        let affinePoints = JacobianPointModel.convertNonInfinityBatchToAffine(
+            jacobianPoints
+        )
         var compressedPublicKeys: [Data] = .init()
         compressedPublicKeys.reserveCapacity(affinePoints.count)
 
         for affinePoint in affinePoints {
-            guard let affinePoint else {
-                throw Error.invalidDerivedPublicKey
-            }
-            compressedPublicKeys.append(encodePublicKey(affinePoint, format: .compressed))
+            compressedPublicKeys.append(affinePoint.encodeCompressed33())
         }
 
         return compressedPublicKeys

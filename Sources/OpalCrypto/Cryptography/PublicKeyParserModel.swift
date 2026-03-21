@@ -40,11 +40,7 @@ enum PublicKeyParserModel {
             yCoordinate = yCoordinate.negate()
         }
 
-        let point = AffinePointModel(x: xCoordinate, y: yCoordinate)
-        guard point.isOnCurve else {
-            throw Error.invalidPoint
-        }
-        return point
+        return AffinePointModel(x: xCoordinate, y: yCoordinate)
     }
 
     private static func parseUncompressedPublicKey(_ data: Data) throws -> AffinePointModel {

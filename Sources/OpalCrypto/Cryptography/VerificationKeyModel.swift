@@ -45,11 +45,12 @@ struct VerificationKeyModel: Sendable, Equatable {
 
     init(parsedPublicKeyModel: ParsedPublicKeyModel) {
         self.parsedPublicKeyModel = parsedPublicKeyModel
-        self.oddMultiplesAffine = ScalarMultiplicationModel.makeOddMultiplesAffineTable(
-            for: parsedPublicKeyModel.affinePoint
-        )
+        self.oddMultiplesAffine = ScalarMultiplicationModel
+            .makeVerificationKeyOddMultiplesAffineTable(
+                for: parsedPublicKeyModel.affinePoint
+            )
         self.endomorphismOddMultiplesAffine = ScalarMultiplicationModel
-            .makeOddMultiplesAffineTable(
+            .makeVerificationKeyOddMultiplesAffineTable(
                 for: parsedPublicKeyModel.affinePoint.applyEndomorphism()
             )
     }

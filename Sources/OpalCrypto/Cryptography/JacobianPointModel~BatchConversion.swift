@@ -3,6 +3,76 @@
 import Foundation
 
 extension JacobianPointModel {
+    static func convertNonInfinityBatchToAffine(
+        _ points: [JacobianPointModel]
+    ) -> [AffinePointModel] {
+        let temporaryAllocationThreshold = 64
+        guard !points.isEmpty else { return .init() }
+        assert(points.allSatisfy { !$0.isInfinity })
+
+        if points.count <= temporaryAllocationThreshold {
+            return Array(unsafeUninitializedCapacity: points.count) { buffer, initializedCount in
+                withUnsafeTemporaryAllocation(
+                    of: FieldElementModel.self,
+                    capacity: points.count
+                ) { prefixProducts in
+                    var productAccumulator = FieldElementModel.one
+                    for (index, point) in points.enumerated() {
+                        productAccumulator = productAccumulator.mul(point.Z)
+                        prefixProducts[index] = productAccumulator
+                    }
+
+                    var inverseAccumulator = productAccumulator.invert()
+
+                    for index in points.indices.reversed() {
+                        let point = points[index]
+                        let prefixProduct = index == points.startIndex
+                            ? FieldElementModel.one
+                            : prefixProducts[index - 1]
+
+                        let zCoordinateInverse = inverseAccumulator.mul(prefixProduct)
+                        inverseAccumulator = inverseAccumulator.mul(point.Z)
+
+                        let zCoordinateInverseSquared = zCoordinateInverse.square()
+                        buffer[index] = AffinePointModel(
+                            x: point.X.mul(zCoordinateInverseSquared),
+                            y: point.Y.mul(zCoordinateInverseSquared.mul(zCoordinateInverse))
+                        )
+                    }
+                }
+                initializedCount = points.count
+            }
+        }
+
+        var prefixProducts: [FieldElementModel] = .init()
+        prefixProducts.reserveCapacity(points.count)
+        var productAccumulator = FieldElementModel.one
+        for point in points {
+            productAccumulator = productAccumulator.mul(point.Z)
+            prefixProducts.append(productAccumulator)
+        }
+
+        var inverseAccumulator = productAccumulator.invert()
+        return Array(unsafeUninitializedCapacity: points.count) { buffer, initializedCount in
+            for index in points.indices.reversed() {
+                let point = points[index]
+                let prefixProduct = index == points.startIndex
+                    ? FieldElementModel.one
+                    : prefixProducts[index - 1]
+
+                let zCoordinateInverse = inverseAccumulator.mul(prefixProduct)
+                inverseAccumulator = inverseAccumulator.mul(point.Z)
+
+                let zCoordinateInverseSquared = zCoordinateInverse.square()
+                buffer[index] = AffinePointModel(
+                    x: point.X.mul(zCoordinateInverseSquared),
+                    y: point.Y.mul(zCoordinateInverseSquared.mul(zCoordinateInverse))
+                )
+            }
+            initializedCount = points.count
+        }
+    }
+
     static func convertBatchToAffine(_ points: [JacobianPointModel]) -> [AffinePointModel?] {
         let temporaryAllocationThreshold = 64
         var pointIndices: [Int] = .init()

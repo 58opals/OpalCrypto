@@ -87,16 +87,12 @@ struct FieldElementModel: Sendable, Equatable {
     }
     
     var isQuadraticResidue: Bool {
-        pow(exponentBits: FieldPowModel.legendreExponentBits) == .one
+        isQuadraticResidueUsingNibbleExponentiation
     }
     
     @inlinable
     func sqrt() -> FieldElementModel? {
-        let candidate = pow(exponentBits: FieldPowModel.squareRootExponentBits)
-        guard candidate.square() == self else {
-            return nil
-        }
-        return candidate
+        sqrtUsingNibbleExponentiation()
     }
     
     var isZero: Bool {

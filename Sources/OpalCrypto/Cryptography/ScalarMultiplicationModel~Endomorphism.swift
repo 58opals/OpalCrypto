@@ -6,8 +6,14 @@ extension ScalarMultiplicationModel {
     @inlinable
     static func mulGWithEndomorphism(_ scalar: ScalarModel) -> JacobianPointModel {
         let split = scalar.splitForEndomorphism()
-        let firstDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(split.firstScalar, width: windowedNonAdjacentFormWidth)
-        let secondDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(split.secondScalar, width: windowedNonAdjacentFormWidth)
+        let firstDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
+            split.firstScalar,
+            width: generatorWindowedNonAdjacentFormWidth
+        )
+        let secondDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
+            split.secondScalar,
+            width: generatorWindowedNonAdjacentFormWidth
+        )
 
         return multiplyWindowedDigits(
             primaryDigits: firstDigits,

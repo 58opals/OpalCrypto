@@ -86,6 +86,33 @@ struct PerformanceOptimizationValidator {
         )
     }
 
+    @Test("Specialized field sqrt and residue helpers preserve the old exponentiation results")
+    func specializedFieldSqrtAndResidueHelpersPreserveTheOldExponentiationResults() throws {
+        let fieldElement = try FieldElementModel(
+            data32: Data([UInt8](repeating: 0x00, count: 31) + [0x04])
+        )
+        let squareRoot = try #require(fieldElement.sqrt())
+        let expectedSquareRoot = fieldElement.pow(
+            exponentBits: FieldPowModel.squareRootExponentBits
+        )
+
+        #expect(squareRoot == expectedSquareRoot)
+        #expect(
+            fieldElement.isQuadraticResidue
+                == (fieldElement.pow(exponentBits: FieldPowModel.legendreExponentBits) == .one)
+        )
+    }
+
+    @Test("Specialized scalar inversion preserves the old exponentiation result")
+    func specializedScalarInversionPreservesTheOldExponentiationResult() throws {
+        let scalar = try ScalarModel(data32: makePrivateKey(15), requireNonZero: true)
+
+        #expect(
+            try scalar.invert()
+                == scalar.pow(exponentBits: ScalarPowModel.inversionExponentBits)
+        )
+    }
+
     @Test("Trusted extended-key payload factories match validated constructors on known-good inputs")
     func trustedExtendedKeyPayloadFactoriesMatchValidatedConstructorsOnKnownGoodInputs() throws {
         let privateKey = makePrivateKey(41)
@@ -287,6 +314,27 @@ struct PerformanceOptimizationValidator {
 
         #expect(scalarBatchPublicKeys == dataBatchPublicKeys)
         #expect(scalarBatchPublicKeys == singlePublicKeys)
+    }
+
+    @Test("Global affine conversion after batch Jacobian multiplication matches single derivation")
+    func globalAffineConversionAfterBatchJacobianMultiplicationMatchesSingleDerivation() throws {
+        let privateKeys = (1...1024).map(makePrivateKey)
+        let privateKeyScalars = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .parsePrivateKeyScalars(
+                fromPrivateKeys32: privateKeys,
+                assumingValidPrivateKeys: false
+            )
+        let jacobianPoints = StandardsForEfficientCryptography256k1CurveModel.Operation
+            .derivePublicKeyJacobianPoints(
+                fromPrivateKeyScalars: privateKeyScalars
+            )
+        let batchPublicKeys = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .encodeCompressedPublicKeys(fromJacobianPoints: jacobianPoints)
+        let singlePublicKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+        }
+
+        #expect(batchPublicKeys == singlePublicKeys)
     }
 
     @Test("Forced serial and forced parallel batch derivation return identical ordered results")

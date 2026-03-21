@@ -18,6 +18,70 @@ package enum PerformanceBenchmarkSupportModel {
             .compressedPublicKeyData
     }
 
+    package static func makeBatchJacobianPointBuffer(
+        from privateKeys: [Data]
+    ) throws -> BatchJacobianPointBufferModel {
+        let privateKeyScalars = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .parsePrivateKeyScalars(
+                fromPrivateKeys32: privateKeys,
+                assumingValidPrivateKeys: false
+            )
+        return BatchJacobianPointBufferModel(
+            points: StandardsForEfficientCryptography256k1CurveModel.Operation
+                .derivePublicKeyJacobianPoints(
+                    fromPrivateKeyScalars: privateKeyScalars
+                )
+        )
+    }
+
+    package static func multiplyBatchGeneratorScalars(
+        from privateKeys: [Data]
+    ) throws -> Int {
+        let batchJacobianPointBufferModel = try makeBatchJacobianPointBuffer(
+            from: privateKeys
+        )
+        guard let firstPoint = batchJacobianPointBufferModel.points.first else {
+            return 0
+        }
+        return batchJacobianPointBufferModel.points.count
+            ^ Int(firstPoint.X.data32Bytes[0])
+            ^ Int(firstPoint.Y.data32Bytes[0])
+            ^ Int(firstPoint.Z.data32Bytes[0])
+    }
+
+    package static func convertBatchJacobianPointBufferToCompressedPublicKeys(
+        _ batchJacobianPointBufferModel: BatchJacobianPointBufferModel
+    ) throws -> [Data] {
+        try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .encodeCompressedPublicKeys(
+                fromJacobianPoints: batchJacobianPointBufferModel.points
+            )
+    }
+
+    package static func computeFieldSquareRoot(
+        fieldElementData32Bytes: Data
+    ) throws -> Data {
+        let fieldElement = try FieldElementModel(data32: fieldElementData32Bytes)
+        guard let squareRoot = fieldElement.sqrt() else {
+            return Data()
+        }
+        return squareRoot.data32Bytes
+    }
+
+    package static func checkFieldQuadraticResidue(
+        fieldElementData32Bytes: Data
+    ) throws -> Bool {
+        try FieldElementModel(data32: fieldElementData32Bytes).isQuadraticResidue
+    }
+
+    package static func invertScalar(
+        scalarData32Bytes: Data
+    ) throws -> Data {
+        try ScalarModel(data32: scalarData32Bytes, requireNonZero: true)
+            .invert()
+            .data32Bytes
+    }
+
     package static func multiplyVerificationKey(
         scalarData32Bytes: Data,
         verificationKey: OpalCrypto.Signature.VerificationKey

@@ -10,11 +10,11 @@ extension ScalarMultiplicationModel {
         let scalarSplit = scalar.splitForEndomorphism()
         let primaryDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
             scalarSplit.firstScalar,
-            width: windowedNonAdjacentFormWidth
+            width: verificationKeyWindowedNonAdjacentFormWidth
         )
         let secondaryDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
             scalarSplit.secondScalar,
-            width: windowedNonAdjacentFormWidth
+            width: verificationKeyWindowedNonAdjacentFormWidth
         )
 
         return multiplyWindowedDigits(
@@ -35,19 +35,19 @@ extension ScalarMultiplicationModel {
 
         let generatorPrimaryDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
             generatorSplit.firstScalar,
-            width: windowedNonAdjacentFormWidth
+            width: generatorWindowedNonAdjacentFormWidth
         )
         let generatorSecondaryDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
             generatorSplit.secondScalar,
-            width: windowedNonAdjacentFormWidth
+            width: generatorWindowedNonAdjacentFormWidth
         )
         let verificationKeyPrimaryDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
             verificationKeySplit.firstScalar,
-            width: windowedNonAdjacentFormWidth
+            width: verificationKeyWindowedNonAdjacentFormWidth
         )
         let verificationKeySecondaryDigits = SignedScalar128Model.makeWindowedNonAdjacentForm(
             verificationKeySplit.secondScalar,
-            width: windowedNonAdjacentFormWidth
+            width: verificationKeyWindowedNonAdjacentFormWidth
         )
 
         let maximumDigitCount = max(

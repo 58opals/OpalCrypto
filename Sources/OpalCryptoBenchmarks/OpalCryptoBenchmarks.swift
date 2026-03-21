@@ -106,6 +106,46 @@ enum OpalCryptoBenchmarks {
             return publicKeys.count ^ Int(publicKeys[0][0])
         }
 
+        checksum ^= try runSyncBenchmark(
+            name: "Batch Jacobian multiplication (256)",
+            iterations: 8
+        ) {
+            try PerformanceBenchmarkSupportModel.multiplyBatchGeneratorScalars(
+                from: context.batch256PrivateKeys
+            )
+        }
+
+        checksum ^= try runSyncBenchmark(
+            name: "Batch affine conversion (256)",
+            iterations: 8
+        ) {
+            let publicKeys = try PerformanceBenchmarkSupportModel
+                .convertBatchJacobianPointBufferToCompressedPublicKeys(
+                    context.batch256JacobianPointBufferModel
+                )
+            return publicKeys.count ^ Int(publicKeys[0][0])
+        }
+
+        checksum ^= try runSyncBenchmark(
+            name: "Batch Jacobian multiplication (1024)",
+            iterations: 3
+        ) {
+            try PerformanceBenchmarkSupportModel.multiplyBatchGeneratorScalars(
+                from: context.batch1024PrivateKeys
+            )
+        }
+
+        checksum ^= try runSyncBenchmark(
+            name: "Batch affine conversion (1024)",
+            iterations: 3
+        ) {
+            let publicKeys = try PerformanceBenchmarkSupportModel
+                .convertBatchJacobianPointBufferToCompressedPublicKeys(
+                    context.batch1024JacobianPointBufferModel
+                )
+            return publicKeys.count ^ Int(publicKeys[0][0])
+        }
+
         checksum ^= try runSyncBenchmark(name: "ECDSA sign", iterations: 200) {
             let signature = try OpalCrypto.Signature.sign(
                 message: context.ecdsaMessage,
@@ -184,6 +224,26 @@ enum OpalCryptoBenchmarks {
                 privateKey: context.singlePrivateKey
             )
             return parsedPrivateKey.count ^ Int(parsedPrivateKey[0])
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Field sqrt", iterations: 400) {
+            let squareRoot = try PerformanceBenchmarkSupportModel.computeFieldSquareRoot(
+                fieldElementData32Bytes: context.fieldSquareRootInput
+            )
+            return squareRoot.count ^ Int(squareRoot[31])
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Field quadratic-residue check", iterations: 400) {
+            try PerformanceBenchmarkSupportModel.checkFieldQuadraticResidue(
+                fieldElementData32Bytes: context.fieldSquareRootInput
+            ) ? 1 : 0
+        }
+
+        checksum ^= try runSyncBenchmark(name: "Scalar inversion", iterations: 400) {
+            let inverse = try PerformanceBenchmarkSupportModel.invertScalar(
+                scalarData32Bytes: context.scalarInversionInput
+            )
+            return inverse.count ^ Int(inverse[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Generic point multiplication", iterations: 200) {
@@ -301,6 +361,8 @@ enum OpalCryptoBenchmarks {
         let batch64PrivateKeys: [Data]
         let batch256PrivateKeys: [Data]
         let batch1024PrivateKeys: [Data]
+        let batch256JacobianPointBufferModel: BatchJacobianPointBufferModel
+        let batch1024JacobianPointBufferModel: BatchJacobianPointBufferModel
         let ecdsaMessage: Data
         let schnorrDigest: Data
         let compressedPublicKey: Data
@@ -317,12 +379,18 @@ enum OpalCryptoBenchmarks {
         let genericPointMultiplicationScalar: Data
         let jointGeneratorScalar: Data
         let jointVerificationKeyScalar: Data
+        let fieldSquareRootInput: Data
+        let scalarInversionInput: Data
 
         static func make() throws -> BenchmarkContext {
             let singlePrivateKey = makePrivateKey(index: 1)
             let batch64PrivateKeys = (1...64).map(makePrivateKey(index:))
             let batch256PrivateKeys = (1...256).map(makePrivateKey(index:))
             let batch1024PrivateKeys = (1...1024).map(makePrivateKey(index:))
+            let batch256JacobianPointBufferModel = try PerformanceBenchmarkSupportModel
+                .makeBatchJacobianPointBuffer(from: batch256PrivateKeys)
+            let batch1024JacobianPointBufferModel = try PerformanceBenchmarkSupportModel
+                .makeBatchJacobianPointBuffer(from: batch1024PrivateKeys)
             let ecdsaMessage = Data("opalcrypto-benchmark-ecdsa".utf8)
             let schnorrDigest = OpalCrypto.Hashing.computeSHA256(
                 Data("opalcrypto-benchmark-schnorr".utf8)
@@ -364,12 +432,18 @@ enum OpalCryptoBenchmarks {
             let genericPointMultiplicationScalar = makePrivateKey(index: 17)
             let jointGeneratorScalar = makePrivateKey(index: 19)
             let jointVerificationKeyScalar = makePrivateKey(index: 23)
+            let fieldSquareRootInput = Data(
+                [UInt8](repeating: 0x00, count: 31) + [0x04]
+            )
+            let scalarInversionInput = makePrivateKey(index: 29)
 
             return BenchmarkContext(
                 singlePrivateKey: singlePrivateKey,
                 batch64PrivateKeys: batch64PrivateKeys,
                 batch256PrivateKeys: batch256PrivateKeys,
                 batch1024PrivateKeys: batch1024PrivateKeys,
+                batch256JacobianPointBufferModel: batch256JacobianPointBufferModel,
+                batch1024JacobianPointBufferModel: batch1024JacobianPointBufferModel,
                 ecdsaMessage: ecdsaMessage,
                 schnorrDigest: schnorrDigest,
                 compressedPublicKey: compressedPublicKey,
@@ -385,7 +459,9 @@ enum OpalCryptoBenchmarks {
                 rootExtendedPublicKey: rootExtendedPublicKey,
                 genericPointMultiplicationScalar: genericPointMultiplicationScalar,
                 jointGeneratorScalar: jointGeneratorScalar,
-                jointVerificationKeyScalar: jointVerificationKeyScalar
+                jointVerificationKeyScalar: jointVerificationKeyScalar,
+                fieldSquareRootInput: fieldSquareRootInput,
+                scalarInversionInput: scalarInversionInput
             )
         }
 

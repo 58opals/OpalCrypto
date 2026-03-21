@@ -124,6 +124,6 @@ extension ScalarModel {
         guard !isZero else {
             throw ScalarModel.Error.zeroNotAllowed
         }
-        return pow(exponentBits: ScalarPowModel.inversionExponentBits)
+        return pow(exponentNibbles: ScalarPowModel.inversionExponentNibbles)
     }
 }
