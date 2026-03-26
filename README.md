@@ -1,10 +1,10 @@
-# OpalCrypto
+# Opal Crypto
 
-OpalCrypto is the BCH cryptography toolkit for Swift apps and packages. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
+Opal Crypto is the BCH cryptography toolkit for Swift apps and packages. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
 ## Audience
 
-Use OpalCrypto when you are building Swift BCH software and need stable cryptographic capabilities behind one public facade instead of wiring lower-level primitives directly into app or package code.
+Use Opal Crypto when you are building Swift BCH software and need stable cryptographic capabilities behind one public facade instead of wiring lower-level primitives directly into app or package code.
 
 ## Requirements
 
