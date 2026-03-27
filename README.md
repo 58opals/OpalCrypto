@@ -1,10 +1,10 @@
 # Opal Crypto
 
-Opal Crypto is the BCH cryptography toolkit for Swift apps and packages. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
+Opal Crypto is the lowest-level BCH cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
 ## Audience
 
-Use Opal Crypto when you are building Swift BCH software and need stable cryptographic capabilities behind one public facade instead of wiring lower-level primitives directly into app or package code.
+Use Opal Crypto when you are building Swift BCH software and need stable cryptographic capabilities behind one public facade. Downstream code should integrate through `OpalCrypto` instead of depending on internal implementation types or source layout.
 
 ## Requirements
 
@@ -67,8 +67,17 @@ For Schnorr signatures, use `format: .schnorr` and pass a 32-byte digest as the 
 
 The Base32 APIs use the Bech32 alphabet and stay intentionally low-level; `interpretedAsFiveBitValues` switches between five-bit symbol input and byte-mode radix conversion.
 
+## Boundaries
+
+- In scope: facade-first BCH cryptography for keys, secp256k1, hashing, encoding, key derivation, and numeric primitives.
+- Out of scope: wallet or app-domain orchestration, network or protocol/runtime responsibilities, non-BCH features, non-Swift expansion, or reliance on internal implementation details as public API.
+
 ## Testing
 
 ```bash
 swift test
 ```
+
+## Further Context
+
+See [docs/context.md](docs/context.md) for package role, repo boundaries, and integration expectations.
