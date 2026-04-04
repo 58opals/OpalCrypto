@@ -17,6 +17,7 @@ extension OpalCrypto {
             case invalidSignature
             case invalidDER
             case nonCanonicalDER
+            case randomGenerationFailed(status: Int32)
         }
 
         public static func isPrivateKeyValid(_ privateKey: Data) -> Bool {
@@ -63,6 +64,31 @@ extension OpalCrypto {
             do {
                 return try await StandardsForEfficientCryptography256k1CurveModel.Operation
                     .deriveCompressedPublicKeys(fromPrivateKeys32: privateKeys)
+            } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
+                throw mapOperationError(error)
+            }
+        }
+
+        public static func generatePrivateKey() throws -> Data {
+            do {
+                return try StandardsForEfficientCryptography256k1CurveModel.Operation
+                    .generatePrivateKeyData32Bytes()
+            } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
+                throw mapOperationError(error)
+            }
+        }
+
+        public static func deriveSharedSecret(
+            privateKey: Data,
+            publicKey: Data
+        ) throws -> Data {
+            try validateCompressedPublicKey(publicKey)
+            do {
+                return try StandardsForEfficientCryptography256k1CurveModel.Operation
+                    .deriveSharedSecret(
+                        privateKeyData32Bytes: privateKey,
+                        publicKey: publicKey
+                    )
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 throw mapOperationError(error)
             }
@@ -130,6 +156,8 @@ extension OpalCrypto {
                 return .invalidTweak
             case .invalidDerivedPrivateKey, .invalidDerivedPublicKey:
                 return .invalidDerivedKey
+            case .randomGenerationFailed(let status):
+                return .randomGenerationFailed(status: status)
             }
         }
 

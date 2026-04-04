@@ -239,7 +239,8 @@ extension OpalCrypto {
                      .invalidSignatureLength,
                      .invalidSignature,
                      .invalidDER,
-                     .nonCanonicalDER:
+                     .nonCanonicalDER,
+                     .randomGenerationFailed:
                     return .cryptographyFailure
                 }
             }

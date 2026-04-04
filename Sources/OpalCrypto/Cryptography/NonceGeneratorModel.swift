@@ -72,8 +72,6 @@ extension NonceGeneratorModel {
 
 extension NonceGeneratorModel {
     static func makeAuthenticationCode(key: Data, message: Data) -> Data {
-        let keyValue = SymmetricKey(data: key)
-        let authenticationCode = HMAC<CryptoKit.SHA256>.authenticationCode(for: message, using: keyValue)
-        return Data(authenticationCode)
+        HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model.hash(message, key: key)
     }
 }

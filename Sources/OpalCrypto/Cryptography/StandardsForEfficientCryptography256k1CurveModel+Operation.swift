@@ -18,6 +18,7 @@ extension StandardsForEfficientCryptography256k1CurveModel {
             case invalidTweakValue
             case invalidDerivedPrivateKey
             case invalidDerivedPublicKey
+            case randomGenerationFailed(status: Int32)
         }
 
         internal static var curveOrderN: Data {

@@ -19,5 +19,9 @@ extension OpalCrypto {
         public static func computeHMACSHA512(data: Data, key: Data) -> Data {
             HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model.hash(data, key: key)
         }
+
+        public static func computeHMACSHA256(data: Data, key: Data) -> Data {
+            HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model.hash(data, key: key)
+        }
     }
 }
