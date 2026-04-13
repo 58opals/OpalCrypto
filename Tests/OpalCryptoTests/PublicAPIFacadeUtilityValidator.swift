@@ -111,6 +111,19 @@ struct PublicAPIFacadeUtilityValidator {
         }
     }
 
+    @Test("Multiply BigUnsignedInteger by a large 64-bit multiplier at the overflow boundary")
+    func multiplyBigUnsignedIntegerByLarge64BitMultiplierAtTheOverflowBoundary() {
+        var value = OpalCrypto.Numeric.BigUnsignedInteger(
+            Data([0xFF, 0xFF, 0xFF, 0xFF])
+        )
+
+        value.multiply(by: 4_294_967_298)
+
+        #expect(value.serialize() == Data([
+            0x01, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE
+        ]))
+    }
+
     @Test("Exercise Base32 byte-mode round-trips with leading zero payloads")
     func exerciseBase32ByteModeRoundTripsWithLeadingZeroPayloads() throws {
         let payloads = [
@@ -222,6 +235,36 @@ struct PublicAPIFacadeUtilityValidator {
                 interpretedAsFiveBitValues: true
             )
             Issue.record("Expected invalid Base32 decode character error.")
+        } catch let error as OpalCrypto.Encoding.Error {
+            #expect(error == .invalidCharacterFound)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject mixed-case Base32 decode in five-bit mode")
+    func rejectMixedCaseBase32DecodeInFiveBitMode() {
+        do {
+            _ = try OpalCrypto.Encoding.decodeBase32(
+                "qP",
+                interpretedAsFiveBitValues: true
+            )
+            Issue.record("Expected mixed-case Base32 decode error.")
+        } catch let error as OpalCrypto.Encoding.Error {
+            #expect(error == .invalidCharacterFound)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject mixed-case Base32 decode in byte mode")
+    func rejectMixedCaseBase32DecodeInByteMode() {
+        do {
+            _ = try OpalCrypto.Encoding.decodeBase32(
+                "qP",
+                interpretedAsFiveBitValues: false
+            )
+            Issue.record("Expected mixed-case Base32 decode error.")
         } catch let error as OpalCrypto.Encoding.Error {
             #expect(error == .invalidCharacterFound)
         } catch {

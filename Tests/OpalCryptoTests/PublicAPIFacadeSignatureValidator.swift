@@ -180,6 +180,42 @@ struct PublicAPIFacadeSignatureValidator {
         #expect(cachedResult)
     }
 
+    @Test("Verification-key ECDSA verify accepts uncompressed SEC1 public keys")
+    func verificationKeyEcdsaVerifyAcceptsUncompressedSec1PublicKeys() throws {
+        var privateKeyData = Data(repeating: 0x00, count: 32)
+        privateKeyData[31] = 0x01
+        let messageData = Data("opal-ecdsa-uncompressed-verify".utf8)
+        let signatureData = try OpalCrypto.Signature.sign(
+            message: messageData,
+            privateKey: privateKeyData,
+            format: .ecdsa(.der)
+        )
+        let uncompressedPublicKeyData = try Data(
+            hexadecimal: """
+            0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+            """
+        )
+        let verificationKey = try OpalCrypto.Signature.VerificationKey(
+            publicKey: uncompressedPublicKeyData
+        )
+
+        let rawResult = try OpalCrypto.Signature.verify(
+            signature: signatureData,
+            message: messageData,
+            publicKey: uncompressedPublicKeyData,
+            format: .ecdsa(.der)
+        )
+        let cachedResult = try OpalCrypto.Signature.verify(
+            signature: signatureData,
+            message: messageData,
+            verificationKey: verificationKey,
+            format: .ecdsa(.der)
+        )
+
+        #expect(rawResult == cachedResult)
+        #expect(cachedResult)
+    }
+
     @Test("Verification-key Schnorr verify matches raw public-key verify")
     func verificationKeySchnorrVerifyMatchesRawPublicKeyVerify() throws {
         var privateKeyData = Data(repeating: 0x00, count: 32)
@@ -311,4 +347,32 @@ struct PublicAPIFacadeSignatureValidator {
             Issue.record("Unexpected error type: \(error)")
         }
     }
+}
+
+private extension Data {
+    init(hexadecimal: String) throws {
+        let normalized = hexadecimal.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count.isMultiple(of: 2) else {
+            throw HexadecimalDataError.invalidLength
+        }
+
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(normalized.count / 2)
+        var cursor = normalized.startIndex
+        while cursor < normalized.endIndex {
+            let nextCursor = normalized.index(cursor, offsetBy: 2)
+            let pair = normalized[cursor..<nextCursor]
+            guard let byte = UInt8(pair, radix: 16) else {
+                throw HexadecimalDataError.invalidCharacter
+            }
+            bytes.append(byte)
+            cursor = nextCursor
+        }
+        self = Data(bytes)
+    }
+}
+
+private enum HexadecimalDataError: Error {
+    case invalidLength
+    case invalidCharacter
 }

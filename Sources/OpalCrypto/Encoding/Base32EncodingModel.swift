@@ -50,6 +50,10 @@ internal struct Base32EncodingModel {
     }
 
     internal static func decode(_ string: String, interpretedAsFiveBitValues: Bool) throws -> Data {
+        guard !hasMixedCaseLetters(string) else {
+            throw Error.invalidCharacterFound
+        }
+
         var data = Data()
         switch interpretedAsFiveBitValues {
         case true:
@@ -88,5 +92,27 @@ internal struct Base32EncodingModel {
             data.append(value.serialize())
         }
         return data
+    }
+
+    private static func hasMixedCaseLetters(_ string: String) -> Bool {
+        var hasLowercase = false
+        var hasUppercase = false
+
+        for asciiValue in string.utf8 {
+            switch asciiValue {
+            case 0x61...0x7A:
+                hasLowercase = true
+            case 0x41...0x5A:
+                hasUppercase = true
+            default:
+                continue
+            }
+
+            if hasLowercase, hasUppercase {
+                return true
+            }
+        }
+
+        return false
     }
 }

@@ -14,7 +14,7 @@ internal enum ExtendedKeyDerivationModel {
     private static let hardenedMask: UInt32 = 0x8000_0000
 
     internal static func makeRootPrivateKey(seed: Data) throws -> ExtendedKeyPayloadModel {
-        guard !seed.isEmpty else {
+        guard (16...64).contains(seed.count) else {
             throw Error.invalidSeed
         }
         let digest = HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model.hash(

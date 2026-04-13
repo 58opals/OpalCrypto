@@ -174,15 +174,47 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
             }
             return
         }
-        var carry: UInt64 = 0
-        for index in words.indices {
-            let product = UInt64(words[index]) * UInt64(multiplier) + carry
-            words[index] = UInt32(product & 0xffff_ffff)
-            carry = product >> 32
+        
+        let multiplierValue = UInt64(multiplier)
+        guard multiplierValue > UInt64(UInt32.max) else {
+            multiply(byWord: UInt32(multiplierValue))
+            return
         }
-        if carry > 0 {
-            words.append(UInt32(carry))
+        
+        let multiplicandWords = words
+        let multiplierWords = [
+            UInt32(multiplierValue & 0xffff_ffff),
+            UInt32(multiplierValue >> 32)
+        ]
+        var productWords = Array(
+            repeating: UInt32(0),
+            count: multiplicandWords.count + multiplierWords.count
+        )
+        
+        // Split larger multipliers into base-2^32 limbs so each partial product fits in UInt64.
+        for (multiplierIndex, multiplierWord) in multiplierWords.enumerated() where multiplierWord > 0 {
+            var carry: UInt64 = 0
+            for multiplicandIndex in multiplicandWords.indices {
+                let productIndex = multiplicandIndex + multiplierIndex
+                let partialProduct = UInt64(multiplicandWords[multiplicandIndex]) * UInt64(multiplierWord)
+                let sum = UInt64(productWords[productIndex]) + partialProduct + carry
+                productWords[productIndex] = UInt32(sum & 0xffff_ffff)
+                carry = sum >> 32
+            }
+            
+            var carryIndex = multiplicandWords.count + multiplierIndex
+            while carry > 0 {
+                if carryIndex == productWords.count {
+                    productWords.append(0)
+                }
+                let sum = UInt64(productWords[carryIndex]) + carry
+                productWords[carryIndex] = UInt32(sum & 0xffff_ffff)
+                carry = sum >> 32
+                carryIndex += 1
+            }
         }
+        
+        self = LargeUnsignedIntegerArithmeticModel(words: productWords)
     }
     
     internal mutating func divide(by divisor: Int) -> Int {
@@ -203,6 +235,19 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     private init(words: [UInt32]) {
         self.words = words
         normalize()
+    }
+    
+    private mutating func multiply(byWord multiplier: UInt32) {
+        var carry: UInt64 = 0
+        let multiplierValue = UInt64(multiplier)
+        for index in words.indices {
+            let product = UInt64(words[index]) * multiplierValue + carry
+            words[index] = UInt32(product & 0xffff_ffff)
+            carry = product >> 32
+        }
+        if carry > 0 {
+            words.append(UInt32(carry))
+        }
     }
     
     private mutating func normalize() {

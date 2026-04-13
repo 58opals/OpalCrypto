@@ -82,7 +82,7 @@ extension OpalCrypto {
             publicKey: Data,
             format: Format
         ) throws -> Bool {
-            try validateCompressedPublicKey(publicKey)
+            try validateSecp256k1PublicKey(publicKey)
             try validateSignatureLength(signature, format: format)
             if case .schnorr = format {
                 try validateSchnorrDigestLength(message)
@@ -145,14 +145,22 @@ extension OpalCrypto {
             }
         }
 
-        private static func validateCompressedPublicKey(_ publicKeyData: Data) throws {
-            guard publicKeyData.count == 33 else {
+        private static func validateSecp256k1PublicKey(_ publicKeyData: Data) throws {
+            guard publicKeyData.count == 33 || publicKeyData.count == 65 else {
                 throw Error.invalidPublicKeyLength(expected: 33, actual: publicKeyData.count)
             }
             guard let prefix = publicKeyData.first else {
                 throw Error.invalidPublicKeyLength(expected: 33, actual: 0)
             }
-            guard prefix == 0x02 || prefix == 0x03 else {
+            let isValidPrefix = switch publicKeyData.count {
+            case 33:
+                prefix == 0x02 || prefix == 0x03
+            case 65:
+                prefix == 0x04
+            default:
+                false
+            }
+            guard isValidPrefix else {
                 throw Error.invalidPublicKeyPrefix(actual: prefix)
             }
         }

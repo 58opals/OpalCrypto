@@ -72,6 +72,26 @@ struct PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Reject extended-key root seeds outside the BIP32 byte range")
+    func rejectExtendedKeyRootSeedsOutsideTheBip32ByteRange() {
+        for invalidSeedLength in [0, 1, 15, 65] {
+            let invalidSeed = Data(repeating: 0x01, count: invalidSeedLength)
+
+            do {
+                _ = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: invalidSeed)
+                Issue.record(
+                    "Expected invalid derived key error for out-of-range seed length \(invalidSeedLength)."
+                )
+            } catch let error as OpalCrypto.Key.ExtendedPrivateKey.Error {
+                #expect(error == .invalidDerivedKey)
+            } catch {
+                Issue.record(
+                    "Unexpected error type for seed length \(invalidSeedLength): \(error)"
+                )
+            }
+        }
+    }
+
     @Test("Extended-key serialization preserves parent fingerprint and child index")
     func extendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
         let rootKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: Data(hexadecimal: seedHex))
