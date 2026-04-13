@@ -83,12 +83,9 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return data
     }
     
-    internal func shiftLeft(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
-        guard bits > 0 else { return self }
-        precondition(bits % 8 == 0, "Shift must be a multiple of 8.")
+    internal func shiftLeft(byBytes byteShift: Int) -> LargeUnsignedIntegerArithmeticModel {
+        guard byteShift > 0 else { return self }
         guard !words.isEmpty else { return .zero }
-
-        let byteShift = bits / 8
         let wordShift = byteShift / 4
         let intraWordByteShift = byteShift % 4
         let intraWordBitShift = intraWordByteShift * 8
@@ -111,10 +108,8 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return LargeUnsignedIntegerArithmeticModel(words: shiftedWords)
     }
     
-    internal func shiftRight(by bits: Int) -> LargeUnsignedIntegerArithmeticModel {
-        guard bits > 0 else { return self }
-        precondition(bits % 8 == 0, "Shift must be a multiple of 8.")
-        let byteShift = bits / 8
+    internal func shiftRight(byBytes byteShift: Int) -> LargeUnsignedIntegerArithmeticModel {
+        guard byteShift > 0 else { return self }
         let wordShift = byteShift / 4
         let intraWordByteShift = byteShift % 4
         let intraWordBitShift = intraWordByteShift * 8
@@ -151,9 +146,8 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         return false
     }
     
-    internal mutating func add(_ addend: Int) {
-        precondition(addend >= 0, "Addend must be non-negative.")
-        var carry = UInt64(addend)
+    internal mutating func add(_ addend: UInt64) {
+        var carry = addend
         var index = 0
         while carry > 0 {
             if index == words.count {
@@ -166,8 +160,7 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         }
     }
     
-    internal mutating func multiply(by multiplier: Int) {
-        precondition(multiplier >= 0, "Multiplier must be non-negative.")
+    internal mutating func multiply(by multiplier: UInt64) {
         guard !words.isEmpty, multiplier > 1 else {
             if multiplier == 0 {
                 words = .init()
@@ -175,16 +168,15 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
             return
         }
         
-        let multiplierValue = UInt64(multiplier)
-        guard multiplierValue > UInt64(UInt32.max) else {
-            multiply(byWord: UInt32(multiplierValue))
+        guard multiplier > UInt64(UInt32.max) else {
+            multiply(byWord: UInt32(multiplier))
             return
         }
-        
+
         let multiplicandWords = words
         let multiplierWords = [
-            UInt32(multiplierValue & 0xffff_ffff),
-            UInt32(multiplierValue >> 32)
+            UInt32(multiplier & 0xffff_ffff),
+            UInt32(multiplier >> 32)
         ]
         var productWords = Array(
             repeating: UInt32(0),
@@ -217,19 +209,18 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         self = LargeUnsignedIntegerArithmeticModel(words: productWords)
     }
     
-    internal mutating func divide(by divisor: Int) -> Int {
-        precondition(divisor > 0, "Divisor must be positive.")
-        guard !words.isEmpty else { return 0 }
+    internal mutating func divide(by divisor: UInt64) -> UInt64 {
+        guard divisor > 0, !words.isEmpty else { return 0 }
         var remainder: UInt64 = 0
         var quotientWords = Array(repeating: UInt32(0), count: words.count)
         for index in words.indices.reversed() {
             let value = (remainder << 32) + UInt64(words[index])
-            let quotient = value / UInt64(divisor)
-            remainder = value % UInt64(divisor)
+            let quotient = value / divisor
+            remainder = value % divisor
             quotientWords[index] = UInt32(quotient)
         }
         self = LargeUnsignedIntegerArithmeticModel(words: quotientWords)
-        return Int(remainder)
+        return remainder
     }
     
     private init(words: [UInt32]) {

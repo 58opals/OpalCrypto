@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API key material validation")
 struct PublicAPIKeyMaterialValidator {
@@ -124,6 +124,43 @@ struct PublicAPIKeyMaterialValidator {
         #expect(publicGrandchild.childIndex == 1)
         #expect(reparsedPublicGrandchild.parentFingerprint == publicGrandchild.parentFingerprint)
         #expect(reparsedPublicGrandchild.childIndex == publicGrandchild.childIndex)
+    }
+
+    @Test("Extended public-key payload init rejects invalid internal payloads without trapping")
+    func extendedPublicKeyPayloadInitRejectsInvalidInternalPayloadsWithoutTrapping() throws {
+        let privateKeyPayload = try ExtendedKeyPayloadModel(
+            kind: .privateKey,
+            depth: 0,
+            parentFingerprintUInt32BigEndian: 0,
+            childIndex: 0,
+            chainCode: Data(repeating: 0x11, count: 32),
+            keyData: Data(privateKeyBytes)
+        )
+        let malformedPublicPayload = ExtendedKeyPayloadModel.makeTrustedDerivedPublicKey(
+            depth: 1,
+            parentFingerprintUInt32BigEndian: 0x1234_5678,
+            childIndex: 7,
+            chainCode: Data(repeating: 0x22, count: 32),
+            publicKeyData33Bytes: Data([0x02] + Array(repeating: 0x00, count: 32))
+        )
+
+        do {
+            _ = try OpalCrypto.Key.ExtendedPublicKey(payload: privateKeyPayload)
+            Issue.record("Expected invalid version error for a private-key payload.")
+        } catch let error as OpalCrypto.Key.ExtendedPublicKey.Error {
+            #expect(error == .invalidVersion(actual: ExtendedKeyPayloadModel.privateVersion))
+        } catch {
+            Issue.record("Unexpected error type for private-key payload: \(error)")
+        }
+
+        do {
+            _ = try OpalCrypto.Key.ExtendedPublicKey(payload: malformedPublicPayload)
+            Issue.record("Expected invalid public-key error for malformed payload.")
+        } catch let error as OpalCrypto.Key.ExtendedPublicKey.Error {
+            #expect(error == .invalidPublicKey)
+        } catch {
+            Issue.record("Unexpected error type for malformed public-key payload: \(error)")
+        }
     }
 
     private let privateKeyBytes = Array(repeating: UInt8(0x00), count: 31) + [0x01]

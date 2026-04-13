@@ -200,16 +200,15 @@ struct PerformanceOptimizationValidator {
         let verificationKeyModel = VerificationKeyModel(
             parsedPublicKeyModel: try ParsedPublicKeyModel(publicKeyData: compressedPublicKey)
         )
-        let ecdsaSignature = try OpalCrypto.Signature.sign(
+        let ecdsaSignature = try OpalCrypto.Signature.signECDSA(
             message: message,
             privateKey: privateKey,
-            format: .ecdsa(.der)
+            format: .der
         )
-        let schnorrSignature = try OpalCrypto.Signature.sign(
-            message: digest,
+        let schnorrSignature = try OpalCrypto.Signature.signSchnorr(
+            digest: digest,
             privateKey: privateKey,
-            format: .schnorr,
-            nonce: .bip340Deterministic
+            noncePolicy: .bip340Deterministic
         )
 
         let rawEcdsaResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(

@@ -141,24 +141,27 @@ extension OpalCrypto {
                 rawValue.serialize()
             }
 
-            public func shiftLeft(by bits: Int) -> BigUnsignedInteger {
-                BigUnsignedInteger(rawValue: rawValue.shiftLeft(by: bits))
+            public func shiftLeft(byBytes byteCount: UInt) -> BigUnsignedInteger {
+                BigUnsignedInteger(rawValue: rawValue.shiftLeft(byBytes: Int(byteCount)))
             }
 
-            public func shiftRight(by bits: Int) -> BigUnsignedInteger {
-                BigUnsignedInteger(rawValue: rawValue.shiftRight(by: bits))
+            public func shiftRight(byBytes byteCount: UInt) -> BigUnsignedInteger {
+                BigUnsignedInteger(rawValue: rawValue.shiftRight(byBytes: Int(byteCount)))
             }
 
-            public mutating func add(_ addend: Int) {
+            public mutating func add(_ addend: UInt64) {
                 rawValue.add(addend)
             }
 
-            public mutating func multiply(by multiplier: Int) {
+            public mutating func multiply(by multiplier: UInt64) {
                 rawValue.multiply(by: multiplier)
             }
 
-            public mutating func divide(by divisor: Int) -> Int {
-                rawValue.divide(by: divisor)
+            public mutating func divide(by divisor: UInt64) throws -> UInt64 {
+                guard divisor > 0 else {
+                    throw Error.invalidDivisor(actual: divisor)
+                }
+                return rawValue.divide(by: divisor)
             }
 
             public static func < (lhs: BigUnsignedInteger, rhs: BigUnsignedInteger) -> Bool {
@@ -172,6 +175,7 @@ extension OpalCrypto {
 
         public enum Error: Swift.Error, Equatable {
             case invalidDataLength(expected: Int, actual: Int)
+            case invalidDivisor(actual: UInt64)
         }
     }
 }

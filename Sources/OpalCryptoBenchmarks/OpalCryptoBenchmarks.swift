@@ -147,60 +147,57 @@ enum OpalCryptoBenchmarks {
         }
 
         checksum ^= try runSyncBenchmark(name: "ECDSA sign", iterations: 200) {
-            let signature = try OpalCrypto.Signature.sign(
+            let signature = try OpalCrypto.Signature.signECDSA(
                 message: context.ecdsaMessage,
                 privateKey: context.singlePrivateKey,
-                format: .ecdsa(.der)
+                format: .der
             )
             return signature.count ^ Int(signature[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "ECDSA verify", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verify(
+            let isValid = try OpalCrypto.Signature.verifyECDSA(
                 signature: context.ecdsaSignature,
                 message: context.ecdsaMessage,
                 publicKey: context.compressedPublicKey,
-                format: .ecdsa(.der)
+                format: .der
             )
             return isValid ? 1 : 0
         }
 
         checksum ^= try runSyncBenchmark(name: "ECDSA verify (cached key)", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verify(
+            let isValid = try OpalCrypto.Signature.verifyECDSA(
                 signature: context.ecdsaSignature,
                 message: context.ecdsaMessage,
                 verificationKey: context.verificationKey,
-                format: .ecdsa(.der)
+                format: .der
             )
             return isValid ? 1 : 0
         }
 
         checksum ^= try runSyncBenchmark(name: "Schnorr sign", iterations: 200) {
-            let signature = try OpalCrypto.Signature.sign(
-                message: context.schnorrDigest,
+            let signature = try OpalCrypto.Signature.signSchnorr(
+                digest: context.schnorrDigest,
                 privateKey: context.singlePrivateKey,
-                format: .schnorr,
-                nonce: .bip340Deterministic
+                noncePolicy: .bip340Deterministic
             )
             return signature.count ^ Int(signature[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Schnorr verify", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verify(
+            let isValid = try OpalCrypto.Signature.verifySchnorr(
                 signature: context.schnorrSignature,
-                message: context.schnorrDigest,
-                publicKey: context.compressedPublicKey,
-                format: .schnorr
+                digest: context.schnorrDigest,
+                publicKey: context.compressedPublicKey
             )
             return isValid ? 1 : 0
         }
 
         checksum ^= try runSyncBenchmark(name: "Schnorr verify (cached key)", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verify(
+            let isValid = try OpalCrypto.Signature.verifySchnorr(
                 signature: context.schnorrSignature,
-                message: context.schnorrDigest,
-                verificationKey: context.verificationKey,
-                format: .schnorr
+                digest: context.schnorrDigest,
+                verificationKey: context.verificationKey
             )
             return isValid ? 1 : 0
         }
@@ -401,16 +398,15 @@ enum OpalCryptoBenchmarks {
             let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
                 fromPrivateKey: singlePrivateKey
             )
-            let ecdsaSignature = try OpalCrypto.Signature.sign(
+            let ecdsaSignature = try OpalCrypto.Signature.signECDSA(
                 message: ecdsaMessage,
                 privateKey: singlePrivateKey,
-                format: .ecdsa(.der)
+                format: .der
             )
-            let schnorrSignature = try OpalCrypto.Signature.sign(
-                message: schnorrDigest,
+            let schnorrSignature = try OpalCrypto.Signature.signSchnorr(
+                digest: schnorrDigest,
                 privateKey: singlePrivateKey,
-                format: .schnorr,
-                nonce: .bip340Deterministic
+                noncePolicy: .bip340Deterministic
             )
             let mnemonic = try OpalCrypto.Key.Mnemonic(
                 phrase: """
@@ -521,8 +517,12 @@ enum OpalCryptoBenchmarks {
     ) {
         let totalMilliseconds = Double(elapsedNanoseconds) / 1_000_000
         let averageMicroseconds = Double(elapsedNanoseconds) / Double(iterations) / 1_000
-        let totalText = String(format: "%.3f", totalMilliseconds)
-        let averageText = String(format: "%.3f", averageMicroseconds)
+        let totalText = totalMilliseconds.formatted(
+            .number.precision(.fractionLength(3))
+        )
+        let averageText = averageMicroseconds.formatted(
+            .number.precision(.fractionLength(3))
+        )
         print("\(name): total \(totalText) ms, avg \(averageText) us")
     }
 }

@@ -41,8 +41,8 @@ internal struct Base32EncodingModel {
             var charactersResult: [Character] = .init()
             charactersResult.reserveCapacity(Swift.max(1, data.count * 2))
             while !value.isZero {
-                let remainder = value.divide(by: baseNumber)
-                charactersResult.append(characters[remainder])
+                let remainder = value.divide(by: UInt64(baseNumber))
+                charactersResult.append(characters[Int(remainder)])
             }
             let leadingZeroPrefix = String(repeating: String(zeroCharacter), count: leadingZeroByteCount)
             return leadingZeroPrefix + String(charactersResult.reversed())
@@ -85,8 +85,8 @@ internal struct Base32EncodingModel {
                 } else {
                     isReadingLeadingZeroes = false
                 }
-                value.multiply(by: baseNumber)
-                value.add(Int(index))
+                value.multiply(by: UInt64(baseNumber))
+                value.add(UInt64(index))
             }
             data = Data(repeating: 0x00, count: leadingZeroCharacterCount)
             data.append(value.serialize())

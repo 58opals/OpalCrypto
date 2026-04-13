@@ -25,8 +25,8 @@ internal struct Base58EncodingModel {
         var charactersResult: [Character] = .init()
         charactersResult.reserveCapacity(Swift.max(1, data.count * 2))
         while !value.isZero {
-            let remainder = value.divide(by: baseNumber)
-            charactersResult.append(characters[remainder])
+            let remainder = value.divide(by: UInt64(baseNumber))
+            charactersResult.append(characters[Int(remainder)])
         }
         
         let leadingZeroBytes = data.prefix { $0 == 0 }.count
@@ -44,8 +44,8 @@ internal struct Base58EncodingModel {
             guard asciiValue < 128 else { return nil }
             let value = asciiLookup[Int(asciiValue)]
             guard value >= 0 else { return nil }
-            total.multiply(by: baseNumber)
-            total.add(Int(value))
+            total.multiply(by: UInt64(baseNumber))
+            total.add(UInt64(value))
         }
         
         var bytes: [UInt8] = .init()

@@ -9,11 +9,18 @@ struct ParsedPrivateKeyModel: Sendable, Equatable {
     }
 
     let scalar: ScalarModel
-    let compressedPublicKeyData: Data
-    let compressedPublicKeyFingerprintUInt32BigEndian: UInt32
+    let parsedPublicKeyModel: ParsedPublicKeyModel
+
+    var compressedPublicKeyData: Data {
+        parsedPublicKeyModel.compressedPublicKeyData
+    }
+
+    var compressedPublicKeyFingerprintUInt32BigEndian: UInt32 {
+        parsedPublicKeyModel.fingerprintUInt32BigEndian
+    }
 
     var compressedPublicKeyFingerprintData4Bytes: Data {
-        Data(bigEndianUInt32: compressedPublicKeyFingerprintUInt32BigEndian)
+        parsedPublicKeyModel.fingerprintData4Bytes
     }
 
     init(privateKeyData32Bytes: Data) throws {
@@ -35,12 +42,11 @@ struct ParsedPrivateKeyModel: Sendable, Equatable {
     }
 
     init(trustedScalar: ScalarModel) throws {
-        let compressedPublicKeyData = try StandardsForEfficientCryptography256k1CurveModel
-            .Operation.deriveCompressedPublicKey(fromPrivateKeyScalar: trustedScalar)
+        let publicPoint = ScalarMultiplicationModel.mulG(trustedScalar)
+        guard let publicAffine = publicPoint.convertToAffine() else {
+            throw Error.invalidPrivateKey
+        }
         self.scalar = trustedScalar
-        self.compressedPublicKeyData = compressedPublicKeyData
-        self.compressedPublicKeyFingerprintUInt32BigEndian = SecureHash160Model
-            .hash(compressedPublicKeyData)
-            .uint32BigEndian(at: 0)
+        self.parsedPublicKeyModel = ParsedPublicKeyModel(affinePoint: publicAffine)
     }
 }

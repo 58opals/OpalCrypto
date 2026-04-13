@@ -7,12 +7,12 @@ import OpalCrypto
 @Suite("Public API blind signature validation")
 struct PublicAPIBlindSignatureValidator {
     @Test("Blind Schnorr requests finalize into valid signatures")
-    func blindSchnorrRequestsFinalizeIntoValidSignatures() throws {
+    func blindSchnorrRequestsFinalizeIntoValidSignatures() async throws {
         let privateKey = makeScalar(0x05)
         let publicKey = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: privateKey
         )
-        var signer = try OpalCrypto.BlindSignature.Signer()
+        let signer = try OpalCrypto.BlindSignature.Signer()
         let digest = Data(repeating: 0xAB, count: 32)
 
         let request = try OpalCrypto.BlindSignature.Request(
@@ -20,35 +20,34 @@ struct PublicAPIBlindSignatureValidator {
             noncePoint: signer.noncePoint,
             messageDigest: digest
         )
-        let response = try signer.sign(
+        let response = try await signer.sign(
             privateKey: privateKey,
             requestScalar: request.scalar
         )
         let signature = try request.finalize(responseScalar: response)
 
         #expect(
-            try OpalCrypto.Signature.verify(
+            try OpalCrypto.Signature.verifySchnorr(
                 signature: signature,
-                message: digest,
-                publicKey: publicKey,
-                format: .schnorr
+                digest: digest,
+                publicKey: publicKey
             )
         )
     }
 
     @Test("Blind signature finalization rejects tampered responses")
-    func blindSignatureFinalizationRejectsTamperedResponses() throws {
+    func blindSignatureFinalizationRejectsTamperedResponses() async throws {
         let privateKey = makeScalar(0x06)
         let publicKey = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: privateKey
         )
-        var signer = try OpalCrypto.BlindSignature.Signer()
+        let signer = try OpalCrypto.BlindSignature.Signer()
         let request = try OpalCrypto.BlindSignature.Request(
             signerPublicKey: publicKey,
             noncePoint: signer.noncePoint,
             messageDigest: Data(repeating: 0x6C, count: 32)
         )
-        let response = try signer.sign(
+        let response = try await signer.sign(
             privateKey: privateKey,
             requestScalar: request.scalar
         )
@@ -66,23 +65,61 @@ struct PublicAPIBlindSignatureValidator {
     }
 
     @Test("Blind signer rejects nonce reuse")
-    func blindSignerRejectsNonceReuse() throws {
+    func blindSignerRejectsNonceReuse() async throws {
         let privateKey = makeScalar(0x07)
         let publicKey = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: privateKey
         )
-        var signer = try OpalCrypto.BlindSignature.Signer()
+        let signer = try OpalCrypto.BlindSignature.Signer()
         let request = try OpalCrypto.BlindSignature.Request(
             signerPublicKey: publicKey,
             noncePoint: signer.noncePoint,
             messageDigest: Data(repeating: 0x7D, count: 32)
         )
 
-        _ = try signer.sign(privateKey: privateKey, requestScalar: request.scalar)
+        _ = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
 
         do {
-            _ = try signer.sign(privateKey: privateKey, requestScalar: request.scalar)
+            _ = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
             Issue.record("Expected nonce reuse rejection.")
+        } catch let error as OpalCrypto.BlindSignature.Error {
+            #expect(error == .nonceAlreadyUsed)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Blind signer aliases share one-time nonce state")
+    func blindSignerAliasesShareOneTimeNonceState() async throws {
+        let privateKey = makeScalar(0x08)
+        let publicKey = try OpalCrypto.Signature.derivePublicKey(
+            fromPrivateKey: privateKey
+        )
+        let signer = try OpalCrypto.BlindSignature.Signer()
+        let signerAlias = signer
+        let firstRequest = try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signer.noncePoint,
+            messageDigest: Data(repeating: 0x8E, count: 32)
+        )
+
+        _ = try await signer.sign(
+            privateKey: privateKey,
+            requestScalar: firstRequest.scalar
+        )
+
+        let secondRequest = try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signerAlias.noncePoint,
+            messageDigest: Data(repeating: 0x8F, count: 32)
+        )
+
+        do {
+            _ = try await signerAlias.sign(
+                privateKey: privateKey,
+                requestScalar: secondRequest.scalar
+            )
+            Issue.record("Expected aliased signer to reject nonce reuse.")
         } catch let error as OpalCrypto.BlindSignature.Error {
             #expect(error == .nonceAlreadyUsed)
         } catch {

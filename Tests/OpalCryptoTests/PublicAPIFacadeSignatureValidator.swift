@@ -15,17 +15,17 @@ struct PublicAPIFacadeSignatureValidator {
         let publicKeyData = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: privateKeyData
         )
-        let signatureData = try OpalCrypto.Signature.sign(
+        let signatureData = try OpalCrypto.Signature.signECDSA(
             message: messageData,
             privateKey: privateKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
 
-        let isValid = try OpalCrypto.Signature.verify(
+        let isValid = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             publicKey: publicKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
         #expect(isValid)
     }
@@ -39,19 +39,19 @@ struct PublicAPIFacadeSignatureValidator {
         let publicKeyData = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: privateKeyData
         )
-        let signatureData = try OpalCrypto.Signature.sign(
+        let signatureData = try OpalCrypto.Signature.signECDSA(
             message: messageData,
             privateKey: privateKeyData,
-            format: .ecdsa(.raw)
+            format: .raw
         )
 
         #expect(signatureData.count == 64)
 
-        let isValid = try OpalCrypto.Signature.verify(
+        let isValid = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             publicKey: publicKeyData,
-            format: .ecdsa(.raw)
+            format: .raw
         )
         #expect(isValid)
     }
@@ -72,23 +72,23 @@ struct PublicAPIFacadeSignatureValidator {
         let otherPublicKeyData = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: otherPrivateKeyData
         )
-        let signatureData = try OpalCrypto.Signature.sign(
+        let signatureData = try OpalCrypto.Signature.signECDSA(
             message: messageData,
             privateKey: privateKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
 
-        let isValidForTamperedMessage = try OpalCrypto.Signature.verify(
+        let isValidForTamperedMessage = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: tamperedMessageData,
             publicKey: publicKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
-        let isValidForWrongPublicKey = try OpalCrypto.Signature.verify(
+        let isValidForWrongPublicKey = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             publicKey: otherPublicKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
 
         #expect(!isValidForTamperedMessage)
@@ -103,18 +103,18 @@ struct PublicAPIFacadeSignatureValidator {
         let publicKeyData = try OpalCrypto.Signature.derivePublicKey(
             fromPrivateKey: privateKeyData
         )
-        let signatureData = try OpalCrypto.Signature.sign(
+        let signatureData = try OpalCrypto.Signature.signECDSA(
             message: messageData,
             privateKey: privateKeyData,
-            format: .ecdsa(.raw)
+            format: .raw
         )
 
         do {
-            _ = try OpalCrypto.Signature.verify(
+            _ = try OpalCrypto.Signature.verifyECDSA(
                 signature: Data(signatureData.prefix(63)),
                 message: messageData,
                 publicKey: publicKeyData,
-                format: .ecdsa(.raw)
+                format: .raw
             )
             Issue.record("Expected invalid signature length error.")
         } catch let error as OpalCrypto.Signature.Error {
@@ -133,18 +133,16 @@ struct PublicAPIFacadeSignatureValidator {
             fromPrivateKey: privateKeyData
         )
 
-        let signatureData = try OpalCrypto.Signature.sign(
-            message: digestData32Bytes,
+        let signatureData = try OpalCrypto.Signature.signSchnorr(
+            digest: digestData32Bytes,
             privateKey: privateKeyData,
-            format: .schnorr,
-            nonce: .bip340Deterministic
+            noncePolicy: .bip340Deterministic
         )
 
-        let isValid = try OpalCrypto.Signature.verify(
+        let isValid = try OpalCrypto.Signature.verifySchnorr(
             signature: signatureData,
-            message: digestData32Bytes,
-            publicKey: publicKeyData,
-            format: .schnorr
+            digest: digestData32Bytes,
+            publicKey: publicKeyData
         )
         #expect(isValid)
     }
@@ -157,23 +155,23 @@ struct PublicAPIFacadeSignatureValidator {
         let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
             fromPrivateKey: privateKeyData
         )
-        let signatureData = try OpalCrypto.Signature.sign(
+        let signatureData = try OpalCrypto.Signature.signECDSA(
             message: messageData,
             privateKey: privateKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
 
-        let rawResult = try OpalCrypto.Signature.verify(
+        let rawResult = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             publicKey: verificationKey.publicKey,
-            format: .ecdsa(.der)
+            format: .der
         )
-        let cachedResult = try OpalCrypto.Signature.verify(
+        let cachedResult = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             verificationKey: verificationKey,
-            format: .ecdsa(.der)
+            format: .der
         )
 
         #expect(rawResult == cachedResult)
@@ -185,10 +183,10 @@ struct PublicAPIFacadeSignatureValidator {
         var privateKeyData = Data(repeating: 0x00, count: 32)
         privateKeyData[31] = 0x01
         let messageData = Data("opal-ecdsa-uncompressed-verify".utf8)
-        let signatureData = try OpalCrypto.Signature.sign(
+        let signatureData = try OpalCrypto.Signature.signECDSA(
             message: messageData,
             privateKey: privateKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
         let uncompressedPublicKeyData = try Data(
             hexadecimal: """
@@ -199,17 +197,17 @@ struct PublicAPIFacadeSignatureValidator {
             publicKey: uncompressedPublicKeyData
         )
 
-        let rawResult = try OpalCrypto.Signature.verify(
+        let rawResult = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             publicKey: uncompressedPublicKeyData,
-            format: .ecdsa(.der)
+            format: .der
         )
-        let cachedResult = try OpalCrypto.Signature.verify(
+        let cachedResult = try OpalCrypto.Signature.verifyECDSA(
             signature: signatureData,
             message: messageData,
             verificationKey: verificationKey,
-            format: .ecdsa(.der)
+            format: .der
         )
 
         #expect(rawResult == cachedResult)
@@ -224,24 +222,21 @@ struct PublicAPIFacadeSignatureValidator {
         let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
             fromPrivateKey: privateKeyData
         )
-        let signatureData = try OpalCrypto.Signature.sign(
-            message: digestData32Bytes,
+        let signatureData = try OpalCrypto.Signature.signSchnorr(
+            digest: digestData32Bytes,
             privateKey: privateKeyData,
-            format: .schnorr,
-            nonce: .bip340Deterministic
+            noncePolicy: .bip340Deterministic
         )
 
-        let rawResult = try OpalCrypto.Signature.verify(
+        let rawResult = try OpalCrypto.Signature.verifySchnorr(
             signature: signatureData,
-            message: digestData32Bytes,
-            publicKey: verificationKey.publicKey,
-            format: .schnorr
+            digest: digestData32Bytes,
+            publicKey: verificationKey.publicKey
         )
-        let cachedResult = try OpalCrypto.Signature.verify(
+        let cachedResult = try OpalCrypto.Signature.verifySchnorr(
             signature: signatureData,
-            message: digestData32Bytes,
-            verificationKey: verificationKey,
-            format: .schnorr
+            digest: digestData32Bytes,
+            verificationKey: verificationKey
         )
 
         #expect(rawResult == cachedResult)
@@ -254,10 +249,10 @@ struct PublicAPIFacadeSignatureValidator {
         let invalidPrivateKey = Data(repeating: 0x01, count: 31)
 
         do {
-            _ = try OpalCrypto.Signature.sign(
+            _ = try OpalCrypto.Signature.signECDSA(
                 message: messageData,
                 privateKey: invalidPrivateKey,
-                format: .ecdsa(.raw)
+                format: .raw
             )
             Issue.record("Expected invalid private key length error.")
         } catch let error as OpalCrypto.Signature.Error {
@@ -270,11 +265,10 @@ struct PublicAPIFacadeSignatureValidator {
     @Test("Reject verify with invalid public key length through facade error")
     func rejectVerifyWithInvalidPublicKeyLengthThroughFacadeError() {
         do {
-            _ = try OpalCrypto.Signature.verify(
+            _ = try OpalCrypto.Signature.verifySchnorr(
                 signature: Data(repeating: 0x00, count: 64),
-                message: Data(repeating: 0xAB, count: 32),
-                publicKey: Data(repeating: 0x02, count: 32),
-                format: .schnorr
+                digest: Data(repeating: 0xAB, count: 32),
+                publicKey: Data(repeating: 0x02, count: 32)
             )
             Issue.record("Expected invalid public key length error.")
         } catch let error as OpalCrypto.Signature.Error {
@@ -290,11 +284,10 @@ struct PublicAPIFacadeSignatureValidator {
         publicKeyData[0] = 0x04
 
         do {
-            _ = try OpalCrypto.Signature.verify(
+            _ = try OpalCrypto.Signature.verifySchnorr(
                 signature: Data(repeating: 0x00, count: 64),
-                message: Data(repeating: 0xAB, count: 32),
-                publicKey: publicKeyData,
-                format: .schnorr
+                digest: Data(repeating: 0xAB, count: 32),
+                publicKey: publicKeyData
             )
             Issue.record("Expected invalid public key prefix error.")
         } catch let error as OpalCrypto.Signature.Error {
@@ -310,10 +303,10 @@ struct PublicAPIFacadeSignatureValidator {
         privateKeyData[31] = 0x01
 
         do {
-            _ = try OpalCrypto.Signature.sign(
-                message: Data(repeating: 0xAB, count: 31),
+            _ = try OpalCrypto.Signature.signSchnorr(
+                digest: Data(repeating: 0xAB, count: 31),
                 privateKey: privateKeyData,
-                format: .schnorr
+                noncePolicy: .bip340Deterministic
             )
             Issue.record("Expected invalid digest length error.")
         } catch let error as OpalCrypto.Signature.Error {
@@ -334,11 +327,10 @@ struct PublicAPIFacadeSignatureValidator {
                 fromPrivateKey: privateKeyData
             )
 
-            _ = try OpalCrypto.Signature.verify(
+            _ = try OpalCrypto.Signature.verifySchnorr(
                 signature: Data(repeating: 0x00, count: 63),
-                message: digestData32Bytes,
-                publicKey: publicKeyData,
-                format: .schnorr
+                digest: digestData32Bytes,
+                publicKey: publicKeyData
             )
             Issue.record("Expected invalid signature length error.")
         } catch let error as OpalCrypto.Signature.Error {

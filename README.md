@@ -41,24 +41,24 @@ let message = Data("opal-ecdsa-message".utf8)
 let publicKey = try OpalCrypto.Signature.derivePublicKey(
     fromPrivateKey: privateKey
 )
-let signature = try OpalCrypto.Signature.sign(
+let signature = try OpalCrypto.Signature.signECDSA(
     message: message,
     privateKey: privateKey,
-    format: .ecdsa(.der)
+    format: .der
 )
-let isValid = try OpalCrypto.Signature.verify(
+let isValid = try OpalCrypto.Signature.verifyECDSA(
     signature: signature,
     message: message,
     publicKey: publicKey,
-    format: .ecdsa(.der)
+    format: .der
 )
 ```
 
-For Schnorr signatures, use `format: .schnorr` and pass a 32-byte digest as the message input.
+For Schnorr signatures, use `signSchnorr(digest:...)` and `verifySchnorr(signature:digest:...)`. Those APIs require a caller-supplied 32-byte digest, and hashing remains the caller's responsibility.
 
 ## Key Capabilities
 
-- `Signature`: secp256k1 public-key derivation plus ECDSA and Schnorr signing and verification with facade-owned formats and nonce policies.
+- `Signature`: secp256k1 public-key derivation plus split ECDSA and Schnorr signing and verification entry points with facade-owned formats and nonce policies.
 - `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
 - `Hashing`: SHA-256, Hash256, Hash160, and HMAC-SHA512 helpers.
 - `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives.

@@ -33,7 +33,7 @@ extension OpalCrypto.Key {
                 parentFingerprintUInt32BigEndian: payload.parentFingerprintUInt32BigEndian,
                 childIndex: payload.childIndex,
                 chainCode: payload.chainCode,
-                publicKey: parsedPrivateKeyModel.compressedPublicKeyData
+                parsedPublicKeyModel: parsedPrivateKeyModel.parsedPublicKeyModel
             )
         }
 

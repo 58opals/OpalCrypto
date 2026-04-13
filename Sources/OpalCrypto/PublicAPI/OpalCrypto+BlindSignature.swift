@@ -59,25 +59,25 @@ extension OpalCrypto {
             }
         }
 
-        public struct Signer: Sendable {
+        public actor Signer {
             internal var signerState: BlindSignatureModel.SignerState
 
-            public var noncePoint: Data {
-                signerState.noncePointData
-            }
+            public nonisolated let noncePoint: Data
 
             public init() throws {
                 do {
-                    signerState = try BlindSignatureModel.SignerState()
+                    let signerState = try BlindSignatureModel.SignerState()
+                    self.signerState = signerState
+                    self.noncePoint = signerState.noncePointData
                 } catch let error as BlindSignatureModel.Error {
                     throw BlindSignature.mapError(error)
                 }
             }
 
-            public mutating func sign(
+            public func sign(
                 privateKey: Data,
                 requestScalar: Data
-            ) throws -> Data {
+            ) async throws -> Data {
                 do {
                     return try signerState.sign(
                         privateKey: privateKey,

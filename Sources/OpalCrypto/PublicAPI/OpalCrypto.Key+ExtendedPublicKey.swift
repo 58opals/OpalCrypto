@@ -31,10 +31,7 @@ extension OpalCrypto.Key {
 
         public init(_ serialized: String) throws {
             let payload = try Self.makePayload(from: serialized)
-            guard payload.kind == .publicKey else {
-                throw Error.invalidVersion(actual: ExtendedKeyPayloadModel.privateVersion)
-            }
-            self.init(payload: payload)
+            try self.init(payload: payload)
         }
 
         public func serialize() -> String {
@@ -64,10 +61,22 @@ extension OpalCrypto.Key {
             )
         }
 
-        internal init(payload: ExtendedKeyPayloadModel) {
+        internal init(payload: ExtendedKeyPayloadModel) throws {
+            guard payload.kind == .publicKey else {
+                throw Error.invalidVersion(actual: ExtendedKeyPayloadModel.privateVersion)
+            }
             self.payload = payload
-            self.parsedPublicKeyModel = try! StandardsForEfficientCryptography256k1CurveModel
-                .Operation.makeParsedPublicKey(publicKey: payload.keyData)
+            do {
+                self.parsedPublicKeyModel = try ParsedPublicKeyModel(
+                    publicKeyData: payload.keyData
+                )
+            } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
+                throw Error.invalidPublicKeyLength(expected: 33, actual: actual)
+            } catch ParsedPublicKeyModel.Error.invalidPublicKeyPrefix(let actual) {
+                throw Error.invalidPublicKeyPrefix(actual: actual)
+            } catch {
+                throw Error.invalidPublicKey
+            }
         }
 
         internal init(
@@ -83,34 +92,14 @@ extension OpalCrypto.Key {
             parentFingerprintUInt32BigEndian: UInt32,
             childIndex: UInt32,
             chainCode: Data,
-            publicKey: Data
-        ) {
-            self.payload = try! ExtendedKeyPayloadModel(
-                kind: .publicKey,
-                depth: depth,
-                parentFingerprintUInt32BigEndian: parentFingerprintUInt32BigEndian,
-                childIndex: childIndex,
-                chainCode: chainCode,
-                keyData: publicKey
-            )
-            self.parsedPublicKeyModel = try! StandardsForEfficientCryptography256k1CurveModel
-                .Operation.makeParsedPublicKey(publicKey: publicKey)
-        }
-
-        internal init(
-            depth: UInt8,
-            parentFingerprintUInt32BigEndian: UInt32,
-            childIndex: UInt32,
-            chainCode: Data,
             parsedPublicKeyModel: ParsedPublicKeyModel
         ) {
-            self.payload = try! ExtendedKeyPayloadModel(
-                kind: .publicKey,
+            self.payload = ExtendedKeyPayloadModel.makeTrustedDerivedPublicKey(
                 depth: depth,
                 parentFingerprintUInt32BigEndian: parentFingerprintUInt32BigEndian,
                 childIndex: childIndex,
                 chainCode: chainCode,
-                keyData: parsedPublicKeyModel.compressedPublicKeyData
+                publicKeyData33Bytes: parsedPublicKeyModel.compressedPublicKeyData
             )
             self.parsedPublicKeyModel = parsedPublicKeyModel
         }

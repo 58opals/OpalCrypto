@@ -4,18 +4,17 @@ import Foundation
 
 extension OpalCrypto {
     public enum Signature {
-        public enum Format: Sendable, Equatable {
-            public enum ECDSAEncoding: Sendable, Equatable {
-                case raw
-                case der
-            }
-
-            case ecdsa(ECDSAEncoding)
-            case schnorr
+        public enum ECDSAFormat: Sendable, Equatable {
+            case raw
+            case der
         }
 
-        public enum NoncePolicy: Sendable, Equatable {
+        public enum ECDSANoncePolicy: Sendable, Equatable {
             case rfc6979
+            case random
+        }
+
+        public enum SchnorrNoncePolicy: Sendable, Equatable {
             case bip340Deterministic
             case random
         }
@@ -53,40 +52,57 @@ extension OpalCrypto {
             }
         }
 
-        public static func sign(
+        public static func signECDSA(
             message: Data,
             privateKey: Data,
-            format: Format,
-            nonce: NoncePolicy = .rfc6979
+            format: ECDSAFormat,
+            noncePolicy: ECDSANoncePolicy = .rfc6979
         ) throws -> Data {
             try validatePrivateKeyLength(privateKey)
-            if case .schnorr = format {
-                try validateSchnorrDigestLength(message)
-            }
 
             do {
                 return try EllipticCurveDigitalSignatureAlgorithmModel.sign(
                     message: message,
                     with: privateKey,
                     in: format.internalFormat,
-                    nonceFunction: nonce.internalNoncePolicy
+                    nonceFunction: noncePolicy.internalNoncePolicy
                 )
             } catch {
                 throw mapCryptographyError(error)
             }
         }
 
-        public static func verify(
+        /// Signs a caller-supplied 32-byte Schnorr digest.
+        ///
+        /// The caller is responsible for hashing the message before calling this API.
+        public static func signSchnorr(
+            digest: Data,
+            privateKey: Data,
+            noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
+        ) throws -> Data {
+            try validatePrivateKeyLength(privateKey)
+            try validateSchnorrDigestLength(digest)
+
+            do {
+                return try EllipticCurveDigitalSignatureAlgorithmModel.sign(
+                    message: digest,
+                    with: privateKey,
+                    in: .schnorr,
+                    nonceFunction: noncePolicy.internalNoncePolicy
+                )
+            } catch {
+                throw mapCryptographyError(error)
+            }
+        }
+
+        public static func verifyECDSA(
             signature: Data,
             message: Data,
             publicKey: Data,
-            format: Format
+            format: ECDSAFormat
         ) throws -> Bool {
             try validateSecp256k1PublicKey(publicKey)
-            try validateSignatureLength(signature, format: format)
-            if case .schnorr = format {
-                try validateSchnorrDigestLength(message)
-            }
+            try validateECDSASignatureLength(signature, format: format)
             let verificationKey: VerificationKey
             do {
                 verificationKey = try VerificationKey(publicKey: publicKey)
@@ -98,26 +114,68 @@ extension OpalCrypto {
                 signature: signature,
                 message: message,
                 verificationKey: verificationKey,
-                format: format
+                format: format.internalFormat
             )
         }
 
-        public static func verify(
+        public static func verifyECDSA(
             signature: Data,
             message: Data,
             verificationKey: VerificationKey,
-            format: Format
+            format: ECDSAFormat
         ) throws -> Bool {
-            try validateSignatureLength(signature, format: format)
-            if case .schnorr = format {
-                try validateSchnorrDigestLength(message)
-            }
+            try validateECDSASignatureLength(signature, format: format)
 
             return try verifyValidated(
                 signature: signature,
                 message: message,
                 verificationKey: verificationKey,
-                format: format
+                format: format.internalFormat
+            )
+        }
+
+        /// Verifies a Schnorr signature against a caller-supplied 32-byte digest.
+        ///
+        /// The caller is responsible for hashing the message before calling this API.
+        public static func verifySchnorr(
+            signature: Data,
+            digest: Data,
+            publicKey: Data
+        ) throws -> Bool {
+            try validateSecp256k1PublicKey(publicKey)
+            try validateSchnorrSignatureLength(signature)
+            try validateSchnorrDigestLength(digest)
+            let verificationKey: VerificationKey
+            do {
+                verificationKey = try VerificationKey(publicKey: publicKey)
+            } catch let error as VerificationKey.Error {
+                throw mapVerificationKeyError(error)
+            }
+
+            return try verifyValidated(
+                signature: signature,
+                message: digest,
+                verificationKey: verificationKey,
+                format: .schnorr
+            )
+        }
+
+        /// Verifies a Schnorr signature against a caller-supplied 32-byte digest.
+        ///
+        /// The caller is responsible for hashing the message before calling this API.
+        public static func verifySchnorr(
+            signature: Data,
+            digest: Data,
+            verificationKey: VerificationKey
+        ) throws -> Bool {
+            try validateSchnorrSignatureLength(signature)
+            try validateSchnorrDigestLength(digest)
+
+            return try verifyValidated(
+                signature: signature,
+                message: digest,
+                verificationKey: verificationKey,
+                format: .schnorr
             )
         }
 
@@ -125,14 +183,14 @@ extension OpalCrypto {
             signature: Data,
             message: Data,
             verificationKey: VerificationKey,
-            format: Format
+            format: EllipticCurveDigitalSignatureAlgorithmModel.SignatureFormat
         ) throws -> Bool {
             do {
                 return try EllipticCurveDigitalSignatureAlgorithmModel.verify(
                     signature: signature,
                     message: message,
                     verificationKeyModel: verificationKey.verificationKeyModel,
-                    format: format.internalFormat
+                    format: format
                 )
             } catch {
                 throw mapCryptographyError(error)
@@ -171,14 +229,18 @@ extension OpalCrypto {
             }
         }
 
-        private static func validateSignatureLength(_ signatureData: Data, format: Format) throws {
-            switch format {
-            case .schnorr, .ecdsa(.raw):
-                guard signatureData.count == 64 else {
-                    throw Error.invalidSignatureLength(expected: 64, actual: signatureData.count)
-                }
-            case .ecdsa(.der):
-                break
+        private static func validateECDSASignatureLength(
+            _ signatureData: Data,
+            format: ECDSAFormat
+        ) throws {
+            guard format != .raw || signatureData.count == 64 else {
+                throw Error.invalidSignatureLength(expected: 64, actual: signatureData.count)
+            }
+        }
+
+        private static func validateSchnorrSignatureLength(_ signatureData: Data) throws {
+            guard signatureData.count == 64 else {
+                throw Error.invalidSignatureLength(expected: 64, actual: signatureData.count)
             }
         }
 
