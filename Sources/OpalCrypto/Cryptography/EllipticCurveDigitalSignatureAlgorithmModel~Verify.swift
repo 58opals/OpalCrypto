@@ -10,9 +10,13 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         format: SignatureFormat
     ) throws -> Bool {
         let compressedPublicKey = publicKey
-        guard compressedPublicKey.count == 33 else { throw Error.invalidCompressedPublicKeyLength }
+        guard compressedPublicKey.count == 33 else {
+            throw Error.invalidCompressedPublicKeyLength(expected: 33, actual: compressedPublicKey.count)
+        }
         let prefix = compressedPublicKey[0]
-        guard prefix == 0x02 || prefix == 0x03 else { throw Error.invalidCompressedPublicKeyPrefix }
+        guard prefix == 0x02 || prefix == 0x03 else {
+            throw Error.invalidCompressedPublicKeyPrefix(actual: prefix)
+        }
         let verificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel.Operation
             .makeVerificationKey(publicKey: compressedPublicKey)
         return try verify(

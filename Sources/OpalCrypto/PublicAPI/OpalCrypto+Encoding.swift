@@ -4,10 +4,6 @@ import Foundation
 
 extension OpalCrypto {
     public enum Encoding {
-        public enum Error: Swift.Error, Equatable {
-            case invalidFiveBitValue(actual: UInt8)
-            case invalidCharacterFound
-        }
 
         public static func encodeBase58(_ data: Data) -> String {
             Base58EncodingModel.encode(data)

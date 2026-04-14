@@ -4,29 +4,6 @@ import Foundation
 
 extension OpalCrypto {
     public enum Signature {
-        public enum ECDSAFormat: Sendable, Equatable {
-            case raw
-            case der
-        }
-
-        public enum ECDSANoncePolicy: Sendable, Equatable {
-            case rfc6979
-            case random
-        }
-
-        public enum SchnorrNoncePolicy: Sendable, Equatable {
-            case bip340Deterministic
-            case random
-        }
-
-        public enum Error: Swift.Error, Equatable {
-            case invalidPrivateKeyLength(expected: Int, actual: Int)
-            case invalidPublicKeyLength(expected: Int, actual: Int)
-            case invalidPublicKeyPrefix(actual: UInt8)
-            case invalidDigestLength(expected: Int, actual: Int)
-            case invalidSignatureLength(expected: Int, actual: Int)
-            case cryptographyFailure
-        }
 
         public static func derivePublicKey(fromPrivateKey privateKey: Data) throws -> Data {
             try validatePrivateKeyLength(privateKey)
@@ -247,10 +224,10 @@ extension OpalCrypto {
         private static func mapCryptographyError(_ error: Swift.Error) -> Error {
             if let signatureError = error as? EllipticCurveDigitalSignatureAlgorithmModel.Error {
                 switch signatureError {
-                case .invalidCompressedPublicKeyLength:
-                    return .invalidPublicKeyLength(expected: 33, actual: 0)
-                case .invalidCompressedPublicKeyPrefix:
-                    return .invalidPublicKeyPrefix(actual: 0)
+                case .invalidCompressedPublicKeyLength(let expected, let actual):
+                    return .invalidPublicKeyLength(expected: expected, actual: actual)
+                case .invalidCompressedPublicKeyPrefix(let actual):
+                    return .invalidPublicKeyPrefix(actual: actual)
                 case .invalidDigestLength(let expected, let actual):
                     return .invalidDigestLength(expected: expected, actual: actual)
                 case .invalidHashIterationCount:

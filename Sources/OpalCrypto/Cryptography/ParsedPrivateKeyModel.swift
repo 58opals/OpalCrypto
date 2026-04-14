@@ -3,10 +3,6 @@
 import Foundation
 
 struct ParsedPrivateKeyModel: Sendable, Equatable {
-    enum Error: Swift.Error, Equatable {
-        case invalidPrivateKeyLength(actual: Int)
-        case invalidPrivateKey
-    }
 
     let scalar: ScalarModel
     let parsedPublicKeyModel: ParsedPublicKeyModel

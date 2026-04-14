@@ -4,22 +4,6 @@ import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
     internal enum Operation {
-        internal enum PublicKeyFormat {
-            case compressed
-            case uncompressed
-        }
-
-        internal enum Error: Swift.Error, Equatable {
-            case invalidPrivateKeyLength(actual: Int)
-            case invalidPrivateKeyValue
-            case invalidPublicKeyLength(actual: Int)
-            case invalidPublicKeyValue
-            case invalidTweakLength(actual: Int)
-            case invalidTweakValue
-            case invalidDerivedPrivateKey
-            case invalidDerivedPublicKey
-            case randomGenerationFailed(status: Int32)
-        }
 
         internal static var curveOrderN: Data {
             StandardsForEfficientCryptography256k1CurveModel.Constant.n.data32Bytes

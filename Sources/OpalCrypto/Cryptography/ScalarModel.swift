@@ -3,11 +3,6 @@
 import Foundation
 
 struct ScalarModel: Sendable, Equatable {
-    enum Error: Swift.Error, Equatable {
-        case invalidDataLength(expected: Int, actual: Int)
-        case invalidScalarValue
-        case zeroNotAllowed
-    }
     
     @usableFromInline let value: Unsigned256BitIntegerModel
     

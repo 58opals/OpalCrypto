@@ -39,11 +39,11 @@ struct PublicAPIKeyMaterialValidator {
 
     @Test("Round-trip extended keys and derive raw child indices")
     func roundTripExtendedKeysAndDeriveRawChildIndices() throws {
-        let rootKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: Data(hexadecimal: seedHex))
+        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: Data(hexadecimal: seedHex))
         #expect(rootKey.serialize() == rootPrivateKeyString)
         #expect(rootKey.publicKey.serialize() == rootPublicKeyString)
-        #expect(try OpalCrypto.Key.ExtendedPrivateKey(rootPrivateKeyString) == rootKey)
-        #expect(try OpalCrypto.Key.ExtendedPublicKey(rootPublicKeyString) == rootKey.publicKey)
+        #expect(try OpalCrypto.Key.ExtendedPrivate(rootPrivateKeyString) == rootKey)
+        #expect(try OpalCrypto.Key.ExtendedPublic(rootPublicKeyString) == rootKey.publicKey)
 
         let hardenedChild = try rootKey.derived(indices: [0x8000_0000])
         #expect(hardenedChild.serialize() == hardenedChildPrivateKeyString)
@@ -53,19 +53,19 @@ struct PublicAPIKeyMaterialValidator {
         #expect(grandchild.serialize() == grandchildPrivateGrandchildString)
         #expect(grandchild.publicKey.serialize() == grandchildPublicGrandchildString)
 
-        let derivedFromPublic = try OpalCrypto.Key.ExtendedPublicKey(hardenedChildPublicKeyString)
+        let derivedFromPublic = try OpalCrypto.Key.ExtendedPublic(hardenedChildPublicKeyString)
             .derived(indices: [1])
         #expect(derivedFromPublic.serialize() == grandchildPublicGrandchildString)
     }
 
     @Test("Reject hardened public derivation")
     func rejectHardenedPublicDerivation() throws {
-        let publicKey = try OpalCrypto.Key.ExtendedPublicKey(hardenedChildPublicKeyString)
+        let publicKey = try OpalCrypto.Key.ExtendedPublic(hardenedChildPublicKeyString)
 
         do {
             _ = try publicKey.derived(indices: [0x8000_0000])
             Issue.record("Expected hardened public derivation error.")
-        } catch let error as OpalCrypto.Key.ExtendedPublicKey.Error {
+        } catch let error as OpalCrypto.Key.ExtendedPublic.Error {
             #expect(error == .hardenedDerivationRequiresPrivateKey)
         } catch {
             Issue.record("Unexpected error type: \(error)")
@@ -78,11 +78,11 @@ struct PublicAPIKeyMaterialValidator {
             let invalidSeed = Data(repeating: 0x01, count: invalidSeedLength)
 
             do {
-                _ = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: invalidSeed)
+                _ = try OpalCrypto.Key.ExtendedPrivate.root(seed: invalidSeed)
                 Issue.record(
                     "Expected invalid derived key error for out-of-range seed length \(invalidSeedLength)."
                 )
-            } catch let error as OpalCrypto.Key.ExtendedPrivateKey.Error {
+            } catch let error as OpalCrypto.Key.ExtendedPrivate.Error {
                 #expect(error == .invalidDerivedKey)
             } catch {
                 Issue.record(
@@ -94,9 +94,9 @@ struct PublicAPIKeyMaterialValidator {
 
     @Test("Extended-key serialization preserves parent fingerprint and child index")
     func extendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
-        let rootKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: Data(hexadecimal: seedHex))
+        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: Data(hexadecimal: seedHex))
         let hardenedChild = try rootKey.derived(indices: [0x8000_0000])
-        let reparsedHardenedChild = try OpalCrypto.Key.ExtendedPrivateKey(
+        let reparsedHardenedChild = try OpalCrypto.Key.ExtendedPrivate(
             hardenedChild.serialize()
         )
         let expectedRootFingerprint = Data(
@@ -108,15 +108,15 @@ struct PublicAPIKeyMaterialValidator {
         #expect(reparsedHardenedChild.parentFingerprint == hardenedChild.parentFingerprint)
         #expect(reparsedHardenedChild.childIndex == hardenedChild.childIndex)
 
-        let publicGrandchild = try OpalCrypto.Key.ExtendedPublicKey(
+        let publicGrandchild = try OpalCrypto.Key.ExtendedPublic(
             hardenedChildPublicKeyString
         ).derived(indices: [1])
-        let reparsedPublicGrandchild = try OpalCrypto.Key.ExtendedPublicKey(
+        let reparsedPublicGrandchild = try OpalCrypto.Key.ExtendedPublic(
             publicGrandchild.serialize()
         )
         let expectedParentFingerprint = Data(
             OpalCrypto.Hashing.computeHash160(
-                (try OpalCrypto.Key.ExtendedPublicKey(hardenedChildPublicKeyString)).publicKey
+                (try OpalCrypto.Key.ExtendedPublic(hardenedChildPublicKeyString)).publicKey
             ).prefix(4)
         )
 
@@ -145,18 +145,18 @@ struct PublicAPIKeyMaterialValidator {
         )
 
         do {
-            _ = try OpalCrypto.Key.ExtendedPublicKey(payload: privateKeyPayload)
+            _ = try OpalCrypto.Key.ExtendedPublic(payload: privateKeyPayload)
             Issue.record("Expected invalid version error for a private-key payload.")
-        } catch let error as OpalCrypto.Key.ExtendedPublicKey.Error {
+        } catch let error as OpalCrypto.Key.ExtendedPublic.Error {
             #expect(error == .invalidVersion(actual: ExtendedKeyPayloadModel.privateVersion))
         } catch {
             Issue.record("Unexpected error type for private-key payload: \(error)")
         }
 
         do {
-            _ = try OpalCrypto.Key.ExtendedPublicKey(payload: malformedPublicPayload)
+            _ = try OpalCrypto.Key.ExtendedPublic(payload: malformedPublicPayload)
             Issue.record("Expected invalid public-key error for malformed payload.")
-        } catch let error as OpalCrypto.Key.ExtendedPublicKey.Error {
+        } catch let error as OpalCrypto.Key.ExtendedPublic.Error {
             #expect(error == .invalidPublicKey)
         } catch {
             Issue.record("Unexpected error type for malformed public-key payload: \(error)")
@@ -178,30 +178,3 @@ struct PublicAPIKeyMaterialValidator {
     private let grandchildPublicGrandchildString = "xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ"
 }
 
-private extension Data {
-    init(hexadecimal: String) throws {
-        let normalized = hexadecimal.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard normalized.count.isMultiple(of: 2) else {
-            throw HexadecimalDataError.invalidLength
-        }
-
-        var bytes: [UInt8] = []
-        bytes.reserveCapacity(normalized.count / 2)
-        var cursor = normalized.startIndex
-        while cursor < normalized.endIndex {
-            let nextCursor = normalized.index(cursor, offsetBy: 2)
-            let pair = normalized[cursor..<nextCursor]
-            guard let byte = UInt8(pair, radix: 16) else {
-                throw HexadecimalDataError.invalidCharacter
-            }
-            bytes.append(byte)
-            cursor = nextCursor
-        }
-        self = Data(bytes)
-    }
-}
-
-private enum HexadecimalDataError: Error {
-    case invalidLength
-    case invalidCharacter
-}

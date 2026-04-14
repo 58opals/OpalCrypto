@@ -3,11 +3,6 @@
 import Foundation
 
 struct VerificationKeyModel: Sendable, Equatable {
-    enum Error: Swift.Error, Equatable {
-        case invalidPublicKeyLength(actual: Int)
-        case invalidPublicKeyPrefix(actual: UInt8)
-        case invalidPublicKey
-    }
 
     let parsedPublicKeyModel: ParsedPublicKeyModel
     let oddMultiplesAffine: InlineArray<8, AffinePointModel>

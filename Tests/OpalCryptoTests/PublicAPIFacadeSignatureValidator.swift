@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API facade signature validation")
 struct PublicAPIFacadeSignatureValidator {
@@ -297,6 +297,46 @@ struct PublicAPIFacadeSignatureValidator {
         }
     }
 
+    @Test("Internal verifier preserves invalid compressed public-key length payloads")
+    func internalVerifierPreservesInvalidCompressedPublicKeyLengthPayloads() {
+        do {
+            _ = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+                signature: Data(repeating: 0x00, count: 64),
+                message: Data("opal-ecdsa-message".utf8),
+                publicKey: Data(repeating: 0x02, count: 32),
+                format: .ecdsa(.raw)
+            )
+            Issue.record("Expected invalid compressed public key length error.")
+        } catch let EllipticCurveDigitalSignatureAlgorithmModel.Error
+            .invalidCompressedPublicKeyLength(expected, actual) {
+            #expect(expected == 33)
+            #expect(actual == 32)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Internal verifier preserves invalid compressed public-key prefix payloads")
+    func internalVerifierPreservesInvalidCompressedPublicKeyPrefixPayloads() {
+        var publicKeyData = Data(repeating: 0x00, count: 33)
+        publicKeyData[0] = 0x04
+
+        do {
+            _ = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+                signature: Data(repeating: 0x00, count: 64),
+                message: Data("opal-ecdsa-message".utf8),
+                publicKey: publicKeyData,
+                format: .ecdsa(.raw)
+            )
+            Issue.record("Expected invalid compressed public key prefix error.")
+        } catch let EllipticCurveDigitalSignatureAlgorithmModel.Error
+            .invalidCompressedPublicKeyPrefix(actual) {
+            #expect(actual == 0x04)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Reject Schnorr sign with invalid digest length through facade error")
     func rejectSchnorrSignWithInvalidDigestLengthThroughFacadeError() {
         var privateKeyData = Data(repeating: 0x00, count: 32)
@@ -339,32 +379,4 @@ struct PublicAPIFacadeSignatureValidator {
             Issue.record("Unexpected error type: \(error)")
         }
     }
-}
-
-private extension Data {
-    init(hexadecimal: String) throws {
-        let normalized = hexadecimal.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard normalized.count.isMultiple(of: 2) else {
-            throw HexadecimalDataError.invalidLength
-        }
-
-        var bytes: [UInt8] = []
-        bytes.reserveCapacity(normalized.count / 2)
-        var cursor = normalized.startIndex
-        while cursor < normalized.endIndex {
-            let nextCursor = normalized.index(cursor, offsetBy: 2)
-            let pair = normalized[cursor..<nextCursor]
-            guard let byte = UInt8(pair, radix: 16) else {
-                throw HexadecimalDataError.invalidCharacter
-            }
-            bytes.append(byte)
-            cursor = nextCursor
-        }
-        self = Data(bytes)
-    }
-}
-
-private enum HexadecimalDataError: Error {
-    case invalidLength
-    case invalidCharacter
 }

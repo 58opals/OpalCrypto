@@ -4,9 +4,6 @@ import Foundation
 import CryptoKit
 
 enum ChallengeHashModel {
-    enum Error: Swift.Error, Equatable {
-        case invalidDigestLength(actual: Int)
-    }
     
     static func makeChallengeScalar(
         digest32: Data,

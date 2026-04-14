@@ -276,7 +276,7 @@ struct PerformanceOptimizationValidator {
     @Test("Extended public and private derivation remain aligned with cached key fast paths")
     func extendedPublicAndPrivateDerivationRemainAlignedWithCachedKeyFastPaths() throws {
         let seed = Data((0..<16).map(UInt8.init))
-        let rootPrivateKey = try OpalCrypto.Key.ExtendedPrivateKey.root(seed: seed)
+        let rootPrivateKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: seed)
         let hardenedPrivateChild = try rootPrivateKey.derived(indices: [0x8000_0000])
         let derivedFromPrivate = try rootPrivateKey.derived(
             indices: [0x8000_0000, 1, 2, 3]

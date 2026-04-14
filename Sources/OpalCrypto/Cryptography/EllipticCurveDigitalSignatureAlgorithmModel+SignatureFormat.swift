@@ -7,10 +7,5 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         case ecdsa(EllipticCurveDigitalSignatureAlgorithm)
         case schnorr
 
-        internal enum EllipticCurveDigitalSignatureAlgorithm: Sendable {
-            case raw
-            case compact
-            case distinguishedEncodingRules
-        }
     }
 }

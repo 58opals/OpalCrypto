@@ -3,10 +3,6 @@
 import Foundation
 
 internal enum MnemonicWordListRepository {
-    internal struct WordListData: Sendable, Equatable {
-        internal let words: [String]
-        internal let indexLookup: [String: Int]
-    }
 
     private static let cache = MnemonicWordListCacheModel()
 

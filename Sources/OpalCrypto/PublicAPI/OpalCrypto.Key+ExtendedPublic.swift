@@ -1,24 +1,9 @@
-// OpalCrypto.Key+ExtendedPublicKey.swift
+// OpalCrypto.Key+ExtendedPublic.swift
 
 import Foundation
 
 extension OpalCrypto.Key {
-    public struct ExtendedPublicKey: Sendable, Equatable {
-        public enum Error: Swift.Error, Equatable {
-            case invalidBase58
-            case invalidChecksum
-            case invalidVersion(actual: UInt32)
-            case invalidPayloadLength(expected: Int, actual: Int)
-            case invalidParentFingerprintLength(expected: Int, actual: Int)
-            case invalidChainCodeLength(expected: Int, actual: Int)
-            case invalidPublicKeyLength(expected: Int, actual: Int)
-            case invalidPublicKeyPrefix(actual: UInt8)
-            case invalidPublicKey
-            case invalidDepthMetadata
-            case hardenedDerivationRequiresPrivateKey
-            case depthOverflow
-            case invalidDerivedKey
-        }
+    public struct ExtendedPublic: Sendable, Equatable {
 
         internal let payload: ExtendedKeyPayloadModel
         internal let parsedPublicKeyModel: ParsedPublicKeyModel
@@ -38,7 +23,7 @@ extension OpalCrypto.Key {
             payload.serialize()
         }
 
-        public func derived(indices: [UInt32]) throws -> ExtendedPublicKey {
+        public func derived(indices: [UInt32]) throws -> ExtendedPublic {
             var currentPayload = payload
             var currentParsedPublicKeyModel = parsedPublicKeyModel
             for index in indices {
@@ -55,7 +40,7 @@ extension OpalCrypto.Key {
                     throw Self.mapDerivationError(error)
                 }
             }
-            return ExtendedPublicKey(
+            return ExtendedPublic(
                 payload: currentPayload,
                 parsedPublicKeyModel: currentParsedPublicKeyModel
             )

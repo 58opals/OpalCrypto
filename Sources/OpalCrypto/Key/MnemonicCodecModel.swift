@@ -3,11 +3,6 @@
 import Foundation
 
 internal enum MnemonicCodecModel {
-    internal struct ParsedMnemonic: Sendable, Equatable {
-        internal let words: [String]
-        internal let length: OpalCrypto.Key.Mnemonic.Length
-        internal let language: OpalCrypto.Key.Mnemonic.Word.Language
-    }
 
     internal static func normalizeWord(_ string: String) -> String {
         string

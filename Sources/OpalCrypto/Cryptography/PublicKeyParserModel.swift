@@ -3,11 +3,6 @@
 import Foundation
 
 enum PublicKeyParserModel {
-    enum Error: Swift.Error, Equatable {
-        case invalidLength(actual: Int)
-        case invalidPrefix(byte: UInt8)
-        case invalidPoint
-    }
 
     static func parsePublicKey(_ data: Data) throws -> AffinePointModel {
         switch data.count {

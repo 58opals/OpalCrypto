@@ -3,10 +3,6 @@
 import Foundation
 
 struct FieldElementModel: Sendable, Equatable {
-    enum Error: Swift.Error, Equatable {
-        case invalidFieldValue
-        case invalidDataLength(expected: Int, actual: Int)
-    }
     
     @usableFromInline let value: Unsigned256BitIntegerModel
     

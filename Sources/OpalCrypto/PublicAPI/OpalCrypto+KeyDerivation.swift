@@ -4,12 +4,6 @@ import Foundation
 
 extension OpalCrypto {
     public enum KeyDerivation {
-        public enum Error: Swift.Error, Equatable {
-            case invalidIterationCount(actual: Int)
-            case emptySalt
-            case invalidDerivedKeyLength(actual: Int)
-            case derivedKeyLengthExceedsLimit(actual: Int)
-        }
 
         public static func derivePBKDF2Key(
             password: Data,

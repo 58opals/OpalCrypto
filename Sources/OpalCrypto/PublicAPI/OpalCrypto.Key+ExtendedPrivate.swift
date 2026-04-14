@@ -1,22 +1,9 @@
-// OpalCrypto.Key+ExtendedPrivateKey.swift
+// OpalCrypto.Key+ExtendedPrivate.swift
 
 import Foundation
 
 extension OpalCrypto.Key {
-    public struct ExtendedPrivateKey: Sendable, Equatable {
-        public enum Error: Swift.Error, Equatable {
-            case invalidBase58
-            case invalidChecksum
-            case invalidVersion(actual: UInt32)
-            case invalidPayloadLength(expected: Int, actual: Int)
-            case invalidParentFingerprintLength(expected: Int, actual: Int)
-            case invalidChainCodeLength(expected: Int, actual: Int)
-            case invalidPrivateKeyLength(expected: Int, actual: Int)
-            case invalidPrivateKey
-            case invalidDepthMetadata
-            case depthOverflow
-            case invalidDerivedKey
-        }
+    public struct ExtendedPrivate: Sendable, Equatable {
 
         internal let payload: ExtendedKeyPayloadModel
         internal let parsedPrivateKeyModel: ParsedPrivateKeyModel
@@ -27,8 +14,8 @@ extension OpalCrypto.Key {
         public var childIndex: UInt32 { payload.childIndex }
         public var privateKey: Data { payload.keyData }
 
-        public var publicKey: ExtendedPublicKey {
-            ExtendedPublicKey(
+        public var publicKey: ExtendedPublic {
+            ExtendedPublic(
                 depth: payload.depth,
                 parentFingerprintUInt32BigEndian: payload.parentFingerprintUInt32BigEndian,
                 childIndex: payload.childIndex,
@@ -42,7 +29,7 @@ extension OpalCrypto.Key {
             try self.init(payload: payload)
         }
 
-        public static func root(seed: Data) throws -> ExtendedPrivateKey {
+        public static func root(seed: Data) throws -> ExtendedPrivate {
             let payload: ExtendedKeyPayloadModel
             do {
                 payload = try ExtendedKeyDerivationModel.makeRootPrivateKey(seed: seed)
@@ -57,14 +44,14 @@ extension OpalCrypto.Key {
                     throw Error.invalidDerivedKey
                 }
             }
-            return try ExtendedPrivateKey(payload: payload)
+            return try ExtendedPrivate(payload: payload)
         }
 
         public func serialize() -> String {
             payload.serialize()
         }
 
-        public func derived(indices: [UInt32]) throws -> ExtendedPrivateKey {
+        public func derived(indices: [UInt32]) throws -> ExtendedPrivate {
             var currentPayload = payload
             var currentParsedPrivateKeyModel = parsedPrivateKeyModel
             for index in indices {
@@ -81,7 +68,7 @@ extension OpalCrypto.Key {
                     throw Self.mapDerivationError(error)
                 }
             }
-            return ExtendedPrivateKey(
+            return ExtendedPrivate(
                 payload: currentPayload,
                 parsedPrivateKeyModel: currentParsedPrivateKeyModel
             )

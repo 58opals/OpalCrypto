@@ -3,11 +3,6 @@
 import Foundation
 
 internal enum Base58CheckCodecModel {
-    internal enum Error: Swift.Error, Equatable {
-        case invalidBase58
-        case invalidPayloadLength(actual: Int)
-        case invalidChecksum
-    }
 
     internal static func encode(payload: Data) -> String {
         let checksum = SecureHash256Model.hash(payload).prefix(4)

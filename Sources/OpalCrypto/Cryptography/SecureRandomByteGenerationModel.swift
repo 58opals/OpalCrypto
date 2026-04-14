@@ -4,9 +4,6 @@ import Foundation
 import Security
 
 internal enum SecureRandomByteGenerationModel {
-    internal enum Error: Swift.Error, Equatable, Sendable {
-        case failed(status: Int32)
-    }
     
     internal static func makeBytes(count: Int) throws -> [UInt8] {
         precondition(count >= 0)

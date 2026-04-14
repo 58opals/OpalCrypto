@@ -5,15 +5,7 @@ import CryptoKit
 
 extension EllipticCurveDigitalSignatureAlgorithmModel {
     internal struct Message {
-        internal enum Error: Swift.Error {
-            case hashCountMustBeGreaterThanZero
-            case invalidDigestByteCount(expected: Int, actual: Int)
-        }
         
-        private enum Representation {
-            case payload(data: Data, hashRounds: UInt8)
-            case digest(digest: CryptoKit.SHA256.Digest, hashRounds: UInt8)
-        }
         
         private let representation: Representation
         

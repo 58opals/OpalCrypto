@@ -3,13 +3,6 @@
 import Foundation
 
 internal enum ExtendedKeyDerivationModel {
-    internal enum Error: Swift.Error, Equatable {
-        case invalidSeed
-        case invalidKeyKind
-        case hardenedDerivationRequiresPrivateKey
-        case depthOverflow
-        case invalidDerivedKey
-    }
 
     private static let hardenedMask: UInt32 = 0x8000_0000
 

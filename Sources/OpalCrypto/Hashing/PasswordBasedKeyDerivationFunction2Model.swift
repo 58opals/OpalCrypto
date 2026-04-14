@@ -4,12 +4,6 @@ import Foundation
 import CryptoKit
 
 internal struct PasswordBasedKeyDerivationFunction2Model {
-    internal enum Error: Swift.Error, Equatable {
-        case invalidIterationCount(actual: Int)
-        case emptySalt
-        case invalidDerivedKeyLength(actual: Int)
-        case keyLengthExceedsLimit(actual: Int)
-    }
 
     private static let sha512BlockSize = 512 / 8
     private static let maximumDerivedKeyLength = Int(UInt64(UInt32.max) * UInt64(sha512BlockSize))

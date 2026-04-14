@@ -3,9 +3,6 @@
 import Foundation
 
 internal struct Unsigned512BitIntegerModel: Sendable {
-    internal enum Error: Swift.Error, Equatable {
-        case invalidDataLength(expected: Int, actual: Int)
-    }
 
     @usableFromInline var limbs: InlineArray<8, UInt64>
 

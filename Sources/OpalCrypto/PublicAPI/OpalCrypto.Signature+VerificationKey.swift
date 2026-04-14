@@ -4,11 +4,6 @@ import Foundation
 
 extension OpalCrypto.Signature {
     public struct VerificationKey: Sendable, Equatable {
-        public enum Error: Swift.Error, Equatable {
-            case invalidPublicKeyLength(actual: Int)
-            case invalidPublicKeyPrefix(actual: UInt8)
-            case invalidPublicKey
-        }
 
         internal let verificationKeyModel: VerificationKeyModel
 

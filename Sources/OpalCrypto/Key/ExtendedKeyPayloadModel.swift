@@ -3,34 +3,9 @@
 import Foundation
 
 internal struct ExtendedKeyPayloadModel: Sendable, Equatable {
-    internal enum Kind: Sendable, Equatable {
-        case privateKey
-        case publicKey
-    }
-
-    internal enum Error: Swift.Error, Equatable {
-        case invalidBase58
-        case invalidChecksum
-        case invalidVersion(actual: UInt32)
-        case invalidPayloadLength(actual: Int)
-        case invalidParentFingerprintLength(actual: Int)
-        case invalidChainCodeLength(actual: Int)
-        case invalidDepthMetadata
-        case invalidPrivateKeyPrefix(actual: UInt8)
-        case invalidPrivateKeyLength(actual: Int)
-        case invalidPrivateKey
-        case invalidPublicKeyLength(actual: Int)
-        case invalidPublicKeyPrefix(actual: UInt8)
-        case invalidPublicKey
-    }
 
     internal static let privateVersion: UInt32 = 0x0488_ade4
     internal static let publicVersion: UInt32 = 0x0488_b21e
-
-    private enum ValidationMode {
-        case full
-        case trusted
-    }
 
     internal let kind: Kind
     internal let depth: UInt8
