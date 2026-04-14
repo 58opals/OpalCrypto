@@ -280,8 +280,9 @@ extension OpalCrypto {
                     return .invalidPublicKeyLength(expected: expected, actual: actual)
                 case .invalidPublicKeyPrefix(let actual):
                     return .invalidPublicKeyPrefix(actual: actual)
-                case .invalidPublicKey,
-                     .invalidTweakLength,
+                case .invalidPublicKey:
+                    return .invalidPublicKey
+                case .invalidTweakLength,
                      .invalidTweak,
                      .invalidSignatureLength,
                      .invalidSignature,
@@ -304,7 +305,7 @@ extension OpalCrypto {
             case .invalidPublicKeyPrefix(let actual):
                 return .invalidPublicKeyPrefix(actual: actual)
             case .invalidPublicKey:
-                return .cryptographyFailure
+                return .invalidPublicKey
             }
         }
     }

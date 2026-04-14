@@ -7,6 +7,7 @@ extension OpalCrypto.Signature {
         case invalidPrivateKeyLength(expected: Int, actual: Int)
         case invalidPublicKeyLength(expected: Int, actual: Int)
         case invalidPublicKeyPrefix(actual: UInt8)
+        case invalidPublicKey
         case invalidDigestLength(expected: Int, actual: Int)
         case invalidSignatureLength(expected: Int, actual: Int)
         case cryptographyFailure

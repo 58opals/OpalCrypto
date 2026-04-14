@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-@testable import OpalCrypto
+import OpalCrypto
 
 @Suite("Public API facade signature validation")
 struct PublicAPIFacadeSignatureValidator {
@@ -297,41 +297,38 @@ struct PublicAPIFacadeSignatureValidator {
         }
     }
 
-    @Test("Internal verifier preserves invalid compressed public-key length payloads")
-    func internalVerifierPreservesInvalidCompressedPublicKeyLengthPayloads() {
+    @Test("Reject ECDSA verify with malformed SEC1 public key through facade error")
+    func rejectEcdsaVerifyWithMalformedSec1PublicKeyThroughFacadeError() {
+        let malformedPublicKey = Data([0x02] + Array(repeating: 0x00, count: 32))
+
         do {
-            _ = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+            _ = try OpalCrypto.Signature.verifyECDSA(
                 signature: Data(repeating: 0x00, count: 64),
                 message: Data("opal-ecdsa-message".utf8),
-                publicKey: Data(repeating: 0x02, count: 32),
-                format: .ecdsa(.raw)
+                publicKey: malformedPublicKey,
+                format: .raw
             )
-            Issue.record("Expected invalid compressed public key length error.")
-        } catch let EllipticCurveDigitalSignatureAlgorithmModel.Error
-            .invalidCompressedPublicKeyLength(expected, actual) {
-            #expect(expected == 33)
-            #expect(actual == 32)
+            Issue.record("Expected invalid public key error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidPublicKey)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
     }
 
-    @Test("Internal verifier preserves invalid compressed public-key prefix payloads")
-    func internalVerifierPreservesInvalidCompressedPublicKeyPrefixPayloads() {
-        var publicKeyData = Data(repeating: 0x00, count: 33)
-        publicKeyData[0] = 0x04
+    @Test("Reject Schnorr verify with malformed SEC1 public key through facade error")
+    func rejectSchnorrVerifyWithMalformedSec1PublicKeyThroughFacadeError() {
+        let malformedPublicKey = Data([0x02] + Array(repeating: 0x00, count: 32))
 
         do {
-            _ = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+            _ = try OpalCrypto.Signature.verifySchnorr(
                 signature: Data(repeating: 0x00, count: 64),
-                message: Data("opal-ecdsa-message".utf8),
-                publicKey: publicKeyData,
-                format: .ecdsa(.raw)
+                digest: Data(repeating: 0xAB, count: 32),
+                publicKey: malformedPublicKey
             )
-            Issue.record("Expected invalid compressed public key prefix error.")
-        } catch let EllipticCurveDigitalSignatureAlgorithmModel.Error
-            .invalidCompressedPublicKeyPrefix(actual) {
-            #expect(actual == 0x04)
+            Issue.record("Expected invalid public key error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidPublicKey)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
