@@ -4,6 +4,7 @@ import Foundation
 
 extension OpalCrypto.Communication {
     public enum Error: Swift.Error, Equatable {
+        case messageTooLong(maximum: Int, actual: Int)
         case invalidPublicKeyLength(expected: Int, actual: Int)
         case invalidPublicKeyPrefix(actual: UInt8)
         case invalidPublicKey

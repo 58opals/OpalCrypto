@@ -301,6 +301,23 @@ struct PublicAPICommunicationValidator {
         }
     }
 
+    @Test("Communication plaintext length resolution rejects messages that overflow the 32-bit envelope length field")
+    func communicationPlaintextLengthResolutionRejectsMessagesThatOverflowThe32BitEnvelopeLengthField() {
+        let oversizedMessageLength = Int(UInt32.max) + 1
+
+        do {
+            _ = try CommunicationBoxModel.resolvePlaintextLength(
+                messageByteCount: oversizedMessageLength,
+                paddedPlaintextLength: nil
+            )
+            Issue.record("Expected oversized message-length rejection.")
+        } catch let error as CommunicationBoxModel.Error {
+            #expect(error == .messageTooLong(actual: oversizedMessageLength))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("HMAC-SHA256 helper matches a stable vector")
     func hmacSha256HelperMatchesAStableVector() throws {
         let digest = OpalCrypto.Hashing.computeHMACSHA256(

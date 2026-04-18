@@ -231,22 +231,10 @@ enum CommunicationBoxModel {
         message: Data,
         paddedPlaintextLength: Int?
     ) throws -> Data {
-        let minimumLength = message.count + 4
-        let resolvedLength: Int
-        if let paddedPlaintextLength {
-            guard paddedPlaintextLength.isMultiple(of: 16) else {
-                throw Error.paddedPlaintextLengthNotMultipleOf16(actual: paddedPlaintextLength)
-            }
-            guard paddedPlaintextLength >= minimumLength else {
-                throw Error.invalidPaddedPlaintextLength(
-                    minimum: minimumLength,
-                    actual: paddedPlaintextLength
-                )
-            }
-            resolvedLength = paddedPlaintextLength
-        } else {
-            resolvedLength = ((minimumLength + 15) / 16) * 16
-        }
+        let resolvedLength = try resolvePlaintextLength(
+            messageByteCount: message.count,
+            paddedPlaintextLength: paddedPlaintextLength
+        )
 
         var plaintext = Data()
         plaintext.reserveCapacity(resolvedLength)
@@ -258,6 +246,31 @@ enum CommunicationBoxModel {
             )
         }
         return plaintext
+    }
+
+    static func resolvePlaintextLength(
+        messageByteCount: Int,
+        paddedPlaintextLength: Int?
+    ) throws -> Int {
+        guard messageByteCount <= Int(UInt32.max) else {
+            throw Error.messageTooLong(actual: messageByteCount)
+        }
+
+        let minimumLength = messageByteCount + 4
+        if let paddedPlaintextLength {
+            guard paddedPlaintextLength.isMultiple(of: 16) else {
+                throw Error.paddedPlaintextLengthNotMultipleOf16(actual: paddedPlaintextLength)
+            }
+            guard paddedPlaintextLength >= minimumLength else {
+                throw Error.invalidPaddedPlaintextLength(
+                    minimum: minimumLength,
+                    actual: paddedPlaintextLength
+                )
+            }
+            return paddedPlaintextLength
+        }
+
+        return ((minimumLength + 15) / 16) * 16
     }
 
     private static func crypt(
