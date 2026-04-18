@@ -1,5 +1,6 @@
 // PublicAPICommunicationValidator.swift
 
+import CommonCrypto
 import Foundation
 import Testing
 @testable import OpalCrypto
@@ -247,6 +248,59 @@ struct PublicAPICommunicationValidator {
         }
     }
 
+    @Test("Communication boxes reject non-zero plaintext padding even with a valid MAC")
+    func communicationBoxesRejectNonZeroPlaintextPaddingEvenWithAValidMac() throws {
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.generatePrivateKey()
+        let recipientPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: recipientPrivateKey
+        )
+        let message = Data("pad-check-123".utf8)
+
+        let ciphertext = try OpalCrypto.Communication.encrypt(
+            message: message,
+            recipientPublicKey: recipientPublicKey,
+            paddedPlaintextLength: 32
+        )
+        let decrypted = try OpalCrypto.Communication.decrypt(
+            ciphertext,
+            privateKey: recipientPrivateKey
+        )
+
+        let plaintext = makePaddedPlaintext(
+            message: message,
+            paddedPlaintextLength: 32
+        )
+        var tamperedPlaintext = plaintext
+        tamperedPlaintext[tamperedPlaintext.index(before: tamperedPlaintext.endIndex)] = 0x01
+
+        let ephemeralPublicKey = Data(ciphertext.prefix(33))
+        let encryptedPayload = try aes256CbcCrypt(
+            tamperedPlaintext,
+            key: decrypted.symmetricKey,
+            operation: CCOperation(kCCEncrypt)
+        )
+        let authenticatedPayload = ephemeralPublicKey + encryptedPayload
+        let authenticationCode = Data(
+            OpalCrypto.Hashing.computeHMACSHA256(
+                data: authenticatedPayload,
+                key: decrypted.symmetricKey
+            ).prefix(16)
+        )
+        let tamperedCiphertext = authenticatedPayload + authenticationCode
+
+        do {
+            _ = try OpalCrypto.Communication.decrypt(
+                tamperedCiphertext,
+                symmetricKey: decrypted.symmetricKey
+            )
+            Issue.record("Expected invalid ciphertext error for non-zero padding.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("HMAC-SHA256 helper matches a stable vector")
     func hmacSha256HelperMatchesAStableVector() throws {
         let digest = OpalCrypto.Hashing.computeHMACSHA256(
@@ -258,5 +312,56 @@ struct PublicAPICommunicationValidator {
         )
 
         #expect(digest == expectedDigest)
+    }
+
+    private func makePaddedPlaintext(
+        message: Data,
+        paddedPlaintextLength: Int
+    ) -> Data {
+        var plaintext = Data()
+        plaintext.reserveCapacity(paddedPlaintextLength)
+        plaintext.appendUInt32BigEndian(UInt32(message.count))
+        plaintext.append(message)
+        plaintext.append(
+            Data(repeating: 0x00, count: paddedPlaintextLength - plaintext.count)
+        )
+        return plaintext
+    }
+
+    private func aes256CbcCrypt(
+        _ input: Data,
+        key: Data,
+        operation: CCOperation
+    ) throws -> Data {
+        let initializationVector = Data(repeating: 0x00, count: kCCBlockSizeAES128)
+        var output = Data(repeating: 0x00, count: input.count + kCCBlockSizeAES128)
+        let outputCapacity = output.count
+        var outputLength = 0
+
+        let status = output.withUnsafeMutableBytes { outputBuffer in
+            input.withUnsafeBytes { inputBuffer in
+                key.withUnsafeBytes { keyBuffer in
+                    initializationVector.withUnsafeBytes { ivBuffer in
+                        CCCrypt(
+                            operation,
+                            CCAlgorithm(kCCAlgorithmAES),
+                            CCOptions(0),
+                            keyBuffer.baseAddress,
+                            key.count,
+                            ivBuffer.baseAddress,
+                            inputBuffer.baseAddress,
+                            input.count,
+                            outputBuffer.baseAddress,
+                            outputCapacity,
+                            &outputLength
+                        )
+                    }
+                }
+            }
+        }
+
+        #expect(status == kCCSuccess)
+        output.removeSubrange(outputLength..<output.count)
+        return output
     }
 }

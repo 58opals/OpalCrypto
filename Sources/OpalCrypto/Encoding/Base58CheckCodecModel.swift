@@ -20,7 +20,7 @@ internal enum Base58CheckCodecModel {
         let payload = decoded.dropLast(4)
         let checksum = decoded.suffix(4)
         let expectedChecksum = SecureHash256Model.hash(payload).prefix(4)
-        guard Data(checksum) == expectedChecksum else {
+        guard Data(checksum).constantTimeEquals(expectedChecksum) else {
             throw Error.invalidChecksum
         }
 

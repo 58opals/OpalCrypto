@@ -167,6 +167,98 @@ struct PublicAPIBlindSignatureValidator {
         )
     }
 
+    @Test("Blind signer rejects non-canonical request scalars without consuming the nonce")
+    func blindSignerRejectsNonCanonicalRequestScalarsWithoutConsumingTheNonce() async throws {
+        let privateKey = makeScalar(0x0A)
+        let publicKey = try OpalCrypto.Signature.derivePublicKey(
+            fromPrivateKey: privateKey
+        )
+        let signer = try OpalCrypto.BlindSignature.Signer()
+        let request = try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signer.noncePoint,
+            messageDigest: Data(repeating: 0xA2, count: 32)
+        )
+
+        do {
+            _ = try await signer.sign(
+                privateKey: privateKey,
+                requestScalar: try Data(
+                    hexadecimal: """
+                    fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+                    """
+                )
+            )
+            Issue.record("Expected malformed request-scalar rejection.")
+        } catch let error as OpalCrypto.BlindSignature.Error {
+            #expect(error == .cryptographyFailure)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        let response = try await signer.sign(
+            privateKey: privateKey,
+            requestScalar: request.scalar
+        )
+        let signature = try request.finalize(responseScalar: response)
+
+        #expect(
+            try OpalCrypto.Signature.verifySchnorr(
+                signature: signature,
+                digest: Data(repeating: 0xA2, count: 32),
+                publicKey: publicKey
+            )
+        )
+    }
+
+    @Test("Blind request finalization rejects non-canonical response scalars even when verification is disabled")
+    func blindRequestFinalizationRejectsNonCanonicalResponseScalarsEvenWhenVerificationIsDisabled()
+        async throws {
+        let privateKey = makeScalar(0x0B)
+        let publicKey = try OpalCrypto.Signature.derivePublicKey(
+            fromPrivateKey: privateKey
+        )
+        let signer = try OpalCrypto.BlindSignature.Signer()
+        let request = try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signer.noncePoint,
+            messageDigest: Data(repeating: 0xB3, count: 32)
+        )
+
+        do {
+            _ = try request.finalize(
+                responseScalar: try Data(
+                    hexadecimal: """
+                    fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+                    """
+                ),
+                verify: false
+            )
+            Issue.record("Expected malformed response-scalar rejection.")
+        } catch let error as OpalCrypto.BlindSignature.Error {
+            #expect(error == .cryptographyFailure)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        let response = try await signer.sign(
+            privateKey: privateKey,
+            requestScalar: request.scalar
+        )
+        let signature = try request.finalize(
+            responseScalar: response,
+            verify: false
+        )
+
+        #expect(
+            try OpalCrypto.Signature.verifySchnorr(
+                signature: signature,
+                digest: Data(repeating: 0xB3, count: 32),
+                publicKey: publicKey
+            )
+        )
+    }
+
     private func makeScalar(_ value: UInt8) -> Data {
         Data(repeating: 0x00, count: 31) + Data([value])
     }

@@ -110,7 +110,7 @@ enum CommunicationBoxModel {
                 .prefix(16)
         )
         let actualAuthenticationCode = Data(ciphertext.suffix(16))
-        guard expectedAuthenticationCode == actualAuthenticationCode else {
+        guard expectedAuthenticationCode.constantTimeEquals(actualAuthenticationCode) else {
             throw Error.invalidCiphertext
         }
 
@@ -125,6 +125,9 @@ enum CommunicationBoxModel {
 
         let messageLength = Int(plaintext.uint32BigEndian(at: 0))
         guard messageLength >= 0, 4 + messageLength <= plaintext.count else {
+            throw Error.invalidCiphertext
+        }
+        guard plaintext[(4 + messageLength)..<plaintext.endIndex].allSatisfy({ $0 == 0 }) else {
             throw Error.invalidCiphertext
         }
         return plaintext.dataSlice(in: 4..<(4 + messageLength))

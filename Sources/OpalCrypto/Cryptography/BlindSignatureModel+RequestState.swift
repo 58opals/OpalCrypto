@@ -101,8 +101,9 @@ extension BlindSignatureModel {
 
             let responseScalar: ScalarModel
             do {
-                responseScalar = try ScalarConversionModel.makeReducedScalar(
-                    from: responseScalarData32Bytes
+                responseScalar = try ScalarModel(
+                    data32: responseScalarData32Bytes,
+                    requireNonZero: false
                 )
             } catch {
                 throw Error.cryptographyFailure
