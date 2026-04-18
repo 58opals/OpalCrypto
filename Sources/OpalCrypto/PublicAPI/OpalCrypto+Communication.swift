@@ -53,8 +53,8 @@ extension OpalCrypto {
 
         private static func mapError(_ error: CommunicationBoxModel.Error) -> Error {
             switch error {
-            case .invalidPublicKeyLength(let actual):
-                return .invalidPublicKeyLength(expected: 33, actual: actual)
+            case .invalidPublicKeyLength(let expected, let actual):
+                return .invalidPublicKeyLength(expected: expected, actual: actual)
             case .invalidPublicKeyPrefix(let actual):
                 return .invalidPublicKeyPrefix(actual: actual)
             case .invalidPublicKey:

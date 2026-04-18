@@ -170,8 +170,52 @@ extension OpalCrypto {
                     format: format
                 )
             } catch {
+                if isInvalidVerificationSignatureError(error) {
+                    return false
+                }
                 throw mapCryptographyError(error)
             }
+        }
+
+        private static func isInvalidVerificationSignatureError(_ error: Swift.Error) -> Bool {
+            if let secpError = error as? StandardsForEfficientCryptography256k1CurveModel.Error {
+                switch secpError {
+                case .invalidSignatureLength,
+                     .invalidSignatureScalar,
+                     .signatureComponentZero,
+                     .derMalformed,
+                     .derNonCanonical:
+                    return true
+                case .invalidDigestLength,
+                     .invalidPrivateKeyLength,
+                     .invalidPrivateKeyValue,
+                     .invalidPublicKeyLength,
+                     .randomGenerationFailed:
+                    return false
+                }
+            }
+
+            if let secpFacadeError = error as? OpalCrypto.Secp256k1.Error {
+                switch secpFacadeError {
+                case .invalidSignatureLength,
+                     .invalidSignature,
+                     .invalidDER,
+                     .nonCanonicalDER:
+                    return true
+                case .invalidPrivateKeyLength,
+                     .invalidPrivateKey,
+                     .invalidPublicKeyLength,
+                     .invalidPublicKeyPrefix,
+                     .invalidPublicKey,
+                     .invalidTweakLength,
+                     .invalidTweak,
+                     .invalidDerivedKey,
+                     .randomGenerationFailed:
+                    return false
+                }
+            }
+
+            return false
         }
 
         private static func validatePrivateKeyLength(_ privateKeyData: Data) throws {

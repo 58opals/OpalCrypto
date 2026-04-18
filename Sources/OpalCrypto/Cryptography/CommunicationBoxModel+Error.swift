@@ -5,7 +5,7 @@ import Foundation
 
 extension CommunicationBoxModel {
     enum Error: Swift.Error, Equatable {
-        case invalidPublicKeyLength(actual: Int)
+        case invalidPublicKeyLength(expected: Int, actual: Int)
         case invalidPublicKeyPrefix(actual: UInt8)
         case invalidPublicKey
         case invalidPrivateKeyLength(actual: Int)

@@ -124,6 +124,25 @@ struct PublicAPIFacadeSignatureValidator {
         }
     }
 
+    @Test("ECDSA raw verify returns false for invalid signature scalars")
+    func ecdsaRawVerifyReturnsFalseForInvalidSignatureScalars() throws {
+        var privateKeyData = Data(repeating: 0x00, count: 32)
+        privateKeyData[31] = 0x01
+        let messageData = Data("opal-ecdsa-invalid-scalar".utf8)
+        let publicKeyData = try OpalCrypto.Signature.derivePublicKey(
+            fromPrivateKey: privateKeyData
+        )
+
+        let isValid = try OpalCrypto.Signature.verifyECDSA(
+            signature: Data(repeating: 0x00, count: 64),
+            message: messageData,
+            publicKey: publicKeyData,
+            format: .raw
+        )
+
+        #expect(!isValid)
+    }
+
     @Test("Exercise Schnorr deterministic sign and verify through public facade")
     func exerciseSchnorrDeterministicSignAndVerifyThroughPublicFacade() throws {
         var privateKeyData = Data(repeating: 0x00, count: 32)

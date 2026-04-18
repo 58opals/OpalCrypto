@@ -60,6 +60,25 @@ struct PublicAPISecp256k1Validator {
         #expect(tweakedFromUncompressed == tweakedFromCompressed)
     }
 
+    @Test("Public-key tweak-add reports the uncompressed expected length for short SEC1 input")
+    func publicKeyTweakAddReportsTheUncompressedExpectedLengthForShortSec1Input() {
+        let truncatedUncompressedPublicKey = Data(
+            [0x04] + Array(repeating: 0x11, count: 63)
+        )
+
+        do {
+            _ = try OpalCrypto.Secp256k1.tweakAddPublicKey(
+                truncatedUncompressedPublicKey,
+                tweak: makePrivateKey(1)
+            )
+            Issue.record("Expected invalid public-key length error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Shared-secret derivation validates the private key before the public key")
     func sharedSecretDerivationValidatesThePrivateKeyBeforeThePublicKey() {
         do {
@@ -73,6 +92,31 @@ struct PublicAPISecp256k1Validator {
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
+
+    @Test("Shared-secret derivation accepts uncompressed SEC1 public keys")
+    func sharedSecretDerivationAcceptsUncompressedSec1PublicKeys() throws {
+        let privateKeyA = makePrivateKey(0x07)
+        let privateKeyB = makePrivateKey(0x08)
+        let compressedPublicKeyB = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: privateKeyB
+        )
+        let uncompressedPublicKeyB = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .derivePublicKey(
+                fromPrivateKeyData32Bytes: privateKeyB,
+                format: .uncompressed
+            )
+
+        let sharedSecretFromCompressed = try OpalCrypto.Secp256k1.deriveSharedSecret(
+            privateKey: privateKeyA,
+            publicKey: compressedPublicKeyB
+        )
+        let sharedSecretFromUncompressed = try OpalCrypto.Secp256k1.deriveSharedSecret(
+            privateKey: privateKeyA,
+            publicKey: uncompressedPublicKeyB
+        )
+
+        #expect(sharedSecretFromUncompressed == sharedSecretFromCompressed)
     }
 
     @Test("Round-trip DER encoding and reject non-canonical DER")

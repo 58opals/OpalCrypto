@@ -68,7 +68,7 @@ extension OpalCrypto {
             publicKey: Data
         ) throws -> Data {
             try validatePrivateKey(privateKey)
-            try validateCompressedPublicKey(publicKey)
+            try validateSecp256k1PublicKey(publicKey)
             do {
                 return try StandardsForEfficientCryptography256k1CurveModel.Operation
                     .deriveSharedSecret(
@@ -102,21 +102,51 @@ extension OpalCrypto {
             try makeSignature(rawSignature).isLowS
         }
 
-        private static func validateCompressedPublicKey(_ publicKey: Data) throws {
-            guard publicKey.count == 33 else {
-                throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
+        private static func validateSecp256k1PublicKey(_ publicKey: Data) throws {
+            guard publicKey.count == 33 || publicKey.count == 65 else {
+                throw Error.invalidPublicKeyLength(
+                    expected: expectedSecp256k1PublicKeyLength(for: publicKey),
+                    actual: publicKey.count
+                )
             }
             guard let prefix = publicKey.first else {
                 throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
             }
-            guard prefix == 0x02 || prefix == 0x03 else {
+
+            let isValidPrefix = switch publicKey.count {
+            case 33:
+                prefix == 0x02 || prefix == 0x03
+            case 65:
+                prefix == 0x04
+            default:
+                false
+            }
+            guard isValidPrefix else {
                 throw Error.invalidPublicKeyPrefix(actual: prefix)
+            }
+        }
+
+        private static func expectedSecp256k1PublicKeyLength(for publicKey: Data) -> Int {
+            guard let prefix = publicKey.first else {
+                return 33
+            }
+
+            switch prefix {
+            case 0x04:
+                return 65
+            case 0x02, 0x03:
+                return 33
+            default:
+                return publicKey.count > 33 ? 65 : 33
             }
         }
 
         private static func validateTweakedPublicKeyInput(_ publicKey: Data) throws {
             guard publicKey.count == 33 || publicKey.count == 65 else {
-                throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
+                throw Error.invalidPublicKeyLength(
+                    expected: expectedSecp256k1PublicKeyLength(for: publicKey),
+                    actual: publicKey.count
+                )
             }
             guard let prefix = publicKey.first else {
                 throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)

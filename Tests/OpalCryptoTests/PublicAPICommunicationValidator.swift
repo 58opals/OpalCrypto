@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API communication validation")
 struct PublicAPICommunicationValidator {
@@ -61,6 +61,48 @@ struct PublicAPICommunicationValidator {
                 recipientPublicKey: recipientPublicKey
             ).count == 65
         )
+    }
+
+    @Test("Communication encryption accepts uncompressed recipient public keys")
+    func communicationEncryptionAcceptsUncompressedRecipientPublicKeys() throws {
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.generatePrivateKey()
+        let uncompressedRecipientPublicKey = try StandardsForEfficientCryptography256k1CurveModel
+            .Operation.derivePublicKey(
+                fromPrivateKeyData32Bytes: recipientPrivateKey,
+                format: .uncompressed
+            )
+        let message = Data("recipient-uncompressed".utf8)
+
+        let ciphertext = try OpalCrypto.Communication.encrypt(
+            message: message,
+            recipientPublicKey: uncompressedRecipientPublicKey,
+            paddedPlaintextLength: 32
+        )
+        let decrypted = try OpalCrypto.Communication.decrypt(
+            ciphertext,
+            privateKey: recipientPrivateKey
+        )
+
+        #expect(decrypted.message == message)
+    }
+
+    @Test("Communication encryption reports the uncompressed expected length for short SEC1 recipient keys")
+    func communicationEncryptionReportsTheUncompressedExpectedLengthForShortSec1RecipientKeys() {
+        let truncatedUncompressedRecipientPublicKey = Data(
+            [0x04] + Array(repeating: 0x11, count: 63)
+        )
+
+        do {
+            _ = try OpalCrypto.Communication.encrypt(
+                message: Data("recipient-short-key".utf8),
+                recipientPublicKey: truncatedUncompressedRecipientPublicKey
+            )
+            Issue.record("Expected invalid public-key length error.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
     }
 
     @Test("Communication boxes reject tampered authentication codes")

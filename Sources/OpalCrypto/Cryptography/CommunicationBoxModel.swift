@@ -10,7 +10,7 @@ enum CommunicationBoxModel {
         recipientPublicKey: Data,
         paddedPlaintextLength: Int?
     ) throws -> Data {
-        try validateCompressedPublicKey(recipientPublicKey)
+        try validateSecp256k1PublicKey(recipientPublicKey)
 
         let ephemeralPrivateKey: Data
         do {
@@ -136,13 +136,52 @@ enum CommunicationBoxModel {
 
     private static func validateCompressedPublicKey(_ publicKey: Data) throws {
         guard publicKey.count == 33 else {
-            throw Error.invalidPublicKeyLength(actual: publicKey.count)
+            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
         }
         guard let prefix = publicKey.first else {
-            throw Error.invalidPublicKeyLength(actual: publicKey.count)
+            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
         }
         guard prefix == 0x02 || prefix == 0x03 else {
             throw Error.invalidPublicKeyPrefix(actual: prefix)
+        }
+    }
+
+    private static func validateSecp256k1PublicKey(_ publicKey: Data) throws {
+        guard publicKey.count == 33 || publicKey.count == 65 else {
+            throw Error.invalidPublicKeyLength(
+                expected: expectedSecp256k1PublicKeyLength(for: publicKey),
+                actual: publicKey.count
+            )
+        }
+        guard let prefix = publicKey.first else {
+            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
+        }
+
+        let isValidPrefix = switch publicKey.count {
+        case 33:
+            prefix == 0x02 || prefix == 0x03
+        case 65:
+            prefix == 0x04
+        default:
+            false
+        }
+        guard isValidPrefix else {
+            throw Error.invalidPublicKeyPrefix(actual: prefix)
+        }
+    }
+
+    private static func expectedSecp256k1PublicKeyLength(for publicKey: Data) -> Int {
+        guard let prefix = publicKey.first else {
+            return 33
+        }
+
+        switch prefix {
+        case 0x04:
+            return 65
+        case 0x02, 0x03:
+            return 33
+        default:
+            return publicKey.count > 33 ? 65 : 33
         }
     }
 
@@ -165,7 +204,7 @@ enum CommunicationBoxModel {
         privateKey: Data,
         publicKey: Data
     ) throws -> Data {
-        try validateCompressedPublicKey(publicKey)
+        try validateSecp256k1PublicKey(publicKey)
         do {
             return try StandardsForEfficientCryptography256k1CurveModel.Operation
                 .deriveSharedSecret(
@@ -177,7 +216,7 @@ enum CommunicationBoxModel {
         } catch StandardsForEfficientCryptography256k1CurveModel.Operation.Error.invalidPrivateKeyValue {
             throw Error.invalidPrivateKey
         } catch StandardsForEfficientCryptography256k1CurveModel.Operation.Error.invalidPublicKeyLength(let actual) {
-            throw Error.invalidPublicKeyLength(actual: actual)
+            throw Error.invalidPublicKeyLength(expected: 33, actual: actual)
         } catch StandardsForEfficientCryptography256k1CurveModel.Operation.Error.invalidPublicKeyValue {
             throw Error.invalidPublicKey
         } catch {
