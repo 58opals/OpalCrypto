@@ -147,16 +147,33 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     }
     
     internal mutating func add(_ addend: UInt64) {
-        var carry = addend
-        var index = 0
-        while carry > 0 {
-            if index == words.count {
+        let addendWords = [
+            UInt32(addend & 0xffff_ffff),
+            UInt32(addend >> 32)
+        ]
+        var carry: UInt64 = 0
+
+        for (index, addendWord) in addendWords.enumerated() {
+            guard addendWord > 0 || carry > 0 else {
+                continue
+            }
+            while index >= words.count {
                 words.append(0)
             }
-            let sum = UInt64(words[index]) + carry
+            let sum = UInt64(words[index]) + UInt64(addendWord) + carry
             words[index] = UInt32(sum & 0xffff_ffff)
             carry = sum >> 32
-            index += 1
+        }
+
+        var carryIndex = addendWords.count
+        while carry > 0 {
+            while carryIndex >= words.count {
+                words.append(0)
+            }
+            let sum = UInt64(words[carryIndex]) + carry
+            words[carryIndex] = UInt32(sum & 0xffff_ffff)
+            carry = sum >> 32
+            carryIndex += 1
         }
     }
     

@@ -63,10 +63,17 @@ enum CommunicationBoxModel {
             throw Error.invalidCiphertext
         }
         let ephemeralPublicKey = Data(ciphertext.prefix(33))
-        let symmetricKey = try deriveSharedSecret(
-            privateKey: privateKey,
-            publicKey: ephemeralPublicKey
-        )
+        let symmetricKey: Data
+        do {
+            symmetricKey = try deriveSharedSecret(
+                privateKey: privateKey,
+                publicKey: ephemeralPublicKey
+            )
+        } catch Error.invalidPublicKeyLength,
+                Error.invalidPublicKeyPrefix,
+                Error.invalidPublicKey {
+            throw Error.invalidCiphertext
+        }
         let message = try decrypt(ciphertext, symmetricKey: symmetricKey)
         return DecryptionResult(message: message, symmetricKey: symmetricKey)
     }

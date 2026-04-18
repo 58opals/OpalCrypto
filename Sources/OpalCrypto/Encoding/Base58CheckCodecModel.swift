@@ -14,7 +14,7 @@ internal enum Base58CheckCodecModel {
             throw Error.invalidBase58
         }
         guard decoded.count >= minimumPayloadLength + 4 else {
-            throw Error.invalidPayloadLength(actual: decoded.count)
+            throw Error.invalidPayloadLength(actual: max(0, decoded.count - 4))
         }
 
         let payload = decoded.dropLast(4)

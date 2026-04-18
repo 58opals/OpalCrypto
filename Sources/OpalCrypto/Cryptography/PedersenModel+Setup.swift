@@ -35,7 +35,7 @@ extension PedersenModel {
                 do {
                     nonceScalar = try ScalarModel(
                         data32: nonceData32Bytes,
-                        requireNonZero: true
+                        requireNonZero: false
                     )
                 } catch ScalarModel.Error.invalidDataLength(let expected, let actual) {
                     precondition(expected == 32)
@@ -100,9 +100,6 @@ extension PedersenModel {
             var nonceScalar = ScalarModel.zero
             for commitment in commitments {
                 nonceScalar = nonceScalar.addModN(commitment.nonceScalar)
-            }
-            guard !nonceScalar.isZero else {
-                throw Error.invalidNonce
             }
 
             let uncompressedPointData = try Self.addPoints(

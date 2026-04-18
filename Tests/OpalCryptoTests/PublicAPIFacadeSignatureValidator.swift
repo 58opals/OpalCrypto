@@ -214,6 +214,36 @@ struct PublicAPIFacadeSignatureValidator {
         #expect(cachedResult)
     }
 
+    @Test("Reject one-byte-short uncompressed SEC1 public keys with the uncompressed expected length")
+    func rejectOneByteShortUncompressedSec1PublicKeysWithTheUncompressedExpectedLength() throws {
+        var privateKeyData = Data(repeating: 0x00, count: 32)
+        privateKeyData[31] = 0x01
+        let messageData = Data("opal-ecdsa-short-uncompressed-key".utf8)
+        let signatureData = try OpalCrypto.Signature.signECDSA(
+            message: messageData,
+            privateKey: privateKeyData,
+            format: .der
+        )
+        let truncatedUncompressedPublicKey = Data(
+            [0x04]
+            + Array(repeating: 0x11, count: 63)
+        )
+
+        do {
+            _ = try OpalCrypto.Signature.verifyECDSA(
+                signature: signatureData,
+                message: messageData,
+                publicKey: truncatedUncompressedPublicKey,
+                format: .der
+            )
+            Issue.record("Expected invalid public key length error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Verification-key Schnorr verify matches raw public-key verify")
     func verificationKeySchnorrVerifyMatchesRawPublicKeyVerify() throws {
         var privateKeyData = Data(repeating: 0x00, count: 32)

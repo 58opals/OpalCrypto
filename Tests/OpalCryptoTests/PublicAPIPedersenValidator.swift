@@ -55,8 +55,43 @@ struct PublicAPIPedersenValidator {
         }
     }
 
+    @Test("Pedersen aggregation preserves valid zero-sum nonces")
+    func pedersenAggregationPreservesValidZeroSumNonces() throws {
+        let setup = try OpalCrypto.Pedersen.Setup(
+            alternateBasePoint: Data([0x02]) + Data("CashFusion gives us fungibility.".utf8)
+        )
+        let positiveAmountCommitment = try setup.commit(amount: 1, nonce: makeScalar(1))
+        let cancelingNonceCommitment = try setup.commit(
+            amount: 2,
+            nonce: try Data(
+                hexadecimal: """
+                fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140
+                """
+            )
+        )
+
+        let expectedCombinedPoint = try OpalCrypto.Pedersen.Setup.addPoints(
+            [
+                positiveAmountCommitment.uncompressedPoint,
+                cancelingNonceCommitment.uncompressedPoint
+            ]
+        )
+        let combinedCommitment = try setup.combine(
+            [positiveAmountCommitment, cancelingNonceCommitment]
+        )
+
+        #expect(combinedCommitment.nonce == Data(repeating: 0x00, count: 32))
+        #expect(combinedCommitment.uncompressedPoint == expectedCombinedPoint)
+        #expect(
+            try setup.verify(
+                commitment: combinedCommitment.uncompressedPoint,
+                amount: 3,
+                nonce: combinedCommitment.nonce
+            )
+        )
+    }
+
     private func makeScalar(_ value: UInt8) -> Data {
         Data(repeating: 0x00, count: 31) + Data([value])
     }
 }
-

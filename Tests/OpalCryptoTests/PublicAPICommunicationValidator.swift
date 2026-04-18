@@ -180,6 +180,31 @@ struct PublicAPICommunicationValidator {
         }
     }
 
+    @Test("Communication box private-key decrypt reports malformed ephemeral keys as invalid ciphertext")
+    func communicationBoxPrivateKeyDecryptReportsMalformedEphemeralKeysAsInvalidCiphertext() throws {
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.generatePrivateKey()
+        let recipientPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: recipientPrivateKey
+        )
+        var ciphertext = try OpalCrypto.Communication.encrypt(
+            message: Data("malformed-ephemeral-key".utf8),
+            recipientPublicKey: recipientPublicKey
+        )
+        ciphertext[0] = 0x04
+
+        do {
+            _ = try OpalCrypto.Communication.decrypt(
+                ciphertext,
+                privateKey: recipientPrivateKey
+            )
+            Issue.record("Expected invalid ciphertext error.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("HMAC-SHA256 helper matches a stable vector")
     func hmacSha256HelperMatchesAStableVector() throws {
         let digest = OpalCrypto.Hashing.computeHMACSHA256(

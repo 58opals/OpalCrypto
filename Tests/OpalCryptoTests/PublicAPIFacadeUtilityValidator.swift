@@ -155,6 +155,19 @@ struct PublicAPIFacadeUtilityValidator {
         #expect(remainder == 1)
     }
 
+    @Test("Add a wide UInt64 into BigUnsignedInteger without trapping intermediate overflow")
+    func addWideUInt64IntoBigUnsignedIntegerWithoutTrappingIntermediateOverflow() {
+        var value = OpalCrypto.Numeric.BigUnsignedInteger(
+            Data([0xFF, 0xFF, 0xFF, 0xFF])
+        )
+
+        value.add(UInt64.max)
+
+        #expect(value.serialize() == Data([
+            0x01, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE
+        ]))
+    }
+
     @Test("Compute Hash160 known-answer values across padding boundaries")
     func computeHash160KnownAnswerValuesAcrossPaddingBoundaries() throws {
         let vectors: [(payload: Data, expectedDigest: Data)] = [

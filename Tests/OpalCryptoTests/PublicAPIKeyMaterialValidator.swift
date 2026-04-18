@@ -37,6 +37,21 @@ struct PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Reject truncated wallet import payloads with the real payload length")
+    func rejectTruncatedWalletImportPayloadsWithTheRealPayloadLength() throws {
+        let truncatedPayload = Data([0x80] + Array(repeating: UInt8(0x01), count: 31))
+        let serialized = Base58CheckCodecModel.encode(payload: truncatedPayload)
+
+        do {
+            _ = try OpalCrypto.Key.WIF(serialized)
+            Issue.record("Expected invalid payload length error.")
+        } catch let error as OpalCrypto.Key.WIF.Error {
+            #expect(error == .invalidPayloadLength(actual: 32))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Round-trip extended keys and derive raw child indices")
     func roundTripExtendedKeysAndDeriveRawChildIndices() throws {
         let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: Data(hexadecimal: seedHex))
