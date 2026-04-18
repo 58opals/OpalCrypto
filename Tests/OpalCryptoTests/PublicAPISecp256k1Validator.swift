@@ -35,6 +35,46 @@ struct PublicAPISecp256k1Validator {
         #expect(tweakedPublicKey == expectedPublicKey)
     }
 
+    @Test("Public-key tweak-add accepts uncompressed SEC1 input and still returns compressed output")
+    func publicKeyTweakAddAcceptsUncompressedSec1InputAndStillReturnsCompressedOutput() throws {
+        let onePrivateKey = makePrivateKey(1)
+        let tweak = makePrivateKey(1)
+
+        let compressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: onePrivateKey
+        )
+        let uncompressedPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .derivePublicKey(
+                fromPrivateKeyData32Bytes: onePrivateKey,
+                format: .uncompressed
+            )
+        let tweakedFromCompressed = try OpalCrypto.Secp256k1.tweakAddPublicKey(
+            compressedPublicKey,
+            tweak: tweak
+        )
+        let tweakedFromUncompressed = try OpalCrypto.Secp256k1.tweakAddPublicKey(
+            uncompressedPublicKey,
+            tweak: tweak
+        )
+
+        #expect(tweakedFromUncompressed == tweakedFromCompressed)
+    }
+
+    @Test("Shared-secret derivation validates the private key before the public key")
+    func sharedSecretDerivationValidatesThePrivateKeyBeforeThePublicKey() {
+        do {
+            _ = try OpalCrypto.Secp256k1.deriveSharedSecret(
+                privateKey: Data(repeating: 0x01, count: 31),
+                publicKey: Data(repeating: 0x02, count: 32)
+            )
+            Issue.record("Expected invalid private-key length error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Round-trip DER encoding and reject non-canonical DER")
     func roundTripDerEncodingAndRejectNonCanonicalDer() throws {
         let rawSignature = makePrivateKey(1) + makePrivateKey(2)
@@ -87,4 +127,3 @@ struct PublicAPISecp256k1Validator {
         Data(repeating: 0x00, count: 31) + Data([value])
     }
 }
-

@@ -33,7 +33,7 @@ extension OpalCrypto {
         }
 
         public static func tweakAddPublicKey(_ publicKey: Data, tweak: Data) throws -> Data {
-            try validateCompressedPublicKey(publicKey)
+            try validateTweakedPublicKeyInput(publicKey)
             do {
                 return try StandardsForEfficientCryptography256k1CurveModel.Operation.tweakAddPublicKey(
                     publicKey,
@@ -67,6 +67,7 @@ extension OpalCrypto {
             privateKey: Data,
             publicKey: Data
         ) throws -> Data {
+            try validatePrivateKey(privateKey)
             try validateCompressedPublicKey(publicKey)
             do {
                 return try StandardsForEfficientCryptography256k1CurveModel.Operation
@@ -110,6 +111,38 @@ extension OpalCrypto {
             }
             guard prefix == 0x02 || prefix == 0x03 else {
                 throw Error.invalidPublicKeyPrefix(actual: prefix)
+            }
+        }
+
+        private static func validateTweakedPublicKeyInput(_ publicKey: Data) throws {
+            guard publicKey.count == 33 || publicKey.count == 65 else {
+                throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
+            }
+            guard let prefix = publicKey.first else {
+                throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
+            }
+
+            let isValidPrefix = switch publicKey.count {
+            case 33:
+                prefix == 0x02 || prefix == 0x03
+            case 65:
+                prefix == 0x04
+            default:
+                false
+            }
+            guard isValidPrefix else {
+                throw Error.invalidPublicKeyPrefix(actual: prefix)
+            }
+        }
+
+        private static func validatePrivateKey(_ privateKey: Data) throws {
+            do {
+                _ = try StandardsForEfficientCryptography256k1CurveModel.Operation.parsePrivateKeyScalar(
+                    privateKey,
+                    requireNonZero: true
+                )
+            } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
+                throw mapOperationError(error)
             }
         }
 

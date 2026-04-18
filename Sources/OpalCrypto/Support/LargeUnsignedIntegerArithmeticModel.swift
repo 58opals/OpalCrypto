@@ -214,9 +214,14 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         var remainder: UInt64 = 0
         var quotientWords = Array(repeating: UInt32(0), count: words.count)
         for index in words.indices.reversed() {
-            let value = (remainder << 32) + UInt64(words[index])
-            let quotient = value / divisor
-            remainder = value % divisor
+            // Each base-2^32 long-division step can exceed UInt64 when the prior
+            // remainder already uses more than 32 bits, so split the 96-bit
+            // intermediate across a full-width dividend instead of truncating it.
+            let high = remainder >> 32
+            let low = ((remainder & 0xffff_ffff) << 32) | UInt64(words[index])
+            let division = divisor.dividingFullWidth((high: high, low: low))
+            let quotient = division.quotient
+            remainder = division.remainder
             quotientWords[index] = UInt32(quotient)
         }
         self = LargeUnsignedIntegerArithmeticModel(words: quotientWords)

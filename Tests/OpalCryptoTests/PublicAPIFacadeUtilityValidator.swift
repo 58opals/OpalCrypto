@@ -143,6 +143,18 @@ struct PublicAPIFacadeUtilityValidator {
         }
     }
 
+    @Test("Divide BigUnsignedInteger by a 64-bit divisor without truncating wide intermediates")
+    func divideBigUnsignedIntegerByA64BitDivisorWithoutTruncatingWideIntermediates() throws {
+        var value = OpalCrypto.Numeric.BigUnsignedInteger(
+            Data([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        )
+
+        let remainder = try value.divide(by: 0x0000_0001_0000_0001)
+
+        #expect(value.serialize() == Data([0xFF, 0xFF, 0xFF, 0xFF]))
+        #expect(remainder == 1)
+    }
+
     @Test("Compute Hash160 known-answer values across padding boundaries")
     func computeHash160KnownAnswerValuesAcrossPaddingBoundaries() throws {
         let vectors: [(payload: Data, expectedDigest: Data)] = [
@@ -334,4 +346,3 @@ struct PublicAPIFacadeUtilityValidator {
         }
     }
 }
-

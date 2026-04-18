@@ -58,6 +58,7 @@ enum CommunicationBoxModel {
         _ ciphertext: Data,
         privateKey: Data
     ) throws -> DecryptionResult {
+        try validatePrivateKey(privateKey)
         guard ciphertext.count >= minimumCiphertextLength else {
             throw Error.invalidCiphertext
         }
@@ -78,6 +79,15 @@ enum CommunicationBoxModel {
             throw Error.invalidSymmetricKeyLength(actual: symmetricKey.count)
         }
         guard ciphertext.count >= minimumCiphertextLength else {
+            throw Error.invalidCiphertext
+        }
+
+        let ephemeralPublicKey = Data(ciphertext.prefix(33))
+        do {
+            try validateCompressedPublicKey(ephemeralPublicKey)
+            _ = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parsePublicKeyAffine(ephemeralPublicKey)
+        } catch {
             throw Error.invalidCiphertext
         }
 
@@ -126,6 +136,21 @@ enum CommunicationBoxModel {
         }
         guard prefix == 0x02 || prefix == 0x03 else {
             throw Error.invalidPublicKeyPrefix(actual: prefix)
+        }
+    }
+
+    private static func validatePrivateKey(_ privateKey: Data) throws {
+        do {
+            _ = try StandardsForEfficientCryptography256k1CurveModel.Operation.parsePrivateKeyScalar(
+                privateKey,
+                requireNonZero: true
+            )
+        } catch StandardsForEfficientCryptography256k1CurveModel.Operation.Error.invalidPrivateKeyLength(let actual) {
+            throw Error.invalidPrivateKeyLength(actual: actual)
+        } catch StandardsForEfficientCryptography256k1CurveModel.Operation.Error.invalidPrivateKeyValue {
+            throw Error.invalidPrivateKey
+        } catch {
+            throw Error.cryptographyFailure
         }
     }
 
