@@ -35,7 +35,6 @@ extension BlindSignatureModel {
             guard let nonceScalar else {
                 throw Error.nonceAlreadyUsed
             }
-            self.nonceScalar = nil
 
             let privateKeyScalar: ScalarModel
             do {
@@ -56,6 +55,7 @@ extension BlindSignatureModel {
                 throw Error.cryptographyFailure
             }
 
+            self.nonceScalar = nil
             let responseScalar = nonceScalar.addModN(
                 requestScalar.mulModN(privateKeyScalar)
             )

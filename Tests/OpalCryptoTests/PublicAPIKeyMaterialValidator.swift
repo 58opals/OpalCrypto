@@ -163,6 +163,40 @@ struct PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Extended-key child-derivation wrappers reject the wrong payload kind early")
+    func extendedKeyChildDerivationWrappersRejectTheWrongPayloadKindEarly() throws {
+        let privateKeyPayload = try ExtendedKeyDerivationModel.makeRootPrivateKey(
+            seed: Data(hexadecimal: seedHex)
+        )
+        let publicKeyPayload = try ExtendedKeyDerivationModel.makePublicKey(
+            from: privateKeyPayload
+        )
+
+        do {
+            _ = try ExtendedKeyDerivationModel.derivePrivateChild(
+                from: publicKeyPayload,
+                index: 1
+            )
+            Issue.record("Expected invalid key-kind error for public -> private derivation.")
+        } catch let error as ExtendedKeyDerivationModel.Error {
+            #expect(error == .invalidKeyKind)
+        } catch {
+            Issue.record("Unexpected error type for public -> private derivation: \(error)")
+        }
+
+        do {
+            _ = try ExtendedKeyDerivationModel.derivePublicChild(
+                from: privateKeyPayload,
+                index: 1
+            )
+            Issue.record("Expected invalid key-kind error for private -> public derivation.")
+        } catch let error as ExtendedKeyDerivationModel.Error {
+            #expect(error == .invalidKeyKind)
+        } catch {
+            Issue.record("Unexpected error type for private -> public derivation: \(error)")
+        }
+    }
+
     private let privateKeyBytes = Array(repeating: UInt8(0x00), count: 31) + [0x01]
     private let compressedWalletImportFormatString = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
     private let uncompressedWalletImportFormatString = "5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf"
@@ -177,4 +211,3 @@ struct PublicAPIKeyMaterialValidator {
     private let grandchildPrivateGrandchildString = "xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs"
     private let grandchildPublicGrandchildString = "xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ"
 }
-

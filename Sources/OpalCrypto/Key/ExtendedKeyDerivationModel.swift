@@ -53,6 +53,9 @@ internal enum ExtendedKeyDerivationModel {
         from privateKeyPayload: ExtendedKeyPayloadModel,
         index: UInt32
     ) throws -> ExtendedKeyPayloadModel {
+        guard privateKeyPayload.kind == .privateKey else {
+            throw Error.invalidKeyKind
+        }
         let parsedPrivateKeyModel: ParsedPrivateKeyModel
         do {
             parsedPrivateKeyModel = try ParsedPrivateKeyModel(
@@ -135,8 +138,16 @@ internal enum ExtendedKeyDerivationModel {
         from publicKeyPayload: ExtendedKeyPayloadModel,
         index: UInt32
     ) throws -> ExtendedKeyPayloadModel {
-        let parsedPublicKeyModel = try StandardsForEfficientCryptography256k1CurveModel
-            .Operation.makeParsedPublicKey(publicKey: publicKeyPayload.keyData)
+        guard publicKeyPayload.kind == .publicKey else {
+            throw Error.invalidKeyKind
+        }
+        let parsedPublicKeyModel: ParsedPublicKeyModel
+        do {
+            parsedPublicKeyModel = try StandardsForEfficientCryptography256k1CurveModel
+                .Operation.makeParsedPublicKey(publicKey: publicKeyPayload.keyData)
+        } catch {
+            throw Error.invalidDerivedKey
+        }
         return try derivePublicChildMaterial(
             from: publicKeyPayload,
             parsedPublicKeyModel: parsedPublicKeyModel,

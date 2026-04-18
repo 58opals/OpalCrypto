@@ -48,7 +48,7 @@ enum CommunicationBoxModel {
         )
         let authenticationCode = Data(
             HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
-                .hash(ciphertext, key: symmetricKey)
+                .hash(ephemeralPublicKey + ciphertext, key: symmetricKey)
                 .prefix(16)
         )
         return ephemeralPublicKey + ciphertext + authenticationCode
@@ -86,9 +86,10 @@ enum CommunicationBoxModel {
             throw Error.invalidCiphertext
         }
 
+        let authenticatedPayload = Data(ciphertext.dropLast(16))
         let expectedAuthenticationCode = Data(
             HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
-                .hash(Data(encryptedPayload), key: symmetricKey)
+                .hash(authenticatedPayload, key: symmetricKey)
                 .prefix(16)
         )
         let actualAuthenticationCode = Data(ciphertext.suffix(16))

@@ -127,6 +127,46 @@ struct PublicAPIBlindSignatureValidator {
         }
     }
 
+    @Test("Blind signer keeps nonce available after invalid private-key input")
+    func blindSignerKeepsNonceAvailableAfterInvalidPrivateKeyInput() async throws {
+        let privateKey = makeScalar(0x09)
+        let publicKey = try OpalCrypto.Signature.derivePublicKey(
+            fromPrivateKey: privateKey
+        )
+        let signer = try OpalCrypto.BlindSignature.Signer()
+        let request = try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signer.noncePoint,
+            messageDigest: Data(repeating: 0x91, count: 32)
+        )
+
+        do {
+            _ = try await signer.sign(
+                privateKey: Data(repeating: 0x01, count: 31),
+                requestScalar: request.scalar
+            )
+            Issue.record("Expected invalid private-key length rejection.")
+        } catch let error as OpalCrypto.BlindSignature.Error {
+            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        let response = try await signer.sign(
+            privateKey: privateKey,
+            requestScalar: request.scalar
+        )
+        let signature = try request.finalize(responseScalar: response)
+
+        #expect(
+            try OpalCrypto.Signature.verifySchnorr(
+                signature: signature,
+                digest: Data(repeating: 0x91, count: 32),
+                publicKey: publicKey
+            )
+        )
+    }
+
     private func makeScalar(_ value: UInt8) -> Data {
         Data(repeating: 0x00, count: 31) + Data([value])
     }

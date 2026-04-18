@@ -88,6 +88,39 @@ struct PublicAPICommunicationValidator {
         }
     }
 
+    @Test("Communication boxes reject tampered ephemeral public keys during symmetric-key decryption")
+    func communicationBoxesRejectTamperedEphemeralPublicKeysDuringSymmetricKeyDecryption() throws {
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.generatePrivateKey()
+        let recipientPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+            from: recipientPrivateKey
+        )
+        let message = Data("authenticated-envelope".utf8)
+
+        let ciphertext = try OpalCrypto.Communication.encrypt(
+            message: message,
+            recipientPublicKey: recipientPublicKey
+        )
+        let decrypted = try OpalCrypto.Communication.decrypt(
+            ciphertext,
+            privateKey: recipientPrivateKey
+        )
+
+        var tamperedCiphertext = ciphertext
+        tamperedCiphertext[0] = ciphertext[0] == 0x02 ? 0x03 : 0x02
+
+        do {
+            _ = try OpalCrypto.Communication.decrypt(
+                tamperedCiphertext,
+                symmetricKey: decrypted.symmetricKey
+            )
+            Issue.record("Expected invalid ciphertext error.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("HMAC-SHA256 helper matches a stable vector")
     func hmacSha256HelperMatchesAStableVector() throws {
         let digest = OpalCrypto.Hashing.computeHMACSHA256(
@@ -101,4 +134,3 @@ struct PublicAPICommunicationValidator {
         #expect(digest == expectedDigest)
     }
 }
-
