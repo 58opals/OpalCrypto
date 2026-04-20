@@ -2,6 +2,8 @@
 
 import Foundation
 
+// Keep unsplit for batch-derivation auditability.
+
 extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     internal static func deriveCompressedPublicKeys(
         fromPrivateKeys32 privateKeys32: [Data],

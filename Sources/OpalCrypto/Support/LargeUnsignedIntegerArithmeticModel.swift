@@ -2,6 +2,8 @@
 
 import Foundation
 
+// Keep unsplit for arithmetic-kernel reviewability.
+
 internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     private var words: [UInt32]
     
