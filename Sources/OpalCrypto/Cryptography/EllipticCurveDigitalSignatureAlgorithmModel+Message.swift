@@ -43,10 +43,15 @@ extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
 
 extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
     internal func makeConsensusDigestData32Bytes() throws -> Data {
-        let baseData = makeDataForHashingRounds()
         let rounds = Int(hashRounds)
         guard rounds > 0 else { throw Error.hashCountMustBeGreaterThanZero }
-        let digestData = applyHashRounds(baseData, rounds: rounds)
+        let digestData: Data
+        switch representation {
+        case .payload(let data, _):
+            digestData = applyHashRounds(data, rounds: rounds)
+        case .digest(let digest, _):
+            digestData = applyHashRounds(Data(digest), rounds: rounds - 1)
+        }
         guard digestData.count == 32 else {
             throw Error.invalidDigestByteCount(expected: 32, actual: digestData.count)
         }

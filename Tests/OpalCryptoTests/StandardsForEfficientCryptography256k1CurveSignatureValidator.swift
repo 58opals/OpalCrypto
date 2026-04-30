@@ -54,6 +54,27 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
         )
     }
 
+    @Test("RFC6979 nonce generation preserves accepted-candidate state")
+    func rfc6979NonceGenerationPreservesAcceptedCandidateState() throws {
+        let privateKeyScalar = try ScalarModel(
+            data32: makeSignatureComponent(trailingByte: 0x01),
+            requireNonZero: true
+        )
+        var generator = try NonceGeneratorModel.RequestForComments6979(
+            privateKey: privateKeyScalar,
+            digest32: Data(repeating: 0x42, count: 32)
+        )
+
+        _ = try generator.makeNextScalar()
+        let secondScalar = try generator.makeNextScalar()
+
+        #expect(
+            secondScalar.data32Bytes == (try Data(
+                hexadecimal: "3ea80d98d2f09d28dc4351d0f0dc973d1b62d302ef79e98c12ba2bf9ab8b0caf"
+            ))
+        )
+    }
+
     @Test("Derive compressed public key from valid private key")
     func deriveCompressedPublicKeyFromValidPrivateKey() throws {
         var onePrivateKey = Data(repeating: 0x00, count: 32)

@@ -53,7 +53,7 @@ extension BlindSignatureModel {
                     requireNonZero: false
                 )
             } catch {
-                throw Error.cryptographyFailure
+                throw Error.invalidRequestScalar
             }
 
             self.nonceScalar = nil

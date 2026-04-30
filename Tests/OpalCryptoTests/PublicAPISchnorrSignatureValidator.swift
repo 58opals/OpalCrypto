@@ -99,6 +99,22 @@ struct PublicAPISchnorrSignatureValidator {
         }
     }
 
+    @Test("Reject Schnorr sign with invalid private key value through facade error")
+    func rejectSchnorrSignWithInvalidPrivateKeyValueThroughFacadeError() {
+        do {
+            _ = try OpalCrypto.Signature.signSchnorr(
+                digest: Data(repeating: 0xAB, count: 32),
+                privateKey: Data(repeating: 0x00, count: 32),
+                noncePolicy: .bip340Deterministic
+            )
+            Issue.record("Expected invalid private key error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidPrivateKey)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Reject Schnorr verify with invalid signature length through facade error")
     func rejectSchnorrVerifyWithInvalidSignatureLengthThroughFacadeError() {
         var privateKeyData = Data(repeating: 0x00, count: 32)

@@ -1,6 +1,7 @@
 // SchnorrSignatureValidator.swift
 
 import Foundation
+import CryptoKit
 import Testing
 @testable import OpalCrypto
 
@@ -41,5 +42,26 @@ struct SchnorrSignatureValidator {
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
+
+    @Test("Digest message representation signs the digest directly for Schnorr")
+    func digestMessageRepresentationSignsTheDigestDirectlyForSchnorr() throws {
+        let privateKey = Data(repeating: 0x00, count: 31) + Data([0x01])
+        let digest = SHA256.hash(data: Data("opal-schnorr-digest-message".utf8))
+        let message = EllipticCurveDigitalSignatureAlgorithmModel.Message.makeDigest(digest)
+
+        let representedSignature = try EllipticCurveDigitalSignatureAlgorithmModel.sign(
+            message: message,
+            with: privateKey,
+            in: .schnorr,
+            nonceFunction: .bitcoinImprovementProposalSchnorrDeterministic
+        )
+        let directSignature = try SchnorrSignatureModel.sign(
+            digestData32Bytes: Data(digest),
+            privateKeyData32Bytes: privateKey,
+            nonce: .bitcoinImprovementProposalSchnorrDeterministic
+        ).raw64ByteSignatureData
+
+        #expect(representedSignature == directSignature)
     }
 }

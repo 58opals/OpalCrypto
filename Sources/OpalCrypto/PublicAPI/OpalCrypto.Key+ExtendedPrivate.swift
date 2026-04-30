@@ -120,8 +120,9 @@ extension OpalCrypto.Key {
                 return .invalidChainCodeLength(expected: 32, actual: actual)
             case .invalidDepthMetadata:
                 return .invalidDepthMetadata
-            case .invalidPrivateKeyPrefix,
-                 .invalidPublicKeyLength,
+            case .invalidPrivateKeyPrefix:
+                return .invalidPrivateKey
+            case .invalidPublicKeyLength,
                  .invalidPublicKeyPrefix,
                  .invalidPublicKey:
                 return .invalidVersion(actual: ExtendedKeyPayloadModel.publicVersion)

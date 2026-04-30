@@ -67,7 +67,7 @@ extension PedersenModel {
                     )
                 )
             guard let affinePoint = resultPoint.convertToAffine() else {
-                throw Error.insecureAlternateBasePoint
+                throw Error.invalidCommitment
             }
             return Commitment(
                 setupIdentifier: alternateBasePointModel.compressedPublicKeyData,
@@ -92,6 +92,9 @@ extension PedersenModel {
         func combine(_ commitments: [Commitment]) throws -> Commitment {
             guard let firstCommitment = commitments.first else {
                 throw Error.emptyCommitmentList
+            }
+            guard firstCommitment.setupIdentifier == alternateBasePointModel.compressedPublicKeyData else {
+                throw Error.mismatchedSetup
             }
             guard commitments.allSatisfy({ $0.setupIdentifier == firstCommitment.setupIdentifier }) else {
                 throw Error.mismatchedSetup

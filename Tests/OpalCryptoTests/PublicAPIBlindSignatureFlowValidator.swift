@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API blind signature flow validation")
 struct PublicAPIBlindSignatureFlowValidator {
@@ -76,7 +76,7 @@ struct PublicAPIBlindSignatureFlowValidator {
             )
             Issue.record("Expected malformed response-scalar rejection.")
         } catch let error as OpalCrypto.BlindSignature.Error {
-            #expect(error == .cryptographyFailure)
+            #expect(error == .invalidResponseScalar)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
@@ -91,5 +91,27 @@ struct PublicAPIBlindSignatureFlowValidator {
                 publicKey: publicKey
             )
         )
+    }
+
+    @Test("Blind request finalization rejects zero signature scalars even when verification is disabled")
+    func blindRequestFinalizationRejectsZeroSignatureScalarsEvenWhenVerificationIsDisabled() throws {
+        let privateKey = OpalCryptoTestSupport.makePrivateKey(12)
+        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let signer = try OpalCrypto.BlindSignature.Signer()
+        let request = try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signer.noncePoint,
+            messageDigest: Data(repeating: 0xC4, count: 32)
+        )
+        let cancelingResponse = request.requestState.blindingScalarA.negateModN().data32Bytes
+
+        do {
+            _ = try request.finalize(responseScalar: cancelingResponse, verify: false)
+            Issue.record("Expected zero signature-scalar rejection.")
+        } catch let error as OpalCrypto.BlindSignature.Error {
+            #expect(error == .verificationFailed)
+        } catch {
+            Issue.record("Unexpected error type for zero signature scalar: \(error)")
+        }
     }
 }

@@ -178,6 +178,22 @@ struct PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Extended private-key parsing reports malformed private-key prefix as key material")
+    func extendedPrivateKeyParsingReportsMalformedPrivateKeyPrefixAsKeyMaterial() throws {
+        var payload = try Base58CheckCodecModel.decode(rootPrivateKeyString, minimumPayloadLength: 78)
+        payload[45] = 0x01
+        let serialized = Base58CheckCodecModel.encode(payload: payload)
+
+        do {
+            _ = try OpalCrypto.Key.ExtendedPrivate(serialized)
+            Issue.record("Expected invalid private-key error for malformed xprv prefix.")
+        } catch let error as OpalCrypto.Key.ExtendedPrivate.Error {
+            #expect(error == .invalidPrivateKey)
+        } catch {
+            Issue.record("Unexpected error type for malformed xprv prefix: \(error)")
+        }
+    }
+
     @Test("Extended-key child-derivation wrappers reject the wrong payload kind early")
     func extendedKeyChildDerivationWrappersRejectTheWrongPayloadKindEarly() throws {
         let privateKeyPayload = try ExtendedKeyDerivationModel.makeRootPrivateKey(

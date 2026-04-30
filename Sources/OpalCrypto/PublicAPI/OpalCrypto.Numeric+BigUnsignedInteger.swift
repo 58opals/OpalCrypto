@@ -25,11 +25,15 @@ extension OpalCrypto.Numeric {
         }
 
         public func shiftLeft(byBytes byteCount: UInt) -> BigUnsignedInteger {
-            BigUnsignedInteger(rawValue: rawValue.shiftLeft(byBytes: Int(byteCount)))
+            guard !rawValue.isZero else { return .zero }
+            guard byteCount <= UInt(Int.max) else { return .zero }
+            guard byteCount <= UInt(Int.max - rawValue.serialize().count) else { return .zero }
+            return BigUnsignedInteger(rawValue: rawValue.shiftLeft(byBytes: Int(byteCount)))
         }
 
         public func shiftRight(byBytes byteCount: UInt) -> BigUnsignedInteger {
-            BigUnsignedInteger(rawValue: rawValue.shiftRight(byBytes: Int(byteCount)))
+            guard byteCount <= UInt(Int.max) else { return .zero }
+            return BigUnsignedInteger(rawValue: rawValue.shiftRight(byBytes: Int(byteCount)))
         }
 
         public mutating func add(_ addend: UInt64) {

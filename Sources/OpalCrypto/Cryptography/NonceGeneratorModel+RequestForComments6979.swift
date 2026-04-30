@@ -27,10 +27,10 @@ extension NonceGeneratorModel {
                 valueBytes = NonceGeneratorModel.makeAuthenticationCode(key: keyBytes, message: valueBytes)
                 let candidateBytes = valueBytes
                 let candidateScalar = try? ScalarModel(data32: candidateBytes, requireNonZero: true)
-                updateKeyAndValue(separator: 0x00, includeKeyMaterial: false)
                 if let scalar = candidateScalar {
                     return scalar
                 }
+                updateKeyAndValue(separator: 0x00, includeKeyMaterial: false)
             }
         }
         

@@ -116,7 +116,7 @@ struct PublicAPIBlindSignatureNonceStateValidator {
             )
             Issue.record("Expected malformed request-scalar rejection.")
         } catch let error as OpalCrypto.BlindSignature.Error {
-            #expect(error == .cryptographyFailure)
+            #expect(error == .invalidRequestScalar)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

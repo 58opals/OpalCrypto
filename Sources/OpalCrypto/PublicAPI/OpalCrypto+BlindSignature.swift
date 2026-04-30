@@ -27,8 +27,12 @@ extension OpalCrypto {
                 return .invalidPrivateKey
             case .invalidRequestLength(let actual):
                 return .invalidRequestLength(expected: 32, actual: actual)
+            case .invalidRequestScalar:
+                return .invalidRequestScalar
             case .invalidResponseLength(let actual):
                 return .invalidResponseLength(expected: 32, actual: actual)
+            case .invalidResponseScalar:
+                return .invalidResponseScalar
             case .nonceAlreadyUsed:
                 return .nonceAlreadyUsed
             case .randomGenerationFailed, .cryptographyFailure:

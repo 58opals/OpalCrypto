@@ -82,20 +82,17 @@ extension StandardsForEfficientCryptography256k1CurveModel {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
             }
             if firstByte & 0x80 != 0 {
-                throw StandardsForEfficientCryptography256k1CurveModel.Error.derNonCanonical
+                throw StandardsForEfficientCryptography256k1CurveModel.Error.invalidSignatureScalar
             }
             if integerBytes.count > 1, firstByte == 0x00, integerBytes[1] & 0x80 == 0 {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derNonCanonical
             }
-            if integerBytes.count > 33 {
-                throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
-            }
             var valueBytes = integerBytes
-            if valueBytes.count == 33 {
-                guard valueBytes.first == 0x00 else {
-                    throw StandardsForEfficientCryptography256k1CurveModel.Error.derNonCanonical
-                }
+            if valueBytes.count > 1, valueBytes[0] == 0x00, valueBytes[1] & 0x80 != 0 {
                 valueBytes.removeFirst()
+            }
+            guard valueBytes.count <= 32 else {
+                throw StandardsForEfficientCryptography256k1CurveModel.Error.invalidSignatureScalar
             }
             if valueBytes.count < 32 {
                 valueBytes.insert(contentsOf: repeatElement(0x00, count: 32 - valueBytes.count), at: 0)

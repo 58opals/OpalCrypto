@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API key mnemonic validation")
 struct PublicAPIKeyMnemonicValidator {
@@ -30,6 +30,24 @@ struct PublicAPIKeyMnemonicValidator {
             #expect(mnemonic.length == length)
             #expect(mnemonic.language == .english)
             #expect(reparsed == mnemonic)
+        }
+    }
+
+    @Test("Mnemonic generation maps random byte failures to facade errors")
+    func mnemonicGenerationMapsRandomByteFailuresToFacadeErrors() {
+        do {
+            _ = try OpalCrypto.Key.Mnemonic.generate(
+                length: .words12,
+                language: .english,
+                makeEntropyBytes: { _ in
+                    throw SecureRandomByteGenerationModel.Error.failed(status: -1)
+                }
+            )
+            Issue.record("Expected random generation failure.")
+        } catch let error as OpalCrypto.Key.Mnemonic.Error {
+            #expect(error == .randomGenerationFailed(status: -1))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -82,4 +100,3 @@ struct PublicAPIKeyMnemonicValidator {
     a253d07f616223e337b6fa257632a2cc37e1ba36ff0bc7cf5a943366fa1b9ef02d6aa0333da51c17902951634b8aa81b6692a194b07f4f8c542335d73c96aad3
     """
 }
-

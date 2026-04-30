@@ -136,6 +136,36 @@ struct PublicAPISecp256k1Validator {
         }
     }
 
+    @Test("DER decoding reports canonical oversized integers as invalid signatures")
+    func derDecodingReportsCanonicalOversizedIntegersAsInvalidSignatures() {
+        let oversizedR = Data([0x01] + Array(repeating: UInt8(0x00), count: 32))
+        let validS = Data([0x01])
+        let derSignature = Data([0x30, 0x26, 0x02, 0x21]) + oversizedR + Data([0x02, 0x01]) + validS
+
+        do {
+            _ = try OpalCrypto.Secp256k1.decodeDER(derSignature)
+            Issue.record("Expected invalid signature error for oversized DER integer.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidSignature)
+        } catch {
+            Issue.record("Unexpected error type for oversized DER integer: \(error)")
+        }
+    }
+
+    @Test("DER decoding reports canonical negative integers as invalid signatures")
+    func derDecodingReportsCanonicalNegativeIntegersAsInvalidSignatures() {
+        let derSignature = Data([0x30, 0x06, 0x02, 0x01, 0x80, 0x02, 0x01, 0x01])
+
+        do {
+            _ = try OpalCrypto.Secp256k1.decodeDER(derSignature)
+            Issue.record("Expected invalid signature error for negative DER integer.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidSignature)
+        } catch {
+            Issue.record("Unexpected error type for negative DER integer: \(error)")
+        }
+    }
+
     @Test("Normalize and query low-S signatures")
     func normalizeAndQueryLowSSignatures() throws {
         let highSData = StandardsForEfficientCryptography256k1CurveModel.Constant.n

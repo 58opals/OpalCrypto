@@ -55,6 +55,21 @@ struct PublicAPICommunicationEnvelopeValidator {
         }
     }
 
+    @Test("Communication plaintext length reports minimum violations before block alignment")
+    func communicationPlaintextLengthReportsMinimumViolationsBeforeBlockAlignment() {
+        do {
+            _ = try CommunicationBoxModel.resolvePlaintextLength(
+                messageByteCount: 4,
+                paddedPlaintextLength: 5
+            )
+            Issue.record("Expected padded plaintext minimum-length rejection.")
+        } catch let error as CommunicationBoxModel.Error {
+            #expect(error == .invalidPaddedPlaintextLength(minimum: 8, actual: 5))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("HMAC-SHA256 helper matches a stable vector")
     func hmacSha256HelperMatchesAStableVector() throws {
         let digest = OpalCrypto.Hashing.computeHMACSHA256(

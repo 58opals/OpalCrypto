@@ -34,14 +34,14 @@ extension CommunicationBoxModel {
 
         let minimumLength = messageByteCount + 4
         if let paddedPlaintextLength {
-            guard paddedPlaintextLength.isMultiple(of: 16) else {
-                throw Error.paddedPlaintextLengthNotMultipleOf16(actual: paddedPlaintextLength)
-            }
             guard paddedPlaintextLength >= minimumLength else {
                 throw Error.invalidPaddedPlaintextLength(
                     minimum: minimumLength,
                     actual: paddedPlaintextLength
                 )
+            }
+            guard paddedPlaintextLength.isMultiple(of: 16) else {
+                throw Error.paddedPlaintextLengthNotMultipleOf16(actual: paddedPlaintextLength)
             }
             return paddedPlaintextLength
         }

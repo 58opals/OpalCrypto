@@ -91,6 +91,44 @@ struct PublicAPIPedersenValidator {
         )
     }
 
+    @Test("Pedersen setup rejects commitments created by a different setup")
+    func pedersenSetupRejectsCommitmentsCreatedByADifferentSetup() throws {
+        let setup = try OpalCrypto.Pedersen.Setup(
+            alternateBasePoint: Data([0x02]) + Data("CashFusion gives us fungibility.".utf8)
+        )
+        let otherSetup = try OpalCrypto.Pedersen.Setup(
+            alternateBasePoint: try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+                from: OpalCryptoTestSupport.makePrivateKey(21)
+            )
+        )
+        let foreignCommitment = try otherSetup.commit(amount: 1, nonce: makeScalar(1))
+
+        do {
+            _ = try setup.combine([foreignCommitment])
+            Issue.record("Expected mismatched setup rejection.")
+        } catch let error as OpalCrypto.Pedersen.Error {
+            #expect(error == .mismatchedSetup)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Pedersen commit reports identity outputs as invalid commitments")
+    func pedersenCommitReportsIdentityOutputsAsInvalidCommitments() throws {
+        let setup = try OpalCrypto.Pedersen.Setup(
+            alternateBasePoint: Data([0x02]) + Data("CashFusion gives us fungibility.".utf8)
+        )
+
+        do {
+            _ = try setup.commit(amount: 0, nonce: Data(repeating: 0x00, count: 32))
+            Issue.record("Expected identity commitment rejection.")
+        } catch let error as OpalCrypto.Pedersen.Error {
+            #expect(error == .invalidCommitment)
+        } catch {
+            Issue.record("Unexpected error type for identity commitment: \(error)")
+        }
+    }
+
     private func makeScalar(_ value: UInt8) -> Data {
         Data(repeating: 0x00, count: 31) + Data([value])
     }

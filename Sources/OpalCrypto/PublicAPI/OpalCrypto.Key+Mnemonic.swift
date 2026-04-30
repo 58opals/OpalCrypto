@@ -30,7 +30,29 @@ extension OpalCrypto.Key {
             length: Length,
             language: Word.Language
         ) throws -> Mnemonic {
-            let entropy = Data(try SecureRandomByteGenerationModel.makeBytes(count: length.entropyByteCount))
+            try generate(
+                length: length,
+                language: language,
+                makeEntropyBytes: SecureRandomByteGenerationModel.makeBytes(count:)
+            )
+        }
+
+        internal static func generate(
+            length: Length,
+            language: Word.Language,
+            makeEntropyBytes: (Int) throws -> [UInt8]
+        ) throws -> Mnemonic {
+            let entropyBytes: [UInt8]
+            do {
+                entropyBytes = try makeEntropyBytes(length.entropyByteCount)
+            } catch let error as SecureRandomByteGenerationModel.Error {
+                switch error {
+                case .failed(let status):
+                    throw Error.randomGenerationFailed(status: status)
+                }
+            }
+
+            let entropy = Data(entropyBytes)
             return try Mnemonic(
                 parsed: MnemonicCodecModel.makeMnemonic(entropy: entropy, language: language)
             )

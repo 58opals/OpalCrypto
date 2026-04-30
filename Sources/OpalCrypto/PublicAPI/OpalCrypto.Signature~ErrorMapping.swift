@@ -27,7 +27,9 @@ extension OpalCrypto.Signature {
                 return .invalidPublicKeyLength(expected: 33, actual: actual)
             case .invalidSignatureLength(let actual):
                 return .invalidSignatureLength(expected: 64, actual: actual)
-            case .invalidPrivateKeyValue, .randomGenerationFailed:
+            case .invalidPrivateKeyValue:
+                return .invalidPrivateKey
+            case .randomGenerationFailed:
                 return .cryptographyFailure
             }
         }
@@ -42,8 +44,9 @@ extension OpalCrypto.Signature {
                 return .invalidPublicKeyLength(expected: 33, actual: actual)
             case .invalidSignatureLength(let actual):
                 return .invalidSignatureLength(expected: 64, actual: actual)
-            case .invalidPrivateKeyValue,
-                 .invalidSignatureScalar,
+            case .invalidPrivateKeyValue:
+                return .invalidPrivateKey
+            case .invalidSignatureScalar,
                  .signatureComponentZero,
                  .derMalformed,
                  .derNonCanonical,
@@ -56,7 +59,9 @@ extension OpalCrypto.Signature {
             switch secpFacadeError {
             case .invalidPrivateKeyLength(let expected, let actual):
                 return .invalidPrivateKeyLength(expected: expected, actual: actual)
-            case .invalidPrivateKey, .invalidDerivedKey:
+            case .invalidPrivateKey:
+                return .invalidPrivateKey
+            case .invalidDerivedKey:
                 return .cryptographyFailure
             case .invalidPublicKeyLength(let expected, let actual):
                 return .invalidPublicKeyLength(expected: expected, actual: actual)

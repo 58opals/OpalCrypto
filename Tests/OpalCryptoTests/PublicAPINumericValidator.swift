@@ -50,4 +50,21 @@ struct PublicAPINumericValidator {
             0x01, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE
         ]))
     }
+
+    @Test("Oversized BigUnsignedInteger byte shifts avoid integer conversion traps")
+    func oversizedBigUnsignedIntegerByteShiftsAvoidIntegerConversionTraps() {
+        let oversizedByteCount = UInt(Int.max) + 1
+        let value = OpalCrypto.Numeric.BigUnsignedInteger(Data([0x01, 0x02, 0x03]))
+
+        #expect(value.shiftRight(byBytes: oversizedByteCount).isZero)
+        #expect(value.shiftLeft(byBytes: oversizedByteCount).isZero)
+        #expect(OpalCrypto.Numeric.BigUnsignedInteger.zero.shiftLeft(byBytes: oversizedByteCount).isZero)
+    }
+
+    @Test("BigUnsignedInteger left shifts reject unrepresentable result lengths")
+    func bigUnsignedIntegerLeftShiftsRejectUnrepresentableResultLengths() {
+        let value = OpalCrypto.Numeric.BigUnsignedInteger(Data([0x01]))
+
+        #expect(value.shiftLeft(byBytes: UInt(Int.max)).isZero)
+    }
 }

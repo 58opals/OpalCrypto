@@ -14,7 +14,9 @@ extension BlindSignatureModel {
         case invalidPrivateKeyLength(actual: Int)
         case invalidPrivateKey
         case invalidRequestLength(actual: Int)
+        case invalidRequestScalar
         case invalidResponseLength(actual: Int)
+        case invalidResponseScalar
         case randomGenerationFailed
         case nonceAlreadyUsed
         case verificationFailed

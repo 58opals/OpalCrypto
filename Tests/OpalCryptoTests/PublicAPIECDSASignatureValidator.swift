@@ -148,6 +148,22 @@ struct PublicAPIECDSASignatureValidator {
         }
     }
 
+    @Test("Reject ECDSA sign with invalid private key value through facade error")
+    func rejectEcdsaSignWithInvalidPrivateKeyValueThroughFacadeError() {
+        do {
+            _ = try OpalCrypto.Signature.signECDSA(
+                message: Data("opal-ecdsa-message".utf8),
+                privateKey: Data(repeating: 0x00, count: 32),
+                format: .raw
+            )
+            Issue.record("Expected invalid private key error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidPrivateKey)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Reject ECDSA verify with malformed SEC1 public key through facade error")
     func rejectEcdsaVerifyWithMalformedSec1PublicKeyThroughFacadeError() {
         let malformedPublicKey = Data([0x02] + Array(repeating: 0x00, count: 32))

@@ -106,13 +106,16 @@ extension BlindSignatureModel {
                     requireNonZero: false
                 )
             } catch {
-                throw Error.cryptographyFailure
+                throw Error.invalidResponseScalar
             }
 
             let adjustedResponse = responseScalar.addModN(blindingScalarA)
             let signatureSScalar = isPositiveAdjustment
                 ? adjustedResponse
                 : adjustedResponse.negateModN()
+            guard !signatureSScalar.isZero else {
+                throw Error.verificationFailed
+            }
             let signatureData = signatureRData32Bytes + signatureSScalar.data32Bytes
 
             guard verify else {

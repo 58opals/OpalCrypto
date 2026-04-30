@@ -14,7 +14,9 @@ extension OpalCrypto.BlindSignature {
         case invalidPrivateKeyLength(expected: Int, actual: Int)
         case invalidPrivateKey
         case invalidRequestLength(expected: Int, actual: Int)
+        case invalidRequestScalar
         case invalidResponseLength(expected: Int, actual: Int)
+        case invalidResponseScalar
         case nonceAlreadyUsed
         case cryptographyFailure
         case verificationFailed
