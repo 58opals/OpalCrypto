@@ -8,103 +8,78 @@ import OpalCrypto
 struct PublicAPIECDSASignatureValidator {
     @Test("Exercise ECDSA sign and verify through public facade")
     func exerciseEcdsaSignAndVerifyThroughPublicFacade() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        let messageData = Data("opal-ecdsa-message".utf8)
-        let publicKeyData = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKeyData)
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
+        let privateKey = try makePrivateKey(1)
+        let message = Data("opal-ecdsa-message".utf8)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
             format: .der
         )
 
-        #expect(
-            try OpalCrypto.Signature.verifyECDSA(
-                signature: signatureData,
-                message: messageData,
-                publicKey: publicKeyData,
-                format: .der
-            )
-        )
+        #expect(try signature.verify(message: message, publicKey: publicKey))
     }
 
     @Test("Exercise ECDSA raw sign and verify through public facade")
     func exerciseEcdsaRawSignAndVerifyThroughPublicFacade() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        let messageData = Data("opal-ecdsa-raw-message".utf8)
-        let publicKeyData = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKeyData)
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
+        let privateKey = try makePrivateKey(1)
+        let message = Data("opal-ecdsa-raw-message".utf8)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
             format: .raw
         )
 
-        #expect(signatureData.count == 64)
-        #expect(
-            try OpalCrypto.Signature.verifyECDSA(
-                signature: signatureData,
-                message: messageData,
-                publicKey: publicKeyData,
-                format: .raw
-            )
+        #expect(signature.rawRepresentation.count == 64)
+        #expect(try signature.verify(message: message, publicKey: publicKey))
+    }
+
+    @Test("Exercise ECDSA digest sign and verify without double hashing")
+    func exerciseEcdsaDigestSignAndVerifyWithoutDoubleHashing() throws {
+        let privateKey = try makePrivateKey(1)
+        let message = Data("opal-ecdsa-digest-message".utf8)
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: OpalCrypto.Hashing.sha256(message)
         )
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let verificationKey = OpalCrypto.Signature.VerificationKey(publicKey: publicKey)
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            digest: digest,
+            privateKey: privateKey,
+            format: .raw
+        )
+
+        #expect(try signature.verify(digest: digest, publicKey: publicKey))
+        #expect(try signature.verify(digest: digest, verificationKey: verificationKey))
+        #expect(!(try signature.verify(message: digest.rawRepresentation, publicKey: publicKey)))
     }
 
     @Test("Reject ECDSA verification for tampered message and wrong public key")
     func rejectEcdsaVerificationForTamperedMessageAndWrongPublicKey() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        var otherPrivateKeyData = Data(repeating: 0x00, count: 32)
-        otherPrivateKeyData[31] = 0x02
-        let messageData = Data("opal-ecdsa-message".utf8)
-        var tamperedMessageData = messageData
-        tamperedMessageData[tamperedMessageData.index(before: tamperedMessageData.endIndex)] ^= 0x01
+        let privateKey = try makePrivateKey(1)
+        let otherPrivateKey = try makePrivateKey(2)
+        let message = Data("opal-ecdsa-message".utf8)
+        var tamperedMessage = message
+        tamperedMessage[tamperedMessage.index(before: tamperedMessage.endIndex)] ^= 0x01
 
-        let publicKeyData = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKeyData)
-        let otherPublicKeyData = try OpalCrypto.Signature.derivePublicKey(
-            fromPrivateKey: otherPrivateKeyData
-        )
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let otherPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: otherPrivateKey)
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
             format: .der
         )
 
-        let isValidForTamperedMessage = try OpalCrypto.Signature.verifyECDSA(
-            signature: signatureData,
-            message: tamperedMessageData,
-            publicKey: publicKeyData,
-            format: .der
-        )
-        let isValidForWrongPublicKey = try OpalCrypto.Signature.verifyECDSA(
-            signature: signatureData,
-            message: messageData,
-            publicKey: otherPublicKeyData,
-            format: .der
-        )
-
-        #expect(!isValidForTamperedMessage)
-        #expect(!isValidForWrongPublicKey)
+        #expect(!(try signature.verify(message: tamperedMessage, publicKey: publicKey)))
+        #expect(!(try signature.verify(message: message, publicKey: otherPublicKey)))
     }
 
-    @Test("Reject ECDSA raw verify with invalid signature length through facade error")
-    func rejectEcdsaRawVerifyWithInvalidSignatureLengthThroughFacadeError() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        let messageData = Data("opal-ecdsa-raw-message".utf8)
-        let publicKeyData = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKeyData)
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
-            format: .raw
-        )
-
+    @Test("Reject ECDSA raw construction with invalid signature length through facade error")
+    func rejectEcdsaRawConstructionWithInvalidSignatureLengthThroughFacadeError() {
         do {
-            _ = try OpalCrypto.Signature.verifyECDSA(
-                signature: Data(signatureData.prefix(63)),
-                message: messageData,
-                publicKey: publicKeyData,
+            _ = try OpalCrypto.Signature.ECDSA(
+                rawRepresentation: Data(repeating: 0x01, count: 63),
                 format: .raw
             )
             Issue.record("Expected invalid signature length error.")
@@ -115,49 +90,43 @@ struct PublicAPIECDSASignatureValidator {
         }
     }
 
-    @Test("ECDSA raw verify returns false for invalid signature scalars")
-    func ecdsaRawVerifyReturnsFalseForInvalidSignatureScalars() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        let messageData = Data("opal-ecdsa-invalid-scalar".utf8)
-        let publicKeyData = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKeyData)
-
-        let isValid = try OpalCrypto.Signature.verifyECDSA(
-            signature: Data(repeating: 0x00, count: 64),
-            message: messageData,
-            publicKey: publicKeyData,
-            format: .raw
-        )
-
-        #expect(!isValid)
-    }
-
-    @Test("Reject sign with invalid private key length through facade error")
-    func rejectSignWithInvalidPrivateKeyLengthThroughFacadeError() {
+    @Test("ECDSA raw construction rejects invalid signature scalars")
+    func ecdsaRawConstructionRejectsInvalidSignatureScalars() {
         do {
-            _ = try OpalCrypto.Signature.signECDSA(
-                message: Data("opal-ecdsa-message".utf8),
-                privateKey: Data(repeating: 0x01, count: 31),
+            _ = try OpalCrypto.Signature.ECDSA(
+                rawRepresentation: Data(repeating: 0x00, count: 64),
                 format: .raw
             )
-            Issue.record("Expected invalid private key length error.")
+            Issue.record("Expected invalid signature error.")
         } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidSignature)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject private-key construction with invalid private key length through facade error")
+    func rejectPrivateKeyConstructionWithInvalidPrivateKeyLengthThroughFacadeError() {
+        do {
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x01, count: 31)
+            )
+            Issue.record("Expected invalid private key length error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
     }
 
-    @Test("Reject ECDSA sign with invalid private key value through facade error")
-    func rejectEcdsaSignWithInvalidPrivateKeyValueThroughFacadeError() {
+    @Test("Reject private-key construction with invalid private key value through facade error")
+    func rejectPrivateKeyConstructionWithInvalidPrivateKeyValueThroughFacadeError() {
         do {
-            _ = try OpalCrypto.Signature.signECDSA(
-                message: Data("opal-ecdsa-message".utf8),
-                privateKey: Data(repeating: 0x00, count: 32),
-                format: .raw
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x00, count: 32)
             )
             Issue.record("Expected invalid private key error.")
-        } catch let error as OpalCrypto.Signature.Error {
+        } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPrivateKey)
         } catch {
             Issue.record("Unexpected error type: \(error)")
@@ -169,17 +138,18 @@ struct PublicAPIECDSASignatureValidator {
         let malformedPublicKey = Data([0x02] + Array(repeating: 0x00, count: 32))
 
         do {
-            _ = try OpalCrypto.Signature.verifyECDSA(
-                signature: Data(repeating: 0x00, count: 64),
-                message: Data("opal-ecdsa-message".utf8),
-                publicKey: malformedPublicKey,
-                format: .raw
-            )
+            _ = try OpalCrypto.Secp256k1.PublicKey(rawRepresentation: malformedPublicKey)
             Issue.record("Expected invalid public key error.")
-        } catch let error as OpalCrypto.Signature.Error {
+        } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPublicKey)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
+
+    private func makePrivateKey(_ value: UInt8) throws -> OpalCrypto.Secp256k1.PrivateKey {
+        try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: Data(repeating: 0x00, count: 31) + Data([value])
+        )
     }
 }

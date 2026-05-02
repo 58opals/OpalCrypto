@@ -57,14 +57,16 @@ struct PublicAPIKeyMnemonicValidator {
         #expect(englishMnemonic.language == .english)
         #expect(englishMnemonic.length == .words12)
         #expect(
-            try englishMnemonic.deriveSeed(passphrase: "TREZOR") == Data(hexadecimal: englishVectorSeedHex)
+            try englishMnemonic.deriveSeed(passphrase: "TREZOR").rawRepresentation
+                == Data(hexadecimal: englishVectorSeedHex)
         )
 
         let koreanMnemonic = try OpalCrypto.Key.Mnemonic(phrase: koreanVectorPhrase)
         #expect(koreanMnemonic.language == .korean)
         #expect(koreanMnemonic.length == .words12)
         #expect(
-            try koreanMnemonic.deriveSeed(passphrase: "TREZOR") == Data(hexadecimal: koreanVectorSeedHex)
+            try koreanMnemonic.deriveSeed(passphrase: "TREZOR").rawRepresentation
+                == Data(hexadecimal: koreanVectorSeedHex)
         )
     }
 

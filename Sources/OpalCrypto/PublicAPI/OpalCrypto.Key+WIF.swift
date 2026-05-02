@@ -5,17 +5,13 @@ import Foundation
 extension OpalCrypto.Key {
     public struct WIF: Sendable, Equatable {
 
-        public let privateKey: Data
+        public let privateKey: OpalCrypto.Secp256k1.PrivateKey
         public let isCompressed: Bool
 
-        public init(privateKey: Data, isCompressed: Bool = true) throws {
-            guard privateKey.count == 32 else {
-                throw Error.invalidPrivateKeyLength(expected: 32, actual: privateKey.count)
-            }
-            guard StandardsForEfficientCryptography256k1CurveModel.Operation
-                .isPrivateKeyData32BytesValid(privateKey) else {
-                throw Error.invalidPrivateKey
-            }
+        public init(
+            privateKey: OpalCrypto.Secp256k1.PrivateKey,
+            isCompressed: Bool = true
+        ) {
             self.privateKey = privateKey
             self.isCompressed = isCompressed
         }
@@ -23,17 +19,21 @@ extension OpalCrypto.Key {
         public init(_ serialized: String) throws {
             do {
                 let decoded = try WalletImportFormatCodecModel.decode(serialized)
-                self.privateKey = decoded.privateKey
+                self.privateKey = try OpalCrypto.Secp256k1.PrivateKey(
+                    rawRepresentation: decoded.privateKey
+                )
                 self.isCompressed = decoded.isCompressed
             } catch let error as WalletImportFormatCodecModel.Error {
                 throw Self.mapError(error)
+            } catch let error as OpalCrypto.Secp256k1.Error {
+                throw Self.mapSecp256k1Error(error)
             }
         }
 
         public func serialize() throws -> String {
             do {
                 return try WalletImportFormatCodecModel.encode(
-                    privateKey: privateKey,
+                    privateKey: privateKey.rawRepresentation,
                     isCompressed: isCompressed
                 )
             } catch let error as WalletImportFormatCodecModel.Error {
@@ -56,6 +56,27 @@ extension OpalCrypto.Key {
             case .invalidPrivateKeyLength(let actual):
                 return .invalidPrivateKeyLength(expected: 32, actual: actual)
             case .invalidPrivateKey:
+                return .invalidPrivateKey
+            }
+        }
+
+        private static func mapSecp256k1Error(_ error: OpalCrypto.Secp256k1.Error) -> Error {
+            switch error {
+            case .invalidPrivateKeyLength(let expected, let actual):
+                return .invalidPrivateKeyLength(expected: expected, actual: actual)
+            case .invalidPrivateKey:
+                return .invalidPrivateKey
+            case .invalidPublicKeyLength,
+                 .invalidPublicKeyPrefix,
+                 .invalidPublicKey,
+                 .invalidTweakLength,
+                 .invalidTweak,
+                 .invalidDerivedKey,
+                 .invalidSignatureLength,
+                 .invalidSignature,
+                 .invalidDER,
+                 .nonCanonicalDER,
+                 .randomGenerationFailed:
                 return .invalidPrivateKey
             }
         }

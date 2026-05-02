@@ -6,17 +6,21 @@ import OpalCrypto
 extension OpalCryptoBenchmarks {
     struct BenchmarkContext: Sendable {
         let singlePrivateKey: Data
+        let singlePrivateKeyValue: OpalCrypto.Secp256k1.PrivateKey
         let batch64PrivateKeys: [Data]
+        let batch64PrivateKeyValues: [OpalCrypto.Secp256k1.PrivateKey]
         let batch256PrivateKeys: [Data]
+        let batch256PrivateKeyValues: [OpalCrypto.Secp256k1.PrivateKey]
         let batch1024PrivateKeys: [Data]
+        let batch1024PrivateKeyValues: [OpalCrypto.Secp256k1.PrivateKey]
         let batch256JacobianPointBufferModel: BatchJacobianPointBufferModel
         let batch1024JacobianPointBufferModel: BatchJacobianPointBufferModel
         let ecdsaMessage: Data
-        let schnorrDigest: Data
-        let compressedPublicKey: Data
+        let schnorrDigest: OpalCrypto.Signature.Digest
+        let compressedPublicKey: OpalCrypto.Secp256k1.PublicKey
         let verificationKey: OpalCrypto.Signature.VerificationKey
-        let ecdsaSignature: Data
-        let schnorrSignature: Data
+        let ecdsaSignature: OpalCrypto.Signature.ECDSA
+        let schnorrSignature: OpalCrypto.Signature.Schnorr
         let mnemonic: OpalCrypto.Key.Mnemonic
         let mnemonicPhrase: String
         let basePayload: Data
@@ -32,31 +36,45 @@ extension OpalCryptoBenchmarks {
 
         static func make() throws -> BenchmarkContext {
             let singlePrivateKey = makePrivateKey(index: 1)
+            let singlePrivateKeyValue = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: singlePrivateKey
+            )
             let batch64PrivateKeys = (1...64).map(makePrivateKey(index:))
+            let batch64PrivateKeyValues = try batch64PrivateKeys.map {
+                try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            }
             let batch256PrivateKeys = (1...256).map(makePrivateKey(index:))
+            let batch256PrivateKeyValues = try batch256PrivateKeys.map {
+                try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            }
             let batch1024PrivateKeys = (1...1024).map(makePrivateKey(index:))
+            let batch1024PrivateKeyValues = try batch1024PrivateKeys.map {
+                try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            }
             let batch256JacobianPointBufferModel = try PerformanceBenchmarkSupportModel
                 .makeBatchJacobianPointBuffer(from: batch256PrivateKeys)
             let batch1024JacobianPointBufferModel = try PerformanceBenchmarkSupportModel
                 .makeBatchJacobianPointBuffer(from: batch1024PrivateKeys)
             let ecdsaMessage = Data("opalcrypto-benchmark-ecdsa".utf8)
-            let schnorrDigest = OpalCrypto.Hashing.computeSHA256(
-                Data("opalcrypto-benchmark-schnorr".utf8)
+            let schnorrDigest = try OpalCrypto.Signature.Digest(
+                rawRepresentation: OpalCrypto.Hashing.sha256(
+                    Data("opalcrypto-benchmark-schnorr".utf8)
+                )
             )
-            let compressedPublicKey = try OpalCrypto.Signature.derivePublicKey(
-                fromPrivateKey: singlePrivateKey
+            let compressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+                from: singlePrivateKeyValue
             )
             let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
-                fromPrivateKey: singlePrivateKey
+                from: singlePrivateKeyValue
             )
-            let ecdsaSignature = try OpalCrypto.Signature.signECDSA(
+            let ecdsaSignature = try OpalCrypto.Signature.ECDSA.sign(
                 message: ecdsaMessage,
-                privateKey: singlePrivateKey,
+                privateKey: singlePrivateKeyValue,
                 format: .der
             )
-            let schnorrSignature = try OpalCrypto.Signature.signSchnorr(
+            let schnorrSignature = try OpalCrypto.Signature.Schnorr.sign(
                 digest: schnorrDigest,
-                privateKey: singlePrivateKey,
+                privateKey: singlePrivateKeyValue,
                 noncePolicy: .bip340Deterministic
             )
             let mnemonic = try OpalCrypto.Key.Mnemonic(
@@ -68,10 +86,7 @@ extension OpalCryptoBenchmarks {
             )
             let basePayload = Data((0..<64).map { UInt8(($0 * 17) & 0xff) })
             let base58EncodedPayload = OpalCrypto.Encoding.encodeBase58(basePayload)
-            let base32EncodedPayload = try OpalCrypto.Encoding.encodeBase32(
-                basePayload,
-                interpretedAsFiveBitValues: false
-            )
+            let base32EncodedPayload = try OpalCrypto.Encoding.encodeBase32Bytes(basePayload)
             let rootExtendedPrivate = try OpalCrypto.Key.ExtendedPrivate.root(
                 seed: try mnemonic.deriveSeed(passphrase: "benchmark")
             )
@@ -86,9 +101,13 @@ extension OpalCryptoBenchmarks {
 
             return BenchmarkContext(
                 singlePrivateKey: singlePrivateKey,
+                singlePrivateKeyValue: singlePrivateKeyValue,
                 batch64PrivateKeys: batch64PrivateKeys,
+                batch64PrivateKeyValues: batch64PrivateKeyValues,
                 batch256PrivateKeys: batch256PrivateKeys,
+                batch256PrivateKeyValues: batch256PrivateKeyValues,
                 batch1024PrivateKeys: batch1024PrivateKeys,
+                batch1024PrivateKeyValues: batch1024PrivateKeyValues,
                 batch256JacobianPointBufferModel: batch256JacobianPointBufferModel,
                 batch1024JacobianPointBufferModel: batch1024JacobianPointBufferModel,
                 ecdsaMessage: ecdsaMessage,

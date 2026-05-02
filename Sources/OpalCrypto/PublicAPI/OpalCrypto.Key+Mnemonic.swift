@@ -58,8 +58,13 @@ extension OpalCrypto.Key {
             )
         }
 
-        public func deriveSeed(passphrase: String = "") throws -> Data {
-            try MnemonicCodecModel.deriveSeed(phrase: phrase, passphrase: passphrase)
+        public func deriveSeed(passphrase: String = "") throws -> OpalCrypto.Key.Seed {
+            try OpalCrypto.Key.Seed(
+                rawRepresentation: MnemonicCodecModel.deriveSeed(
+                    phrase: phrase,
+                    passphrase: passphrase
+                )
+            )
         }
 
         internal init(parsed: MnemonicCodecModel.ParsedMnemonic) {

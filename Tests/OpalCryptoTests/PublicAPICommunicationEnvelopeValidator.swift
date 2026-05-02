@@ -6,33 +6,80 @@ import Testing
 
 @Suite("Public API communication envelope validation")
 struct PublicAPICommunicationEnvelopeValidator {
-    @Test("Communication encryption reports the uncompressed expected length for short SEC1 recipient keys")
-    func communicationEncryptionReportsTheUncompressedExpectedLengthForShortSec1RecipientKeys() {
+    @Test("Communication public-key values report the uncompressed expected length for short SEC1 keys")
+    func communicationPublicKeyValuesReportTheUncompressedExpectedLengthForShortSec1Keys() {
         let truncatedUncompressedRecipientPublicKey = Data([0x04] + Array(repeating: 0x11, count: 63))
 
         do {
-            _ = try OpalCrypto.Communication.encrypt(
-                message: Data("recipient-short-key".utf8),
-                recipientPublicKey: truncatedUncompressedRecipientPublicKey
+            _ = try OpalCrypto.Secp256k1.PublicKey(
+                rawRepresentation: truncatedUncompressedRecipientPublicKey
             )
             Issue.record("Expected invalid public-key length error.")
-        } catch let error as OpalCrypto.Communication.Error {
+        } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
     }
 
-    @Test("Communication box private-key decrypt validates the private key before ciphertext shape")
-    func communicationBoxPrivateKeyDecryptValidatesThePrivateKeyBeforeCiphertextShape() {
+    @Test("Communication private-key values reject wrong-length raw input")
+    func communicationPrivateKeyValuesRejectWrongLengthRawInput() {
         do {
-            _ = try OpalCrypto.Communication.decrypt(
-                Data(),
-                privateKey: Data(repeating: 0x01, count: 31)
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x01, count: 31)
             )
             Issue.record("Expected invalid private-key length error.")
-        } catch let error as OpalCrypto.Communication.Error {
+        } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Communication ciphertext and symmetric-key values validate their byte shapes")
+    func communicationCiphertextAndSymmetricKeyValuesValidateTheirByteShapes() throws {
+        do {
+            _ = try OpalCrypto.Communication.Ciphertext(rawRepresentation: Data())
+            Issue.record("Expected invalid ciphertext error.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        do {
+            _ = try OpalCrypto.Communication.Ciphertext(
+                rawRepresentation: Data([0x04]) + Data(repeating: 0x01, count: 64)
+            )
+            Issue.record("Expected invalid ciphertext error for malformed ephemeral public key.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let ciphertext = try OpalCrypto.Communication.encrypt(
+            message: Data("shape".utf8),
+            recipientPublicKey: publicKey
+        )
+        do {
+            _ = try OpalCrypto.Communication.Ciphertext(
+                rawRepresentation: ciphertext.rawRepresentation + Data([0x00])
+            )
+            Issue.record("Expected invalid ciphertext error for non-block-aligned payload.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        do {
+            _ = try OpalCrypto.Communication.SymmetricKey(rawRepresentation: Data(repeating: 0x01, count: 31))
+            Issue.record("Expected invalid symmetric-key length error.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidSymmetricKeyLength(expected: 32, actual: 31))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
@@ -72,7 +119,7 @@ struct PublicAPICommunicationEnvelopeValidator {
 
     @Test("HMAC-SHA256 helper matches a stable vector")
     func hmacSha256HelperMatchesAStableVector() throws {
-        let digest = OpalCrypto.Hashing.computeHMACSHA256(
+        let digest = OpalCrypto.Hashing.hmacSHA256(
             data: Data("The quick brown fox jumps over the lazy dog".utf8),
             key: Data("key".utf8)
         )

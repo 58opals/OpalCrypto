@@ -11,6 +11,9 @@ extension OpalCrypto.Signature {
         case invalidPublicKey
         case invalidDigestLength(expected: Int, actual: Int)
         case invalidSignatureLength(expected: Int, actual: Int)
+        case invalidSignature
+        case invalidDER
+        case nonCanonicalDER
         case cryptographyFailure
     }
 }

@@ -13,30 +13,53 @@ extension OpalCrypto {
             Base58EncodingModel.decode(text)
         }
 
-        public static func encodeBase32(_ data: Data, interpretedAsFiveBitValues: Bool) throws -> String {
+        public static func encodeBase32Bytes(_ data: Data) throws -> String {
             do {
                 return try Base32EncodingModel.encode(
                     data,
-                    interpretedAsFiveBitValues: interpretedAsFiveBitValues
+                    interpretedAsFiveBitValues: false
                 )
             } catch let error as Base32EncodingModel.Error {
                 throw mapBase32Error(error)
             }
         }
 
-        public static func decodeBase32(_ text: String, interpretedAsFiveBitValues: Bool) throws -> Data {
+        public static func decodeBase32Bytes(_ text: String) throws -> Data {
             do {
                 return try Base32EncodingModel.decode(
                     text,
-                    interpretedAsFiveBitValues: interpretedAsFiveBitValues
+                    interpretedAsFiveBitValues: false
                 )
             } catch let error as Base32EncodingModel.Error {
                 throw mapBase32Error(error)
             }
         }
 
-        public static func computePolymodChecksum(_ values: [UInt8]) -> UInt64 {
-            PolynomialModuloChecksumModel.compute(values)
+        public static func encodeBase32Values(_ values: FiveBitValues) throws -> String {
+            do {
+                return try Base32EncodingModel.encode(
+                    values.rawRepresentation,
+                    interpretedAsFiveBitValues: true
+                )
+            } catch let error as Base32EncodingModel.Error {
+                throw mapBase32Error(error)
+            }
+        }
+
+        public static func decodeBase32Values(_ text: String) throws -> FiveBitValues {
+            do {
+                let values = try Base32EncodingModel.decode(
+                    text,
+                    interpretedAsFiveBitValues: true
+                )
+                return try FiveBitValues(rawRepresentation: values)
+            } catch let error as Base32EncodingModel.Error {
+                throw mapBase32Error(error)
+            }
+        }
+
+        public static func computePolymodChecksum(_ values: FiveBitValues) -> UInt64 {
+            PolynomialModuloChecksumModel.compute(Array(values.rawRepresentation))
         }
 
         private static func mapBase32Error(_ error: Base32EncodingModel.Error) -> Error {

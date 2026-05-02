@@ -4,76 +4,71 @@ import Foundation
 
 extension OpalCrypto {
     public enum Secp256k1 {
-        public static func isPrivateKeyValid(_ privateKey: Data) -> Bool {
-            StandardsForEfficientCryptography256k1CurveModel.Operation.isPrivateKeyData32BytesValid(privateKey)
-        }
-
-        public static func deriveCompressedPublicKey(from privateKey: Data) throws -> Data {
+        public static func derivePublicKey(from privateKey: PrivateKey) throws -> PublicKey {
             do {
-                return try StandardsForEfficientCryptography256k1CurveModel.Operation.derivePublicKey(
-                    fromPrivateKeyData32Bytes: privateKey,
+                let publicKeyData = try StandardsForEfficientCryptography256k1CurveModel.Operation.derivePublicKey(
+                    fromPrivateKeyData32Bytes: privateKey.rawRepresentation,
                     format: .compressed
                 )
+                return try PublicKey(rawRepresentation: publicKeyData)
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 throw mapOperationError(error)
             }
         }
 
-        public static func tweakAddPrivateKey(_ privateKey: Data, tweak: Data) throws -> Data {
+        public static func tweakAddPrivateKey(
+            _ privateKey: PrivateKey,
+            tweak: Scalar
+        ) throws -> PrivateKey {
             do {
-                return try StandardsForEfficientCryptography256k1CurveModel.Operation
+                let tweakedPrivateKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
                     .tweakAddPrivateKeyData32Bytes(
-                        privateKey,
-                        tweakData32Bytes: tweak
+                        privateKey.rawRepresentation,
+                        tweakData32Bytes: tweak.rawRepresentation
                     )
+                return try PrivateKey(rawRepresentation: tweakedPrivateKey)
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 throw mapOperationError(error)
             }
         }
 
-        public static func tweakAddPublicKey(_ publicKey: Data, tweak: Data) throws -> Data {
-            try validateTweakedPublicKeyInput(publicKey)
+        public static func tweakAddPublicKey(
+            _ publicKey: PublicKey,
+            tweak: Scalar
+        ) throws -> PublicKey {
             do {
-                return try StandardsForEfficientCryptography256k1CurveModel.Operation.tweakAddPublicKey(
-                    publicKey,
-                    tweakData32Bytes: tweak,
+                let tweakedPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation.tweakAddPublicKey(
+                    publicKey.rawRepresentation,
+                    tweakData32Bytes: tweak.rawRepresentation,
                     format: .compressed
                 )
+                return try PublicKey(rawRepresentation: tweakedPublicKey)
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 throw mapOperationError(error)
             }
         }
 
-        public static func deriveCompressedPublicKeys(from privateKeys: [Data]) async throws -> [Data] {
+        public static func derivePublicKeys(from privateKeys: [PrivateKey]) async throws -> [PublicKey] {
             do {
-                return try await StandardsForEfficientCryptography256k1CurveModel.Operation
-                    .deriveCompressedPublicKeys(fromPrivateKeys32: privateKeys)
-            } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
-                throw mapOperationError(error)
-            }
-        }
-
-        public static func generatePrivateKey() throws -> Data {
-            do {
-                return try StandardsForEfficientCryptography256k1CurveModel.Operation
-                    .generatePrivateKeyData32Bytes()
+                let publicKeys = try await StandardsForEfficientCryptography256k1CurveModel.Operation
+                    .deriveCompressedPublicKeys(fromPrivateKeys32: privateKeys.map(\.rawRepresentation))
+                return try publicKeys.map(PublicKey.init(rawRepresentation:))
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 throw mapOperationError(error)
             }
         }
 
         public static func deriveSharedSecret(
-            privateKey: Data,
-            publicKey: Data
-        ) throws -> Data {
-            try validatePrivateKey(privateKey)
-            try validateSecp256k1PublicKey(publicKey)
+            privateKey: PrivateKey,
+            publicKey: PublicKey
+        ) throws -> SharedSecret {
             do {
-                return try StandardsForEfficientCryptography256k1CurveModel.Operation
+                let sharedSecret = try StandardsForEfficientCryptography256k1CurveModel.Operation
                     .deriveSharedSecret(
-                        privateKeyData32Bytes: privateKey,
-                        publicKey: publicKey
+                        privateKeyData32Bytes: privateKey.rawRepresentation,
+                        publicKey: publicKey.rawRepresentation
                 )
+                return try SharedSecret(rawRepresentation: sharedSecret)
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 throw mapOperationError(error)
             }

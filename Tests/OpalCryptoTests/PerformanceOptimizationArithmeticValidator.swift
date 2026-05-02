@@ -33,10 +33,12 @@ struct PerformanceOptimizationArithmeticValidator {
 
     @Test("Joint generator and cached-key multiplication matches separate multiplication")
     func jointGeneratorAndCachedKeyMultiplicationMatchesSeparateMultiplication() throws {
-        let publicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
-            from: OpalCryptoTestSupport.makePrivateKey(11)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+            from: OpalCryptoTestSupport.makeTypedPrivateKey(11)
         )
-        let verificationKeyModel = try VerificationKeyModel(publicKeyData: publicKey)
+        let verificationKeyModel = try VerificationKeyModel(
+            publicKeyData: publicKey.rawRepresentation
+        )
         let generatorScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation
             .parseTweakScalar(OpalCryptoTestSupport.makePrivateKey(13), requireNonZero: false)
         let verificationKeyScalar = try StandardsForEfficientCryptography256k1CurveModel.Operation

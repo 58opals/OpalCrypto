@@ -8,13 +8,13 @@ import Testing
 struct PublicAPIKeyMaterialValidator {
     @Test("Round-trip mainnet wallet import format and reject invalid variants")
     func roundTripMainnetWalletImportFormatAndRejectInvalidVariants() throws {
-        let privateKey = Data(privateKeyBytes)
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: Data(privateKeyBytes))
 
-        let compressedWalletImportFormat = try OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: true)
+        let compressedWalletImportFormat = OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: true)
         #expect(try compressedWalletImportFormat.serialize() == compressedWalletImportFormatString)
         #expect(try OpalCrypto.Key.WIF(compressedWalletImportFormatString) == compressedWalletImportFormat)
 
-        let uncompressedWalletImportFormat = try OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: false)
+        let uncompressedWalletImportFormat = OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: false)
         #expect(try uncompressedWalletImportFormat.serialize() == uncompressedWalletImportFormatString)
         #expect(try OpalCrypto.Key.WIF(uncompressedWalletImportFormatString) == uncompressedWalletImportFormat)
 
@@ -54,7 +54,9 @@ struct PublicAPIKeyMaterialValidator {
 
     @Test("Round-trip extended keys and derive raw child indices")
     func roundTripExtendedKeysAndDeriveRawChildIndices() throws {
-        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: Data(hexadecimal: seedHex))
+        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(
+            seed: OpalCrypto.Key.Seed(rawRepresentation: Data(hexadecimal: seedHex))
+        )
         #expect(rootKey.serialize() == rootPrivateKeyString)
         #expect(rootKey.publicKey.serialize() == rootPublicKeyString)
         #expect(try OpalCrypto.Key.ExtendedPrivate(rootPrivateKeyString) == rootKey)
@@ -93,12 +95,12 @@ struct PublicAPIKeyMaterialValidator {
             let invalidSeed = Data(repeating: 0x01, count: invalidSeedLength)
 
             do {
-                _ = try OpalCrypto.Key.ExtendedPrivate.root(seed: invalidSeed)
+                _ = try OpalCrypto.Key.Seed(rawRepresentation: invalidSeed)
                 Issue.record(
-                    "Expected invalid derived key error for out-of-range seed length \(invalidSeedLength)."
+                    "Expected invalid seed-length error for out-of-range seed length \(invalidSeedLength)."
                 )
             } catch let error as OpalCrypto.Key.ExtendedPrivate.Error {
-                #expect(error == .invalidDerivedKey)
+                #expect(error == .invalidSeedLength(actual: invalidSeedLength))
             } catch {
                 Issue.record(
                     "Unexpected error type for seed length \(invalidSeedLength): \(error)"
@@ -109,16 +111,18 @@ struct PublicAPIKeyMaterialValidator {
 
     @Test("Extended-key serialization preserves parent fingerprint and child index")
     func extendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
-        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: Data(hexadecimal: seedHex))
+        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(
+            seed: OpalCrypto.Key.Seed(rawRepresentation: Data(hexadecimal: seedHex))
+        )
         let hardenedChild = try rootKey.derived(indices: [0x8000_0000])
         let reparsedHardenedChild = try OpalCrypto.Key.ExtendedPrivate(
             hardenedChild.serialize()
         )
         let expectedRootFingerprint = Data(
-            OpalCrypto.Hashing.computeHash160(rootKey.publicKey.publicKey).prefix(4)
+            OpalCrypto.Hashing.hash160(rootKey.publicKey.publicKey.rawRepresentation).prefix(4)
         )
 
-        #expect(hardenedChild.parentFingerprint == expectedRootFingerprint)
+        #expect(hardenedChild.parentFingerprint.rawRepresentation == expectedRootFingerprint)
         #expect(hardenedChild.childIndex == 0x8000_0000)
         #expect(reparsedHardenedChild.parentFingerprint == hardenedChild.parentFingerprint)
         #expect(reparsedHardenedChild.childIndex == hardenedChild.childIndex)
@@ -130,12 +134,12 @@ struct PublicAPIKeyMaterialValidator {
             publicGrandchild.serialize()
         )
         let expectedParentFingerprint = Data(
-            OpalCrypto.Hashing.computeHash160(
-                (try OpalCrypto.Key.ExtendedPublic(hardenedChildPublicKeyString)).publicKey
+            OpalCrypto.Hashing.hash160(
+                (try OpalCrypto.Key.ExtendedPublic(hardenedChildPublicKeyString)).publicKey.rawRepresentation
             ).prefix(4)
         )
 
-        #expect(publicGrandchild.parentFingerprint == expectedParentFingerprint)
+        #expect(publicGrandchild.parentFingerprint.rawRepresentation == expectedParentFingerprint)
         #expect(publicGrandchild.childIndex == 1)
         #expect(reparsedPublicGrandchild.parentFingerprint == publicGrandchild.parentFingerprint)
         #expect(reparsedPublicGrandchild.childIndex == publicGrandchild.childIndex)

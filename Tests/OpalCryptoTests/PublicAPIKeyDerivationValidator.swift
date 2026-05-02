@@ -8,12 +8,12 @@ import OpalCrypto
 struct PublicAPIKeyDerivationValidator {
     @Test("Reject invalid PBKDF2 parameters through facade errors")
     func rejectInvalidPbkdf2ParametersThroughFacadeErrors() {
-        let invalidCases: [(Int, Int?, Data, OpalCrypto.KeyDerivation.Error)] = [
-            (0, 32, Data("salt".utf8), .invalidIterationCount(actual: 0)),
-            (-1, 32, Data("salt".utf8), .invalidIterationCount(actual: -1)),
-            (16, 0, Data("salt".utf8), .invalidDerivedKeyLength(actual: 0)),
-            (16, -1, Data("salt".utf8), .invalidDerivedKeyLength(actual: -1)),
-            (16, 32, Data(), .emptySalt)
+        let validSalt = try! OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
+        let invalidCases: [(Int, Int?, OpalCrypto.KeyDerivation.Salt, OpalCrypto.KeyDerivation.Error)] = [
+            (0, 32, validSalt, .invalidIterationCount(actual: 0)),
+            (-1, 32, validSalt, .invalidIterationCount(actual: -1)),
+            (16, 0, validSalt, .invalidDerivedKeyLength(actual: 0)),
+            (16, -1, validSalt, .invalidDerivedKeyLength(actual: -1))
         ]
 
         for invalidCase in invalidCases {
@@ -33,6 +33,18 @@ struct PublicAPIKeyDerivationValidator {
         }
     }
 
+    @Test("Reject empty PBKDF2 salt values before derivation")
+    func rejectEmptyPbkdf2SaltValuesBeforeDerivation() {
+        do {
+            _ = try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data())
+            Issue.record("Expected empty salt error.")
+        } catch let error as OpalCrypto.KeyDerivation.Error {
+            #expect(error == .emptySalt)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Reject PBKDF2 key lengths beyond the RFC maximum")
     func rejectPbkdf2KeyLengthsBeyondTheRfcMaximum() {
         let maximumDerivedKeyLength = Int(UInt64(UInt32.max) * 64)
@@ -41,7 +53,7 @@ struct PublicAPIKeyDerivationValidator {
         do {
             _ = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
                 password: Data("password".utf8),
-                salt: Data("salt".utf8),
+                salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
                 iterationCount: 16,
                 derivedKeyLength: oversizedDerivedKeyLength
             )

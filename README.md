@@ -34,38 +34,36 @@ Then add `"OpalCrypto"` to the target dependency list where you need it.
 import Foundation
 import OpalCrypto
 
-var privateKey = Data(repeating: 0x00, count: 32)
-privateKey[31] = 0x01
+let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
 let message = Data("opal-ecdsa-message".utf8)
 
-let publicKey = try OpalCrypto.Signature.derivePublicKey(
-    fromPrivateKey: privateKey
-)
-let signature = try OpalCrypto.Signature.signECDSA(
+let signature = try OpalCrypto.Signature.ECDSA.sign(
     message: message,
     privateKey: privateKey,
     format: .der
 )
-let isValid = try OpalCrypto.Signature.verifyECDSA(
-    signature: signature,
+let isValid = try signature.verify(
     message: message,
-    publicKey: publicKey,
-    format: .der
+    publicKey: publicKey
 )
 ```
 
-For Schnorr signatures, use `signSchnorr(digest:...)` and `verifySchnorr(signature:digest:...)`. Those APIs require a caller-supplied 32-byte digest, and hashing remains the caller's responsibility.
+For Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schnorr.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`. Hashing remains the caller's responsibility.
 
 ## Key Capabilities
 
-- `Signature`: secp256k1 public-key derivation plus split ECDSA and Schnorr signing and verification entry points with facade-owned formats and nonce policies.
+- `Signature`: typed ECDSA and Schnorr signatures, 32-byte digests, verification keys, facade-owned formats, and nonce policies.
+- `Secp256k1`: typed private keys, public keys, scalars, shared secrets, tweak-add, and batch public-key derivation.
 - `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
-- `Hashing`: SHA-256, Hash256, Hash160, and HMAC-SHA512 helpers.
+- `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
 - `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives.
 - `KeyDerivation`: PBKDF2 key derivation.
 - `Numeric`: `UInt256`, `UInt512`, and `BigUnsignedInteger` facade wrappers.
 
-The Base32 APIs use the Bech32 alphabet and stay intentionally low-level; `interpretedAsFiveBitValues` switches between five-bit symbol input and byte-mode radix conversion.
+The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use `encodeBase32Bytes`/`decodeBase32Bytes` for byte-mode radix conversion and `Encoding.FiveBitValues` with `encodeBase32Values`/`decodeBase32Values` for five-bit symbol mode.
+
+See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 
 ## Boundaries
 

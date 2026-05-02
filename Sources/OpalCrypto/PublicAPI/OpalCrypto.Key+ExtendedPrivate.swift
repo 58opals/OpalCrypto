@@ -8,11 +8,13 @@ extension OpalCrypto.Key {
         internal let payload: ExtendedKeyPayloadModel
         internal let parsedPrivateKeyModel: ParsedPrivateKeyModel
 
-        public var chainCode: Data { payload.chainCode }
+        public var chainCode: ChainCode { try! ChainCode(rawRepresentation: payload.chainCode) }
         public var depth: UInt8 { payload.depth }
-        public var parentFingerprint: Data { payload.parentFingerprint }
+        public var parentFingerprint: Fingerprint { try! Fingerprint(rawRepresentation: payload.parentFingerprint) }
         public var childIndex: UInt32 { payload.childIndex }
-        public var privateKey: Data { payload.keyData }
+        public var privateKey: OpalCrypto.Secp256k1.PrivateKey {
+            try! OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: payload.keyData)
+        }
 
         public var publicKey: ExtendedPublic {
             ExtendedPublic(
@@ -29,14 +31,16 @@ extension OpalCrypto.Key {
             try self.init(payload: payload)
         }
 
-        public static func root(seed: Data) throws -> ExtendedPrivate {
+        public static func root(seed: Seed) throws -> ExtendedPrivate {
             let payload: ExtendedKeyPayloadModel
             do {
-                payload = try ExtendedKeyDerivationModel.makeRootPrivateKey(seed: seed)
+                payload = try ExtendedKeyDerivationModel.makeRootPrivateKey(
+                    seed: seed.rawRepresentation
+                )
             } catch let error as ExtendedKeyDerivationModel.Error {
                 switch error {
                 case .invalidSeed:
-                    throw Error.invalidDerivedKey
+                    throw Error.invalidSeedLength(actual: seed.rawRepresentation.count)
                 case .invalidKeyKind,
                      .hardenedDerivationRequiresPrivateKey,
                      .depthOverflow,

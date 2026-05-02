@@ -8,46 +8,41 @@ extension OpalCryptoBenchmarks {
         var checksum = 0
 
         checksum ^= try runSyncBenchmark(name: "ECDSA sign", iterations: 200) {
-            let signature = try OpalCrypto.Signature.signECDSA(
+            let signature = try OpalCrypto.Signature.ECDSA.sign(
                 message: context.ecdsaMessage,
-                privateKey: context.singlePrivateKey,
+                privateKey: context.singlePrivateKeyValue,
                 format: .der
             )
-            return signature.count ^ Int(signature[0])
+            return signature.rawRepresentation.count ^ Int(signature.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "ECDSA verify", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verifyECDSA(
-                signature: context.ecdsaSignature,
+            let isValid = try context.ecdsaSignature.verify(
                 message: context.ecdsaMessage,
-                publicKey: context.compressedPublicKey,
-                format: .der
+                publicKey: context.compressedPublicKey
             )
             return isValid ? 1 : 0
         }
 
         checksum ^= try runSyncBenchmark(name: "ECDSA verify (cached key)", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verifyECDSA(
-                signature: context.ecdsaSignature,
+            let isValid = try context.ecdsaSignature.verify(
                 message: context.ecdsaMessage,
-                verificationKey: context.verificationKey,
-                format: .der
+                verificationKey: context.verificationKey
             )
             return isValid ? 1 : 0
         }
 
         checksum ^= try runSyncBenchmark(name: "Schnorr sign", iterations: 200) {
-            let signature = try OpalCrypto.Signature.signSchnorr(
+            let signature = try OpalCrypto.Signature.Schnorr.sign(
                 digest: context.schnorrDigest,
-                privateKey: context.singlePrivateKey,
+                privateKey: context.singlePrivateKeyValue,
                 noncePolicy: .bip340Deterministic
             )
-            return signature.count ^ Int(signature[0])
+            return signature.rawRepresentation.count ^ Int(signature.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Schnorr verify", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verifySchnorr(
-                signature: context.schnorrSignature,
+            let isValid = try context.schnorrSignature.verify(
                 digest: context.schnorrDigest,
                 publicKey: context.compressedPublicKey
             )
@@ -55,8 +50,7 @@ extension OpalCryptoBenchmarks {
         }
 
         checksum ^= try runSyncBenchmark(name: "Schnorr verify (cached key)", iterations: 200) {
-            let isValid = try OpalCrypto.Signature.verifySchnorr(
-                signature: context.schnorrSignature,
+            let isValid = try context.schnorrSignature.verify(
                 digest: context.schnorrDigest,
                 verificationKey: context.verificationKey
             )

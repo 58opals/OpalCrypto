@@ -6,32 +6,19 @@ import OpalCrypto
 
 @Suite("Public API verification-key validation")
 struct PublicAPIVerificationKeyValidator {
-    @Test("Verification-key ECDSA verify matches raw public-key verify")
-    func verificationKeyEcdsaVerifyMatchesRawPublicKeyVerify() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x05
-        let messageData = Data("opal-ecdsa-cached-verify".utf8)
-        let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
-            fromPrivateKey: privateKeyData
-        )
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
+    @Test("Verification-key ECDSA verify matches public-key verify")
+    func verificationKeyEcdsaVerifyMatchesPublicKeyVerify() throws {
+        let privateKey = try makePrivateKey(5)
+        let message = Data("opal-ecdsa-cached-verify".utf8)
+        let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(from: privateKey)
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
             format: .der
         )
 
-        let rawResult = try OpalCrypto.Signature.verifyECDSA(
-            signature: signatureData,
-            message: messageData,
-            publicKey: verificationKey.publicKey,
-            format: .der
-        )
-        let cachedResult = try OpalCrypto.Signature.verifyECDSA(
-            signature: signatureData,
-            message: messageData,
-            verificationKey: verificationKey,
-            format: .der
-        )
+        let rawResult = try signature.verify(message: message, publicKey: verificationKey.publicKey)
+        let cachedResult = try signature.verify(message: message, verificationKey: verificationKey)
 
         #expect(rawResult == cachedResult)
         #expect(cachedResult)
@@ -39,58 +26,55 @@ struct PublicAPIVerificationKeyValidator {
 
     @Test("Verification-key ECDSA verify accepts uncompressed SEC1 public keys")
     func verificationKeyEcdsaVerifyAcceptsUncompressedSec1PublicKeys() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        let messageData = Data("opal-ecdsa-uncompressed-verify".utf8)
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
+        let privateKey = try makePrivateKey(1)
+        let message = Data("opal-ecdsa-uncompressed-verify".utf8)
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
             format: .der
         )
+        let uncompressedPublicKey = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: Data(
+                hexadecimal: """
+                0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+                """
+            )
+        )
+        let verificationKey = OpalCrypto.Signature.VerificationKey(
+            publicKey: uncompressedPublicKey
+        )
+
+        let rawResult = try signature.verify(message: message, publicKey: uncompressedPublicKey)
+        let cachedResult = try signature.verify(message: message, verificationKey: verificationKey)
+
+        #expect(rawResult == cachedResult)
+        #expect(cachedResult)
+    }
+
+    @Test("Verification-key raw representation initializes and normalizes SEC1 keys")
+    func verificationKeyRawRepresentationInitializesAndNormalizesSec1Keys() throws {
         let uncompressedPublicKeyData = try Data(
             hexadecimal: """
             0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
             """
         )
         let verificationKey = try OpalCrypto.Signature.VerificationKey(
-            publicKey: uncompressedPublicKeyData
+            rawRepresentation: uncompressedPublicKeyData
+        )
+        let compressedPublicKeyData = try Data(
+            hexadecimal: """
+            0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+            """
         )
 
-        let rawResult = try OpalCrypto.Signature.verifyECDSA(
-            signature: signatureData,
-            message: messageData,
-            publicKey: uncompressedPublicKeyData,
-            format: .der
-        )
-        let cachedResult = try OpalCrypto.Signature.verifyECDSA(
-            signature: signatureData,
-            message: messageData,
-            verificationKey: verificationKey,
-            format: .der
-        )
-
-        #expect(rawResult == cachedResult)
-        #expect(cachedResult)
+        #expect(verificationKey.rawRepresentation == compressedPublicKeyData)
     }
 
-    @Test("Reject one-byte-short uncompressed SEC1 public keys with the uncompressed expected length")
-    func rejectOneByteShortUncompressedSec1PublicKeysWithTheUncompressedExpectedLength() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x01
-        let messageData = Data("opal-ecdsa-short-uncompressed-key".utf8)
-        let signatureData = try OpalCrypto.Signature.signECDSA(
-            message: messageData,
-            privateKey: privateKeyData,
-            format: .der
-        )
-        let truncatedUncompressedPublicKey = Data([0x04] + Array(repeating: 0x11, count: 63))
-
+    @Test("Verification-key raw representation rejects malformed SEC1 keys")
+    func verificationKeyRawRepresentationRejectsMalformedSec1Keys() {
         do {
-            _ = try OpalCrypto.Signature.verifyECDSA(
-                signature: signatureData,
-                message: messageData,
-                publicKey: truncatedUncompressedPublicKey,
-                format: .der
+            _ = try OpalCrypto.Signature.VerificationKey(
+                rawRepresentation: Data([0x04] + Array(repeating: 0x11, count: 63))
             )
             Issue.record("Expected invalid public key length error.")
         } catch let error as OpalCrypto.Signature.Error {
@@ -100,32 +84,45 @@ struct PublicAPIVerificationKeyValidator {
         }
     }
 
-    @Test("Verification-key Schnorr verify matches raw public-key verify")
-    func verificationKeySchnorrVerifyMatchesRawPublicKeyVerify() throws {
-        var privateKeyData = Data(repeating: 0x00, count: 32)
-        privateKeyData[31] = 0x06
-        let digestData32Bytes = Data(repeating: 0x6C, count: 32)
-        let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
-            fromPrivateKey: privateKeyData
+    @Test("Reject one-byte-short uncompressed SEC1 public keys with the uncompressed expected length")
+    func rejectOneByteShortUncompressedSec1PublicKeysWithTheUncompressedExpectedLength() {
+        let truncatedUncompressedPublicKey = Data([0x04] + Array(repeating: 0x11, count: 63))
+
+        do {
+            _ = try OpalCrypto.Secp256k1.PublicKey(
+                rawRepresentation: truncatedUncompressedPublicKey
+            )
+            Issue.record("Expected invalid public key length error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Verification-key Schnorr verify matches public-key verify")
+    func verificationKeySchnorrVerifyMatchesPublicKeyVerify() throws {
+        let privateKey = try makePrivateKey(6)
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: Data(repeating: 0x6C, count: 32)
         )
-        let signatureData = try OpalCrypto.Signature.signSchnorr(
-            digest: digestData32Bytes,
-            privateKey: privateKeyData,
+        let verificationKey = try OpalCrypto.Signature.deriveVerificationKey(from: privateKey)
+        let signature = try OpalCrypto.Signature.Schnorr.sign(
+            digest: digest,
+            privateKey: privateKey,
             noncePolicy: .bip340Deterministic
         )
 
-        let rawResult = try OpalCrypto.Signature.verifySchnorr(
-            signature: signatureData,
-            digest: digestData32Bytes,
-            publicKey: verificationKey.publicKey
-        )
-        let cachedResult = try OpalCrypto.Signature.verifySchnorr(
-            signature: signatureData,
-            digest: digestData32Bytes,
-            verificationKey: verificationKey
-        )
+        let rawResult = try signature.verify(digest: digest, publicKey: verificationKey.publicKey)
+        let cachedResult = try signature.verify(digest: digest, verificationKey: verificationKey)
 
         #expect(rawResult == cachedResult)
         #expect(cachedResult)
+    }
+
+    private func makePrivateKey(_ value: UInt8) throws -> OpalCrypto.Secp256k1.PrivateKey {
+        try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: Data(repeating: 0x00, count: 31) + Data([value])
+        )
     }
 }

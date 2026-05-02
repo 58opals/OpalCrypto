@@ -7,17 +7,18 @@ extension OpalCrypto {
 
         public static func derivePBKDF2Key(
             password: Data,
-            salt: Data,
+            salt: Salt,
             iterationCount: Int,
             derivedKeyLength: Int?
-        ) throws -> Data {
+        ) throws -> DerivedKey {
             do {
-                return try PasswordBasedKeyDerivationFunction2Model(
+                let derivedKey = try PasswordBasedKeyDerivationFunction2Model(
                     password: password,
-                    salt: salt,
+                    salt: salt.rawRepresentation,
                     iterationCount: iterationCount,
                     derivedKeyLength: derivedKeyLength
                 ).deriveKey()
+                return try DerivedKey(rawRepresentation: derivedKey)
             } catch let error as PasswordBasedKeyDerivationFunction2Model.Error {
                 throw mapError(error)
             }

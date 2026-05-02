@@ -6,9 +6,11 @@ extension OpalCrypto.Pedersen {
     public struct Setup: Sendable, Equatable {
         internal let setupModel: PedersenModel.Setup
 
-        public init(alternateBasePoint: Data) throws {
+        public init(alternateBasePoint: OpalCrypto.Secp256k1.PublicKey) throws {
             do {
-                setupModel = try PedersenModel.Setup(alternateBasePoint: alternateBasePoint)
+                setupModel = try PedersenModel.Setup(
+                    alternateBasePoint: alternateBasePoint.rawRepresentation
+                )
             } catch let error as PedersenModel.Error {
                 throw Self.mapError(error)
             }
@@ -16,13 +18,13 @@ extension OpalCrypto.Pedersen {
 
         public func commit(
             amount: Int64,
-            nonce: Data? = nil
+            nonce: Nonce? = nil
         ) throws -> Commitment {
             do {
                 return Commitment(
                     commitmentModel: try setupModel.commit(
                         amount: amount,
-                        nonceData32Bytes: nonce
+                        nonceData32Bytes: nonce?.rawRepresentation
                     )
                 )
             } catch let error as PedersenModel.Error {
@@ -31,15 +33,15 @@ extension OpalCrypto.Pedersen {
         }
 
         public func verify(
-            commitment: Data,
+            commitment: CommitmentPoint,
             amount: Int64,
-            nonce: Data
+            nonce: Nonce
         ) throws -> Bool {
             do {
                 return try setupModel.verify(
-                    commitmentPoint: commitment,
+                    commitmentPoint: commitment.rawRepresentation,
                     amount: amount,
-                    nonceData32Bytes: nonce
+                    nonceData32Bytes: nonce.rawRepresentation
                 )
             } catch let error as PedersenModel.Error {
                 throw Self.mapError(error)
@@ -60,9 +62,12 @@ extension OpalCrypto.Pedersen {
             }
         }
 
-        public static func addPoints(_ points: [Data]) throws -> Data {
+        public static func addPoints(_ points: [CommitmentPoint]) throws -> CommitmentPoint {
             do {
-                return try PedersenModel.Setup.addPoints(points)
+                let point = try PedersenModel.Setup.addPoints(
+                    points.map(\.rawRepresentation)
+                )
+                return try CommitmentPoint(rawRepresentation: point)
             } catch let error as PedersenModel.Error {
                 throw mapError(error)
             }

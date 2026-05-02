@@ -8,10 +8,10 @@ import Testing
 struct PublicAPICommunicationRoundTripValidator {
     @Test("Secp256k1 shared secrets are symmetric")
     func secp256k1SharedSecretsAreSymmetric() throws {
-        let privateKeyA = try OpalCrypto.Secp256k1.generatePrivateKey()
-        let publicKeyA = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKeyA)
-        let privateKeyB = try OpalCrypto.Secp256k1.generatePrivateKey()
-        let publicKeyB = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKeyB)
+        let privateKeyA = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let publicKeyA = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKeyA)
+        let privateKeyB = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let publicKeyB = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKeyB)
 
         let sharedSecretAB = try OpalCrypto.Secp256k1.deriveSharedSecret(
             privateKey: privateKeyA,
@@ -23,13 +23,13 @@ struct PublicAPICommunicationRoundTripValidator {
         )
 
         #expect(sharedSecretAB == sharedSecretBA)
-        #expect(sharedSecretAB.count == 32)
+        #expect(sharedSecretAB.rawRepresentation.count == 32)
     }
 
     @Test("Communication boxes round-trip through private and symmetric decryption")
     func communicationBoxesRoundTripThroughPrivateAndSymmetricDecryption() throws {
-        let recipientPrivateKey = try OpalCrypto.Secp256k1.generatePrivateKey()
-        let recipientPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let recipientPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
             from: recipientPrivateKey
         )
         let message = Data("cashfusion-proof".utf8)
@@ -54,18 +54,21 @@ struct PublicAPICommunicationRoundTripValidator {
             try OpalCrypto.Communication.encrypt(
                 message: Data(),
                 recipientPublicKey: recipientPublicKey
-            ).count == 65
+            ).rawRepresentation.count == 65
         )
     }
 
     @Test("Communication encryption accepts uncompressed recipient public keys")
     func communicationEncryptionAcceptsUncompressedRecipientPublicKeys() throws {
-        let recipientPrivateKey = try OpalCrypto.Secp256k1.generatePrivateKey()
-        let uncompressedRecipientPublicKey = try StandardsForEfficientCryptography256k1CurveModel
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let uncompressedRecipientPublicKeyData = try StandardsForEfficientCryptography256k1CurveModel
             .Operation.derivePublicKey(
-                fromPrivateKeyData32Bytes: recipientPrivateKey,
+                fromPrivateKeyData32Bytes: recipientPrivateKey.rawRepresentation,
                 format: .uncompressed
             )
+        let uncompressedRecipientPublicKey = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: uncompressedRecipientPublicKeyData
+        )
         let message = Data("recipient-uncompressed".utf8)
         let ciphertext = try OpalCrypto.Communication.encrypt(
             message: message,

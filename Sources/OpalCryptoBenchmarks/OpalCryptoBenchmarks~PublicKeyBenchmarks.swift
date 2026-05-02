@@ -11,30 +11,30 @@ extension OpalCryptoBenchmarks {
             name: "Single compressed public-key derivation",
             iterations: 400
         ) {
-            let publicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
-                from: context.singlePrivateKey
+            let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+                from: context.singlePrivateKeyValue
             )
-            return publicKey.count ^ Int(publicKey[0])
+            return publicKey.rawRepresentation.count ^ Int(publicKey.rawRepresentation[0])
         }
 
         checksum ^= try await runAsyncBenchmark(
             name: "Batch compressed public-key derivation (64)",
             iterations: 20
         ) {
-            let publicKeys = try await OpalCrypto.Secp256k1.deriveCompressedPublicKeys(
-                from: context.batch64PrivateKeys
+            let publicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
+                from: context.batch64PrivateKeyValues
             )
-            return publicKeys.count ^ Int(publicKeys[0][0])
+            return publicKeys.count ^ Int(publicKeys[0].rawRepresentation[0])
         }
 
         checksum ^= try await runAsyncBenchmark(
             name: "Batch compressed public-key derivation (256)",
             iterations: 8
         ) {
-            let publicKeys = try await OpalCrypto.Secp256k1.deriveCompressedPublicKeys(
-                from: context.batch256PrivateKeys
+            let publicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
+                from: context.batch256PrivateKeyValues
             )
-            return publicKeys.count ^ Int(publicKeys[0][0])
+            return publicKeys.count ^ Int(publicKeys[0].rawRepresentation[0])
         }
 
         checksum ^= try await runAsyncBenchmark(
@@ -68,10 +68,10 @@ extension OpalCryptoBenchmarks {
             name: "Batch compressed public-key derivation (1024)",
             iterations: 3
         ) {
-            let publicKeys = try await OpalCrypto.Secp256k1.deriveCompressedPublicKeys(
-                from: context.batch1024PrivateKeys
+            let publicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
+                from: context.batch1024PrivateKeyValues
             )
-            return publicKeys.count ^ Int(publicKeys[0][0])
+            return publicKeys.count ^ Int(publicKeys[0].rawRepresentation[0])
         }
 
         checksum ^= try await runAsyncBenchmark(
@@ -141,16 +141,17 @@ extension OpalCryptoBenchmarks {
             return publicKeys.count ^ Int(publicKeys[0][0])
         }
 
-        checksum ^= try runSyncBenchmark(name: "Verification-key construction", iterations: 400) {
-            let verificationKey = try OpalCrypto.Signature.VerificationKey(
+        checksum ^= runSyncBenchmark(name: "Verification-key construction", iterations: 400) {
+            let verificationKey = OpalCrypto.Signature.VerificationKey(
                 publicKey: context.compressedPublicKey
             )
-            return verificationKey.publicKey.count ^ Int(verificationKey.publicKey[0])
+            return verificationKey.publicKey.rawRepresentation.count
+                ^ Int(verificationKey.publicKey.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Parsed public-key construction", iterations: 400) {
             let parsedPublicKey = try PerformanceBenchmarkSupportModel.constructParsedPublicKey(
-                publicKey: context.compressedPublicKey
+                publicKey: context.compressedPublicKey.rawRepresentation
             )
             return parsedPublicKey.count ^ Int(parsedPublicKey[0])
         }

@@ -17,6 +17,12 @@ enum OpalCryptoTestSupport {
         (1...count).map(makePrivateKey)
     }
 
+    static func makeTypedPrivateKeys(count: Int) throws -> [OpalCrypto.Secp256k1.PrivateKey] {
+        try makePrivateKeys(count: count).map {
+            try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+        }
+    }
+
     static func makePrivateKey(_ value: Int) -> Data {
         var privateKey = Data(repeating: 0x00, count: 32)
         let resolvedValue = UInt32(value)
@@ -25,6 +31,20 @@ enum OpalCryptoTestSupport {
         privateKey[30] = UInt8((resolvedValue >> 8) & 0xff)
         privateKey[31] = UInt8(resolvedValue & 0xff)
         return privateKey
+    }
+
+    static func makeTypedPrivateKey(_ value: Int) throws -> OpalCrypto.Secp256k1.PrivateKey {
+        try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: makePrivateKey(value))
+    }
+
+    static func makeScalar(_ value: Int) throws -> OpalCrypto.Secp256k1.Scalar {
+        try OpalCrypto.Secp256k1.Scalar(rawRepresentation: makePrivateKey(value))
+    }
+
+    static func makeDigest(_ value: String) throws -> OpalCrypto.Signature.Digest {
+        try OpalCrypto.Signature.Digest(
+            rawRepresentation: OpalCrypto.Hashing.sha256(Data(value.utf8))
+        )
     }
 
     static func makePaddedPlaintext(

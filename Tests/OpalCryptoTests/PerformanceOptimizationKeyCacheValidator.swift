@@ -38,7 +38,9 @@ struct PerformanceOptimizationKeyCacheValidator {
     @Test("Parsed public-key model canonicalizes encodings and caches the HDKD fingerprint")
     func parsedPublicKeyModelCanonicalizesEncodingsAndCachesTheHdkdFingerprint() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(7)
-        let compressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKey)
+        let compressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+            from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
+        ).rawRepresentation
         let compressedPoint = try PublicKeyParserModel.parsePublicKey(compressedPublicKey)
         let uncompressedPublicKey = compressedPoint.encodeUncompressed65()
         let compressedParsedPublicKeyModel = try ParsedPublicKeyModel(publicKeyData: compressedPublicKey)
@@ -55,7 +57,9 @@ struct PerformanceOptimizationKeyCacheValidator {
     @Test("Parsed private-key model caches the compressed public key and HDKD fingerprint")
     func parsedPrivateKeyModelCachesTheCompressedPublicKeyAndHdkdFingerprint() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(9)
-        let expectedCompressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKey)
+        let expectedCompressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+            from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
+        ).rawRepresentation
         let parsedPrivateKeyModel = try ParsedPrivateKeyModel(privateKeyData32Bytes: privateKey)
 
         #expect(parsedPrivateKeyModel.compressedPublicKeyData == expectedCompressedPublicKey)
@@ -68,7 +72,9 @@ struct PerformanceOptimizationKeyCacheValidator {
     @Test("Trusted extended-key payload factories match validated constructors on known-good inputs")
     func trustedExtendedKeyPayloadFactoriesMatchValidatedConstructorsOnKnownGoodInputs() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(41)
-        let publicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKey)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+            from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
+        ).rawRepresentation
         let parentFingerprint = UInt32(0x1234_5678)
         let chainCode = Data((0..<32).map { UInt8(($0 * 9) & 0xff) })
 
@@ -111,23 +117,24 @@ struct PerformanceOptimizationKeyCacheValidator {
 
     @Test("Verification-key verification parity survives the parsed-key cache split")
     func verificationKeyVerificationParitySurvivesTheParsedKeyCacheSplit() throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(29)
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(29)
         let message = Data("opal-ecdsa-cache-split".utf8)
-        let digest = Data(repeating: 0x29, count: 32)
-        let compressedPublicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0x29, count: 32))
+        let compressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+            .rawRepresentation
         let verificationKeyModel = VerificationKeyModel(
             parsedPublicKeyModel: try ParsedPublicKeyModel(publicKeyData: compressedPublicKey)
         )
-        let ecdsaSignature = try OpalCrypto.Signature.signECDSA(
+        let ecdsaSignature = try OpalCrypto.Signature.ECDSA.sign(
             message: message,
             privateKey: privateKey,
             format: .der
-        )
-        let schnorrSignature = try OpalCrypto.Signature.signSchnorr(
+        ).rawRepresentation
+        let schnorrSignature = try OpalCrypto.Signature.Schnorr.sign(
             digest: digest,
             privateKey: privateKey,
             noncePolicy: .bip340Deterministic
-        )
+        ).rawRepresentation
 
         let rawEcdsaResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
             signature: ecdsaSignature,
@@ -143,13 +150,13 @@ struct PerformanceOptimizationKeyCacheValidator {
         )
         let rawSchnorrResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
             signature: schnorrSignature,
-            message: digest,
+            message: digest.rawRepresentation,
             publicKey: compressedPublicKey,
             format: .schnorr
         )
         let cachedSchnorrResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
             signature: schnorrSignature,
-            message: digest,
+            message: digest.rawRepresentation,
             verificationKeyModel: verificationKeyModel,
             format: .schnorr
         )
@@ -164,11 +171,18 @@ struct PerformanceOptimizationKeyCacheValidator {
     func parsedPublicKeyTweakAddMatchesTheRawAndCachedVerificationKeyPaths() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(31)
         let tweak = OpalCryptoTestSupport.makePrivateKey(37)
-        let compressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: privateKey)
+        let typedPrivateKey = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
+        let typedTweak = try OpalCrypto.Secp256k1.Scalar(rawRepresentation: tweak)
+        let compressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+            from: typedPrivateKey
+        ).rawRepresentation
         let parsedPublicKeyModel = try ParsedPublicKeyModel(publicKeyData: compressedPublicKey)
         let verificationKeyModel = VerificationKeyModel(parsedPublicKeyModel: parsedPublicKeyModel)
 
-        let rawTweakedPublicKey = try OpalCrypto.Secp256k1.tweakAddPublicKey(compressedPublicKey, tweak: tweak)
+        let rawTweakedPublicKey = try OpalCrypto.Secp256k1.tweakAddPublicKey(
+            try OpalCrypto.Secp256k1.PublicKey(rawRepresentation: compressedPublicKey),
+            tweak: typedTweak
+        ).rawRepresentation
         let parsedTweakedPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
             .tweakAddPublicKey(parsedPublicKeyModel, tweakData32Bytes: tweak, format: .compressed)
         let cachedTweakedPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
@@ -180,7 +194,7 @@ struct PerformanceOptimizationKeyCacheValidator {
 
     @Test("Extended public and private derivation remain aligned with cached key fast paths")
     func extendedPublicAndPrivateDerivationRemainAlignedWithCachedKeyFastPaths() throws {
-        let seed = Data((0..<16).map(UInt8.init))
+        let seed = try OpalCrypto.Key.Seed(rawRepresentation: Data((0..<16).map(UInt8.init)))
         let rootPrivateKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: seed)
         let hardenedPrivateChild = try rootPrivateKey.derived(indices: [0x8000_0000])
         let derivedFromPrivate = try rootPrivateKey.derived(indices: [0x8000_0000, 1, 2, 3]).publicKey

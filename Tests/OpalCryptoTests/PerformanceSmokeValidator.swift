@@ -26,7 +26,9 @@ struct PerformanceSmokeValidator {
         let batchPublicKeys = try StandardsForEfficientCryptography256k1CurveModel.Operation
             .encodeCompressedPublicKeys(fromJacobianPoints: jacobianPoints)
         let singlePublicKeys = try privateKeys.map {
-            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+            try OpalCrypto.Secp256k1.derivePublicKey(
+                from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            ).rawRepresentation
         }
 
         #expect(batchPublicKeys == singlePublicKeys)

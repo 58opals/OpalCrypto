@@ -6,70 +6,85 @@ import Testing
 
 @Suite("Public API secp256k1 validation")
 struct PublicAPISecp256k1Validator {
-    @Test("Validate private keys and derive compressed public keys")
-    func validatePrivateKeysAndDeriveCompressedPublicKeys() throws {
-        let zeroPrivateKey = Data(repeating: 0x00, count: 32)
-        let onePrivateKey = makePrivateKey(1)
+    @Test("Validate private keys and derive public keys")
+    func validatePrivateKeysAndDerivePublicKeys() throws {
+        do {
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x00, count: 32)
+            )
+            Issue.record("Expected invalid private-key error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPrivateKey)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
 
-        #expect(!OpalCrypto.Secp256k1.isPrivateKeyValid(zeroPrivateKey))
-        #expect(OpalCrypto.Secp256k1.isPrivateKeyValid(onePrivateKey))
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: makePrivateKey(1)
+        )
         #expect(
-            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: onePrivateKey)
+            try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey).rawRepresentation
                 == Data(hexadecimal: generatorPublicKeyHex)
         )
     }
 
     @Test("Apply tweak-add to private and public keys consistently")
     func applyTweakAddToPrivateAndPublicKeysConsistently() throws {
-        let onePrivateKey = makePrivateKey(1)
-        let twoPrivateKey = makePrivateKey(2)
-        let tweak = makePrivateKey(1)
+        let onePrivateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: makePrivateKey(1)
+        )
+        let twoPrivateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: makePrivateKey(2)
+        )
+        let tweak = try OpalCrypto.Secp256k1.Scalar(rawRepresentation: makePrivateKey(1))
 
-        let tweakedPrivateKey = try OpalCrypto.Secp256k1.tweakAddPrivateKey(onePrivateKey, tweak: tweak)
+        let tweakedPrivateKey = try OpalCrypto.Secp256k1.tweakAddPrivateKey(
+            onePrivateKey,
+            tweak: tweak
+        )
         #expect(tweakedPrivateKey == twoPrivateKey)
 
-        let parentPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: onePrivateKey)
-        let expectedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: twoPrivateKey)
-        let tweakedPublicKey = try OpalCrypto.Secp256k1.tweakAddPublicKey(parentPublicKey, tweak: tweak)
+        let parentPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: onePrivateKey)
+        let expectedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: twoPrivateKey)
+        let tweakedPublicKey = try OpalCrypto.Secp256k1.tweakAddPublicKey(
+            parentPublicKey,
+            tweak: tweak
+        )
 
         #expect(tweakedPublicKey == expectedPublicKey)
     }
 
-    @Test("Public-key tweak-add accepts uncompressed SEC1 input and still returns compressed output")
-    func publicKeyTweakAddAcceptsUncompressedSec1InputAndStillReturnsCompressedOutput() throws {
-        let onePrivateKey = makePrivateKey(1)
-        let tweak = makePrivateKey(1)
-
-        let compressedPublicKey = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
-            from: onePrivateKey
+    @Test("Public-key construction accepts uncompressed SEC1 input and normalizes to compressed output")
+    func publicKeyConstructionAcceptsUncompressedSec1InputAndNormalizesToCompressedOutput() throws {
+        let privateKey = makePrivateKey(1)
+        let compressedPublicKey = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .derivePublicKey(
+                    fromPrivateKeyData32Bytes: privateKey,
+                    format: .compressed
+                )
         )
-        let uncompressedPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
-            .derivePublicKey(
-                fromPrivateKeyData32Bytes: onePrivateKey,
-                format: .uncompressed
-            )
-        let tweakedFromCompressed = try OpalCrypto.Secp256k1.tweakAddPublicKey(
-            compressedPublicKey,
-            tweak: tweak
-        )
-        let tweakedFromUncompressed = try OpalCrypto.Secp256k1.tweakAddPublicKey(
-            uncompressedPublicKey,
-            tweak: tweak
+        let uncompressedPublicKey = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: StandardsForEfficientCryptography256k1CurveModel.Operation
+                .derivePublicKey(
+                    fromPrivateKeyData32Bytes: privateKey,
+                    format: .uncompressed
+                )
         )
 
-        #expect(tweakedFromUncompressed == tweakedFromCompressed)
+        #expect(uncompressedPublicKey.rawRepresentation == compressedPublicKey.rawRepresentation)
+        #expect(uncompressedPublicKey.uncompressedRepresentation.count == 65)
     }
 
-    @Test("Public-key tweak-add reports the uncompressed expected length for short SEC1 input")
-    func publicKeyTweakAddReportsTheUncompressedExpectedLengthForShortSec1Input() {
+    @Test("Public-key construction reports the uncompressed expected length for short SEC1 input")
+    func publicKeyConstructionReportsTheUncompressedExpectedLengthForShortSec1Input() {
         let truncatedUncompressedPublicKey = Data(
             [0x04] + Array(repeating: 0x11, count: 63)
         )
 
         do {
-            _ = try OpalCrypto.Secp256k1.tweakAddPublicKey(
-                truncatedUncompressedPublicKey,
-                tweak: makePrivateKey(1)
+            _ = try OpalCrypto.Secp256k1.PublicKey(
+                rawRepresentation: truncatedUncompressedPublicKey
             )
             Issue.record("Expected invalid public-key length error.")
         } catch let error as OpalCrypto.Secp256k1.Error {
@@ -79,33 +94,26 @@ struct PublicAPISecp256k1Validator {
         }
     }
 
-    @Test("Shared-secret derivation validates the private key before the public key")
-    func sharedSecretDerivationValidatesThePrivateKeyBeforeThePublicKey() {
-        do {
-            _ = try OpalCrypto.Secp256k1.deriveSharedSecret(
-                privateKey: Data(repeating: 0x01, count: 31),
-                publicKey: Data(repeating: 0x02, count: 32)
-            )
-            Issue.record("Expected invalid private-key length error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-    }
-
     @Test("Shared-secret derivation accepts uncompressed SEC1 public keys")
     func sharedSecretDerivationAcceptsUncompressedSec1PublicKeys() throws {
-        let privateKeyA = makePrivateKey(0x07)
-        let privateKeyB = makePrivateKey(0x08)
-        let compressedPublicKeyB = try OpalCrypto.Secp256k1.deriveCompressedPublicKey(
-            from: privateKeyB
+        let privateKeyA = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: makePrivateKey(0x07)
         )
-        let uncompressedPublicKeyB = try StandardsForEfficientCryptography256k1CurveModel.Operation
-            .derivePublicKey(
-                fromPrivateKeyData32Bytes: privateKeyB,
-                format: .uncompressed
-            )
+        let privateKeyB = makePrivateKey(0x08)
+        let compressedPublicKeyB = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: StandardsForEfficientCryptography256k1CurveModel.Operation
+                .derivePublicKey(
+                    fromPrivateKeyData32Bytes: privateKeyB,
+                    format: .compressed
+                )
+        )
+        let uncompressedPublicKeyB = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: StandardsForEfficientCryptography256k1CurveModel.Operation
+                .derivePublicKey(
+                    fromPrivateKeyData32Bytes: privateKeyB,
+                    format: .uncompressed
+                )
+        )
 
         let sharedSecretFromCompressed = try OpalCrypto.Secp256k1.deriveSharedSecret(
             privateKey: privateKeyA,
@@ -117,19 +125,24 @@ struct PublicAPISecp256k1Validator {
         )
 
         #expect(sharedSecretFromUncompressed == sharedSecretFromCompressed)
+        #expect(sharedSecretFromCompressed.rawRepresentation.count == 32)
     }
 
     @Test("Round-trip DER encoding and reject non-canonical DER")
     func roundTripDerEncodingAndRejectNonCanonicalDer() throws {
         let rawSignature = makePrivateKey(1) + makePrivateKey(2)
-        let derSignature = try OpalCrypto.Secp256k1.encodeDER(rawSignature)
-        #expect(try OpalCrypto.Secp256k1.decodeDER(derSignature) == rawSignature)
+        let signature = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: rawSignature,
+            format: .raw
+        )
+        let derSignature = try signature.encoded(as: .der)
+        #expect(try derSignature.encoded(as: .raw).rawRepresentation == rawSignature)
 
         let nonCanonicalDer = Data([0x30, 0x07, 0x02, 0x02, 0x00, 0x01, 0x02, 0x01, 0x02])
         do {
-            _ = try OpalCrypto.Secp256k1.decodeDER(nonCanonicalDer)
+            _ = try OpalCrypto.Signature.ECDSA(rawRepresentation: nonCanonicalDer, format: .der)
             Issue.record("Expected non-canonical DER error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
+        } catch let error as OpalCrypto.Signature.Error {
             #expect(error == .nonCanonicalDER)
         } catch {
             Issue.record("Unexpected error type: \(error)")
@@ -143,9 +156,9 @@ struct PublicAPISecp256k1Validator {
         let derSignature = Data([0x30, 0x26, 0x02, 0x21]) + oversizedR + Data([0x02, 0x01]) + validS
 
         do {
-            _ = try OpalCrypto.Secp256k1.decodeDER(derSignature)
+            _ = try OpalCrypto.Signature.ECDSA(rawRepresentation: derSignature, format: .der)
             Issue.record("Expected invalid signature error for oversized DER integer.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
+        } catch let error as OpalCrypto.Signature.Error {
             #expect(error == .invalidSignature)
         } catch {
             Issue.record("Unexpected error type for oversized DER integer: \(error)")
@@ -157,9 +170,9 @@ struct PublicAPISecp256k1Validator {
         let derSignature = Data([0x30, 0x06, 0x02, 0x01, 0x80, 0x02, 0x01, 0x01])
 
         do {
-            _ = try OpalCrypto.Secp256k1.decodeDER(derSignature)
+            _ = try OpalCrypto.Signature.ECDSA(rawRepresentation: derSignature, format: .der)
             Issue.record("Expected invalid signature error for negative DER integer.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
+        } catch let error as OpalCrypto.Signature.Error {
             #expect(error == .invalidSignature)
         } catch {
             Issue.record("Unexpected error type for negative DER integer: \(error)")
@@ -172,22 +185,25 @@ struct PublicAPISecp256k1Validator {
             .subtractWord(1)
             .data32Bytes
         let rawSignature = makePrivateKey(1) + highSData
+        let signature = try OpalCrypto.Signature.ECDSA(rawRepresentation: rawSignature, format: .raw)
 
-        #expect(!(try OpalCrypto.Secp256k1.isLowS(rawSignature)))
+        #expect(!signature.isLowS)
 
-        let normalizedSignature = try OpalCrypto.Secp256k1.normalizeLowS(rawSignature)
-        #expect(try OpalCrypto.Secp256k1.isLowS(normalizedSignature))
-        #expect(Data(normalizedSignature.suffix(32)) == makePrivateKey(1))
+        let normalizedSignature = try signature.normalizedLowS()
+        #expect(normalizedSignature.isLowS)
+        #expect(Data(normalizedSignature.rawRepresentation.suffix(32)) == makePrivateKey(1))
     }
 
-    @Test("Batch compressed public-key derivation matches single derivation")
-    func batchCompressedPublicKeyDerivationMatchesSingleDerivation() async throws {
-        let privateKeys = [1, 2, 3, 4].map(makePrivateKey)
-        let batchPublicKeys = try await OpalCrypto.Secp256k1.deriveCompressedPublicKeys(
+    @Test("Batch public-key derivation matches single derivation")
+    func batchPublicKeyDerivationMatchesSingleDerivation() async throws {
+        let privateKeys = try [1, 2, 3, 4].map {
+            try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: makePrivateKey($0))
+        }
+        let batchPublicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
             from: privateKeys
         )
         let singlePublicKeys = try privateKeys.map {
-            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+            try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
         }
 
         #expect(batchPublicKeys == singlePublicKeys)

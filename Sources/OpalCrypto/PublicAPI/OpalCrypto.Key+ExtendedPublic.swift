@@ -8,11 +8,13 @@ extension OpalCrypto.Key {
         internal let payload: ExtendedKeyPayloadModel
         internal let parsedPublicKeyModel: ParsedPublicKeyModel
 
-        public var chainCode: Data { payload.chainCode }
+        public var chainCode: ChainCode { try! ChainCode(rawRepresentation: payload.chainCode) }
         public var depth: UInt8 { payload.depth }
-        public var parentFingerprint: Data { payload.parentFingerprint }
+        public var parentFingerprint: Fingerprint { try! Fingerprint(rawRepresentation: payload.parentFingerprint) }
         public var childIndex: UInt32 { payload.childIndex }
-        public var publicKey: Data { payload.keyData }
+        public var publicKey: OpalCrypto.Secp256k1.PublicKey {
+            try! OpalCrypto.Secp256k1.PublicKey(rawRepresentation: payload.keyData)
+        }
 
         public init(_ serialized: String) throws {
             let payload = try Self.makePayload(from: serialized)

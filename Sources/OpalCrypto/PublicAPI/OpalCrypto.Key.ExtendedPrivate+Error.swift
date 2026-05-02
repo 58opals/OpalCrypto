@@ -10,6 +10,7 @@ extension OpalCrypto.Key.ExtendedPrivate {
         case invalidPayloadLength(expected: Int, actual: Int)
         case invalidParentFingerprintLength(expected: Int, actual: Int)
         case invalidChainCodeLength(expected: Int, actual: Int)
+        case invalidSeedLength(actual: Int)
         case invalidPrivateKeyLength(expected: Int, actual: Int)
         case invalidPrivateKey
         case invalidDepthMetadata

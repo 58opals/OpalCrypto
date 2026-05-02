@@ -9,14 +9,17 @@ struct PerformanceOptimizationBatchDerivationValidator {
     @Test("Batch compressed public-key derivation preserves ordering in the parallel path")
     func batchCompressedPublicKeyDerivationPreservesOrderingInTheParallelPath() async throws {
         let privateKeys = OpalCryptoTestSupport.makePrivateKeys(count: 256)
-        let batchPublicKeys = try await OpalCrypto.Secp256k1.deriveCompressedPublicKeys(
-            from: privateKeys
+        let typedPrivateKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+        }
+        let batchPublicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
+            from: typedPrivateKeys
         )
-        let singlePublicKeys = try privateKeys.map {
-            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+        let singlePublicKeys = try typedPrivateKeys.map {
+            try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
         }
 
-        #expect(batchPublicKeys == singlePublicKeys)
+        #expect(batchPublicKeys.map(\.rawRepresentation) == singlePublicKeys.map(\.rawRepresentation))
     }
 
     @Test("Batch compressed public-key derivation from parsed scalars matches data-based and single-key derivation")
@@ -39,7 +42,9 @@ struct PerformanceOptimizationBatchDerivationValidator {
                 executionMode: .automatic
             )
         let singlePublicKeys = try privateKeys.map {
-            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+            try OpalCrypto.Secp256k1.derivePublicKey(
+                from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            ).rawRepresentation
         }
 
         #expect(scalarBatchPublicKeys == dataBatchPublicKeys)
@@ -60,7 +65,9 @@ struct PerformanceOptimizationBatchDerivationValidator {
         let batchPublicKeys = try StandardsForEfficientCryptography256k1CurveModel.Operation
             .encodeCompressedPublicKeys(fromJacobianPoints: jacobianPoints)
         let singlePublicKeys = try privateKeys.map {
-            try OpalCrypto.Secp256k1.deriveCompressedPublicKey(from: $0)
+            try OpalCrypto.Secp256k1.derivePublicKey(
+                from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            ).rawRepresentation
         }
 
         #expect(batchPublicKeys == singlePublicKeys)

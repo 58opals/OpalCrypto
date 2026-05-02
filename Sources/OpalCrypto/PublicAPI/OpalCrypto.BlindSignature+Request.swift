@@ -3,23 +3,23 @@
 import Foundation
 
 extension OpalCrypto.BlindSignature {
-    public struct Request: Sendable {
+        public struct Request: Sendable {
         internal let requestState: BlindSignatureModel.RequestState
 
-        public var scalar: Data {
-            requestState.requestScalar.data32Bytes
+        public var scalar: OpalCrypto.Secp256k1.Scalar {
+            OpalCrypto.Secp256k1.Scalar(scalarModel: requestState.requestScalar)
         }
 
         public init(
-            signerPublicKey: Data,
-            noncePoint: Data,
-            messageDigest: Data
+            signerPublicKey: OpalCrypto.Secp256k1.PublicKey,
+            noncePoint: OpalCrypto.Secp256k1.PublicKey,
+            messageDigest: OpalCrypto.Signature.Digest
         ) throws {
             do {
                 requestState = try BlindSignatureModel.RequestState(
-                    signerPublicKey: signerPublicKey,
-                    noncePoint: noncePoint,
-                    messageDigest32Bytes: messageDigest
+                    signerPublicKey: signerPublicKey.rawRepresentation,
+                    noncePoint: noncePoint.rawRepresentation,
+                    messageDigest32Bytes: messageDigest.rawRepresentation
                 )
             } catch let error as BlindSignatureModel.Error {
                 throw OpalCrypto.BlindSignature.mapError(error)
@@ -27,14 +27,15 @@ extension OpalCrypto.BlindSignature {
         }
 
         public func finalize(
-            responseScalar: Data,
+            responseScalar: OpalCrypto.Secp256k1.Scalar,
             verify: Bool = true
-        ) throws -> Data {
+        ) throws -> OpalCrypto.Signature.Schnorr {
             do {
-                return try requestState.finalize(
-                    responseScalarData32Bytes: responseScalar,
+                let signature = try requestState.finalize(
+                    responseScalarData32Bytes: responseScalar.rawRepresentation,
                     verify: verify
                 )
+                return try OpalCrypto.Signature.Schnorr(rawRepresentation: signature)
             } catch let error as BlindSignatureModel.Error {
                 throw OpalCrypto.BlindSignature.mapError(error)
             }

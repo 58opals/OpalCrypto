@@ -8,10 +8,10 @@ import Testing
 struct PublicAPIBlindSignatureFlowValidator {
     @Test("Blind Schnorr requests finalize into valid signatures")
     func blindSchnorrRequestsFinalizeIntoValidSignatures() async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(5)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(5)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
-        let digest = Data(repeating: 0xAB, count: 32)
+        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0xAB, count: 32))
         let request = try OpalCrypto.BlindSignature.Request(
             signerPublicKey: publicKey,
             noncePoint: signer.noncePoint,
@@ -20,28 +20,26 @@ struct PublicAPIBlindSignatureFlowValidator {
         let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
         let signature = try request.finalize(responseScalar: response)
 
-        #expect(
-            try OpalCrypto.Signature.verifySchnorr(
-                signature: signature,
-                digest: digest,
-                publicKey: publicKey
-            )
-        )
+        #expect(try signature.verify(digest: digest, publicKey: publicKey))
     }
 
     @Test("Blind signature finalization rejects tampered responses")
     func blindSignatureFinalizationRejectsTamperedResponses() async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(6)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(6)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
+        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0x6C, count: 32))
         let request = try OpalCrypto.BlindSignature.Request(
             signerPublicKey: publicKey,
             noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0x6C, count: 32)
+            messageDigest: digest
         )
         let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
-        var tamperedResponse = response
-        tamperedResponse[tamperedResponse.index(before: tamperedResponse.endIndex)] ^= 0x01
+        var tamperedResponseData = response.rawRepresentation
+        tamperedResponseData[tamperedResponseData.index(before: tamperedResponseData.endIndex)] ^= 0x01
+        let tamperedResponse = try OpalCrypto.Secp256k1.Scalar(
+            rawRepresentation: tamperedResponseData
+        )
 
         do {
             _ = try request.finalize(responseScalar: tamperedResponse)
@@ -53,57 +51,38 @@ struct PublicAPIBlindSignatureFlowValidator {
         }
     }
 
-    @Test("Blind request finalization rejects non-canonical response scalars even when verification is disabled")
-    func blindRequestFinalizationRejectsNonCanonicalResponseScalarsEvenWhenVerificationIsDisabled()
-        async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(11)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
-        let signer = try OpalCrypto.BlindSignature.Signer()
-        let request = try OpalCrypto.BlindSignature.Request(
-            signerPublicKey: publicKey,
-            noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0xB3, count: 32)
-        )
-
+    @Test("Blind response scalar construction rejects non-canonical scalars")
+    func blindResponseScalarConstructionRejectsNonCanonicalScalars() throws {
         do {
-            _ = try request.finalize(
-                responseScalar: try Data(
+            _ = try OpalCrypto.Secp256k1.Scalar(
+                rawRepresentation: Data(
                     hexadecimal: """
                     fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
                     """
-                ),
-                verify: false
+                )
             )
             Issue.record("Expected malformed response-scalar rejection.")
-        } catch let error as OpalCrypto.BlindSignature.Error {
-            #expect(error == .invalidResponseScalar)
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidTweak)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
-
-        let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
-        let signature = try request.finalize(responseScalar: response, verify: false)
-
-        #expect(
-            try OpalCrypto.Signature.verifySchnorr(
-                signature: signature,
-                digest: Data(repeating: 0xB3, count: 32),
-                publicKey: publicKey
-            )
-        )
     }
 
     @Test("Blind request finalization rejects zero signature scalars even when verification is disabled")
     func blindRequestFinalizationRejectsZeroSignatureScalarsEvenWhenVerificationIsDisabled() throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(12)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(12)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
+        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0xC4, count: 32))
         let request = try OpalCrypto.BlindSignature.Request(
             signerPublicKey: publicKey,
             noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0xC4, count: 32)
+            messageDigest: digest
         )
-        let cancelingResponse = request.requestState.blindingScalarA.negateModN().data32Bytes
+        let cancelingResponse = OpalCrypto.Secp256k1.Scalar(
+            scalarModel: request.requestState.blindingScalarA.negateModN()
+        )
 
         do {
             _ = try request.finalize(responseScalar: cancelingResponse, verify: false)

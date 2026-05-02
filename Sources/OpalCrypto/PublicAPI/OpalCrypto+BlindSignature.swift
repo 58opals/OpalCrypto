@@ -41,5 +41,29 @@ extension OpalCrypto {
                 return .verificationFailed
             }
         }
+
+        static func mapSecp256k1Error(_ error: OpalCrypto.Secp256k1.Error) -> Error {
+            switch error {
+            case .invalidPrivateKeyLength(let expected, let actual):
+                return .invalidPrivateKeyLength(expected: expected, actual: actual)
+            case .invalidPrivateKey:
+                return .invalidPrivateKey
+            case .invalidPublicKeyLength(_, let actual):
+                return .invalidPublicKeyLength(actual: actual)
+            case .invalidPublicKeyPrefix(let actual):
+                return .invalidPublicKeyPrefix(actual: actual)
+            case .invalidPublicKey:
+                return .invalidPublicKey
+            case .invalidTweakLength,
+                 .invalidTweak,
+                 .invalidDerivedKey,
+                 .invalidSignatureLength,
+                 .invalidSignature,
+                 .invalidDER,
+                 .nonCanonicalDER,
+                 .randomGenerationFailed:
+                return .cryptographyFailure
+            }
+        }
     }
 }

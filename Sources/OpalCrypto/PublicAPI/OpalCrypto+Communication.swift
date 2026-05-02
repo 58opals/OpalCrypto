@@ -7,29 +7,30 @@ extension OpalCrypto {
 
         public static func encrypt(
             message: Data,
-            recipientPublicKey: Data,
+            recipientPublicKey: OpalCrypto.Secp256k1.PublicKey,
             paddedPlaintextLength: Int? = nil
-        ) throws -> Data {
+        ) throws -> Ciphertext {
             do {
-                return try CommunicationBoxModel.encrypt(
+                let ciphertext = try CommunicationBoxModel.encrypt(
                     message: message,
-                    recipientPublicKey: recipientPublicKey,
+                    recipientPublicKey: recipientPublicKey.rawRepresentation,
                     paddedPlaintextLength: paddedPlaintextLength
                 )
+                return Ciphertext(unchecked: ciphertext)
             } catch let error as CommunicationBoxModel.Error {
                 throw mapError(error)
             }
         }
 
         public static func decrypt(
-            _ ciphertext: Data,
-            privateKey: Data
+            _ ciphertext: Ciphertext,
+            privateKey: OpalCrypto.Secp256k1.PrivateKey
         ) throws -> DecryptionResult {
             do {
                 return DecryptionResult(
                     resultModel: try CommunicationBoxModel.decrypt(
-                        ciphertext,
-                        privateKey: privateKey
+                        ciphertext.rawRepresentation,
+                        privateKey: privateKey.rawRepresentation
                     )
                 )
             } catch let error as CommunicationBoxModel.Error {
@@ -38,13 +39,13 @@ extension OpalCrypto {
         }
 
         public static func decrypt(
-            _ ciphertext: Data,
-            symmetricKey: Data
+            _ ciphertext: Ciphertext,
+            symmetricKey: SymmetricKey
         ) throws -> Data {
             do {
                 return try CommunicationBoxModel.decrypt(
-                    ciphertext,
-                    symmetricKey: symmetricKey
+                    ciphertext.rawRepresentation,
+                    symmetricKey: symmetricKey.rawRepresentation
                 )
             } catch let error as CommunicationBoxModel.Error {
                 throw mapError(error)

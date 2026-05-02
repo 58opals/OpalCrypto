@@ -14,10 +14,10 @@ struct PublicAPIHashingEncodingValidator {
     @Test("Exercise hash, encoding, checksum, key-derivation, and numeric APIs")
     func exerciseHashEncodingKeyDerivationAndNumericAPIs() throws {
         let payloadData = Data("opal-api-facade".utf8)
-        let secureHashAlgorithm256 = OpalCrypto.Hashing.computeSHA256(payloadData)
-        let secureHash256 = OpalCrypto.Hashing.computeHash256(payloadData)
-        let secureHash160 = OpalCrypto.Hashing.computeHash160(payloadData)
-        let hmacSecureHashAlgorithm512 = OpalCrypto.Hashing.computeHMACSHA512(
+        let secureHashAlgorithm256 = OpalCrypto.Hashing.sha256(payloadData)
+        let secureHash256 = OpalCrypto.Hashing.hash256(payloadData)
+        let secureHash160 = OpalCrypto.Hashing.hash160(payloadData)
+        let hmacSecureHashAlgorithm512 = OpalCrypto.Hashing.hmacSHA512(
             data: payloadData,
             key: Data(repeating: 0x0B, count: 16)
         )
@@ -31,30 +31,31 @@ struct PublicAPIHashingEncodingValidator {
         #expect(OpalCrypto.Encoding.decodeBase58(base58Encoded) == payloadData)
 
         let base32FiveBitInput = Data([0, 1, 2, 3, 4, 5, 30, 31])
-        let base32Encoded = try OpalCrypto.Encoding.encodeBase32(
-            base32FiveBitInput,
-            interpretedAsFiveBitValues: true
+        let base32FiveBitValues = try OpalCrypto.Encoding.FiveBitValues(
+            rawRepresentation: base32FiveBitInput
         )
-        let base32Decoded = try OpalCrypto.Encoding.decodeBase32(
-            base32Encoded,
-            interpretedAsFiveBitValues: true
+        let base32Encoded = try OpalCrypto.Encoding.encodeBase32Values(base32FiveBitValues)
+        let base32Decoded = try OpalCrypto.Encoding.decodeBase32Values(base32Encoded)
+        #expect(base32Decoded.rawRepresentation == base32FiveBitInput)
+        #expect(
+            OpalCrypto.Encoding.computePolymodChecksum(
+                try OpalCrypto.Encoding.FiveBitValues(rawRepresentation: Data([1, 2, 3, 4, 5]))
+            ) != 0
         )
-        #expect(base32Decoded == base32FiveBitInput)
-        #expect(OpalCrypto.Encoding.computePolymodChecksum([1, 2, 3, 4, 5]) != 0)
 
         let derivedKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
             password: Data("password".utf8),
-            salt: Data("salt".utf8),
+            salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
             iterationCount: 16,
             derivedKeyLength: 32
         )
         let derivedKeyAgain = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
             password: Data("password".utf8),
-            salt: Data("salt".utf8),
+            salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
             iterationCount: 16,
             derivedKeyLength: 32
         )
-        #expect(derivedKey.count == 32)
+        #expect(derivedKey.rawRepresentation.count == 32)
         #expect(derivedKey == derivedKeyAgain)
 
         var largeUnsignedInteger = OpalCrypto.Numeric.BigUnsignedInteger(256)
@@ -84,15 +85,15 @@ struct PublicAPIHashingEncodingValidator {
         ]
 
         for vector in vectors {
-            #expect(OpalCrypto.Hashing.computeHash160(vector.0) == vector.1)
+            #expect(OpalCrypto.Hashing.hash160(vector.0) == vector.1)
         }
     }
 
     @Test("Exercise Base32 byte-mode round-trips with leading zero payloads")
     func exerciseBase32ByteModeRoundTripsWithLeadingZeroPayloads() throws {
         for payload in [Data([0x00]), Data([0x00, 0x00, 0x01]), Data([0x00, 0x10, 0xFF, 0x00])] {
-            let encoded = try OpalCrypto.Encoding.encodeBase32(payload, interpretedAsFiveBitValues: false)
-            let decoded = try OpalCrypto.Encoding.decodeBase32(encoded, interpretedAsFiveBitValues: false)
+            let encoded = try OpalCrypto.Encoding.encodeBase32Bytes(payload)
+            let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(encoded)
             #expect(decoded == payload)
         }
     }
@@ -106,7 +107,7 @@ struct PublicAPIHashingEncodingValidator {
         ]
 
         for vector in vectors {
-            let encoded = try OpalCrypto.Encoding.encodeBase32(vector.0, interpretedAsFiveBitValues: false)
+            let encoded = try OpalCrypto.Encoding.encodeBase32Bytes(vector.0)
             #expect(encoded == vector.1)
         }
     }
@@ -121,7 +122,7 @@ struct PublicAPIHashingEncodingValidator {
         ]
 
         for vector in vectors {
-            let decoded = try OpalCrypto.Encoding.decodeBase32(vector.0, interpretedAsFiveBitValues: false)
+            let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(vector.0)
             #expect(decoded == vector.1)
         }
     }
@@ -130,9 +131,8 @@ struct PublicAPIHashingEncodingValidator {
     func rejectInvalidSingleByteFiveBitBase32InputBytesExactly() {
         for invalidInput in [(Data([0x20]), UInt8(0x20)), (Data([0xFF]), UInt8(0xFF))] {
             do {
-                _ = try OpalCrypto.Encoding.encodeBase32(
-                    invalidInput.0,
-                    interpretedAsFiveBitValues: true
+                _ = try OpalCrypto.Encoding.FiveBitValues(
+                    rawRepresentation: invalidInput.0
                 )
                 Issue.record("Expected invalid five-bit Base32 input error.")
             } catch let error as OpalCrypto.Encoding.Error {
@@ -150,9 +150,8 @@ struct PublicAPIHashingEncodingValidator {
     @Test("Reject mixed five-bit Base32 input at the exact offending byte")
     func rejectMixedFiveBitBase32InputAtTheExactOffendingByte() {
         do {
-            _ = try OpalCrypto.Encoding.encodeBase32(
-                Data([0x01, 0x20, 0x02]),
-                interpretedAsFiveBitValues: true
+            _ = try OpalCrypto.Encoding.FiveBitValues(
+                rawRepresentation: Data([0x01, 0x20, 0x02])
             )
             Issue.record("Expected invalid five-bit Base32 input error.")
         } catch let error as OpalCrypto.Encoding.Error {
@@ -169,7 +168,7 @@ struct PublicAPIHashingEncodingValidator {
     @Test("Reject invalid Base32 decode characters through the public facade")
     func rejectInvalidBase32DecodeCharactersThroughThePublicFacade() {
         do {
-            _ = try OpalCrypto.Encoding.decodeBase32("!", interpretedAsFiveBitValues: true)
+            _ = try OpalCrypto.Encoding.decodeBase32Values("!")
             Issue.record("Expected invalid Base32 decode character error.")
         } catch let error as OpalCrypto.Encoding.Error {
             #expect(error == .invalidCharacterFound)
@@ -181,7 +180,7 @@ struct PublicAPIHashingEncodingValidator {
     @Test("Reject mixed-case Base32 decode in five-bit mode")
     func rejectMixedCaseBase32DecodeInFiveBitMode() {
         do {
-            _ = try OpalCrypto.Encoding.decodeBase32("qP", interpretedAsFiveBitValues: true)
+            _ = try OpalCrypto.Encoding.decodeBase32Values("qP")
             Issue.record("Expected mixed-case Base32 decode error.")
         } catch let error as OpalCrypto.Encoding.Error {
             #expect(error == .invalidCharacterFound)
@@ -193,7 +192,7 @@ struct PublicAPIHashingEncodingValidator {
     @Test("Reject mixed-case Base32 decode in byte mode")
     func rejectMixedCaseBase32DecodeInByteMode() {
         do {
-            _ = try OpalCrypto.Encoding.decodeBase32("qP", interpretedAsFiveBitValues: false)
+            _ = try OpalCrypto.Encoding.decodeBase32Bytes("qP")
             Issue.record("Expected mixed-case Base32 decode error.")
         } catch let error as OpalCrypto.Encoding.Error {
             #expect(error == .invalidCharacterFound)

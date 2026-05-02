@@ -10,11 +10,13 @@ extension OpalCryptoBenchmarks {
         checksum ^= try runSyncBenchmark(name: "PBKDF2", iterations: 60) {
             let derivedKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
                 password: context.basePayload,
-                salt: context.batch64PrivateKeys[0],
+                salt: try OpalCrypto.KeyDerivation.Salt(
+                    rawRepresentation: context.batch64PrivateKeys[0]
+                ),
                 iterationCount: 2048,
                 derivedKeyLength: 64
             )
-            return derivedKey.count ^ Int(derivedKey[0])
+            return derivedKey.rawRepresentation.count ^ Int(derivedKey.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Mnemonic parse", iterations: 200) {
@@ -35,14 +37,14 @@ extension OpalCryptoBenchmarks {
 
         checksum ^= try runSyncBenchmark(name: "Mnemonic seed derivation", iterations: 80) {
             let seed = try context.mnemonic.deriveSeed(passphrase: "benchmark")
-            return seed.count ^ Int(seed[0])
+            return seed.rawRepresentation.count ^ Int(seed.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(name: "Extended-key derivation", iterations: 120) {
             let child = try context.rootExtendedPrivate.derived(
                 indices: [0x8000_0000, 1, 2, 3]
             )
-            return Int(child.depth) ^ Int(child.privateKey[0])
+            return Int(child.depth) ^ Int(child.privateKey.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(
@@ -50,7 +52,7 @@ extension OpalCryptoBenchmarks {
             iterations: 200
         ) {
             let child = try context.rootExtendedPrivate.derived(indices: [1])
-            return Int(child.depth) ^ Int(child.privateKey[0])
+            return Int(child.depth) ^ Int(child.privateKey.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(
@@ -58,7 +60,7 @@ extension OpalCryptoBenchmarks {
             iterations: 200
         ) {
             let child = try context.rootExtendedPublic.derived(indices: [1])
-            return Int(child.depth) ^ Int(child.publicKey[0])
+            return Int(child.depth) ^ Int(child.publicKey.rawRepresentation[0])
         }
 
         checksum ^= try runSyncBenchmark(
@@ -66,7 +68,7 @@ extension OpalCryptoBenchmarks {
             iterations: 120
         ) {
             let child = try context.rootExtendedPublic.derived(indices: [1, 2, 3, 4])
-            return Int(child.depth) ^ Int(child.publicKey[0])
+            return Int(child.depth) ^ Int(child.publicKey.rawRepresentation[0])
         }
 
         return checksum

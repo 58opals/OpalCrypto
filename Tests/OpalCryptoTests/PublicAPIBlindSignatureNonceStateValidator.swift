@@ -8,14 +8,10 @@ import OpalCrypto
 struct PublicAPIBlindSignatureNonceStateValidator {
     @Test("Blind signer rejects nonce reuse")
     func blindSignerRejectsNonceReuse() async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(7)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(7)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
-        let request = try OpalCrypto.BlindSignature.Request(
-            signerPublicKey: publicKey,
-            noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0x7D, count: 32)
-        )
+        let request = try makeRequest(publicKey: publicKey, signer: signer, digestByte: 0x7D)
 
         _ = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
 
@@ -31,22 +27,18 @@ struct PublicAPIBlindSignatureNonceStateValidator {
 
     @Test("Blind signer aliases share one-time nonce state")
     func blindSignerAliasesShareOneTimeNonceState() async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(8)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(8)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
         let signerAlias = signer
-        let firstRequest = try OpalCrypto.BlindSignature.Request(
-            signerPublicKey: publicKey,
-            noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0x8E, count: 32)
-        )
+        let firstRequest = try makeRequest(publicKey: publicKey, signer: signer, digestByte: 0x8E)
 
         _ = try await signer.sign(privateKey: privateKey, requestScalar: firstRequest.scalar)
 
-        let secondRequest = try OpalCrypto.BlindSignature.Request(
-            signerPublicKey: publicKey,
-            noncePoint: signerAlias.noncePoint,
-            messageDigest: Data(repeating: 0x8F, count: 32)
+        let secondRequest = try makeRequest(
+            publicKey: publicKey,
+            signer: signerAlias,
+            digestByte: 0x8F
         )
 
         do {
@@ -59,24 +51,24 @@ struct PublicAPIBlindSignatureNonceStateValidator {
         }
     }
 
-    @Test("Blind signer keeps nonce available after invalid private-key input")
-    func blindSignerKeepsNonceAvailableAfterInvalidPrivateKeyInput() async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(9)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
+    @Test("Blind signer keeps nonce available after invalid private-key construction")
+    func blindSignerKeepsNonceAvailableAfterInvalidPrivateKeyConstruction() async throws {
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(9)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
+        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0x91, count: 32))
         let request = try OpalCrypto.BlindSignature.Request(
             signerPublicKey: publicKey,
             noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0x91, count: 32)
+            messageDigest: digest
         )
 
         do {
-            _ = try await signer.sign(
-                privateKey: Data(repeating: 0x01, count: 31),
-                requestScalar: request.scalar
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x01, count: 31)
             )
             Issue.record("Expected invalid private-key length rejection.")
-        } catch let error as OpalCrypto.BlindSignature.Error {
+        } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
         } catch {
             Issue.record("Unexpected error type: \(error)")
@@ -85,50 +77,37 @@ struct PublicAPIBlindSignatureNonceStateValidator {
         let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
         let signature = try request.finalize(responseScalar: response)
 
-        #expect(
-            try OpalCrypto.Signature.verifySchnorr(
-                signature: signature,
-                digest: Data(repeating: 0x91, count: 32),
-                publicKey: publicKey
-            )
-        )
+        #expect(try signature.verify(digest: digest, publicKey: publicKey))
     }
 
-    @Test("Blind signer rejects non-canonical request scalars without consuming the nonce")
-    func blindSignerRejectsNonCanonicalRequestScalarsWithoutConsumingTheNonce() async throws {
-        let privateKey = OpalCryptoTestSupport.makePrivateKey(10)
-        let publicKey = try OpalCrypto.Signature.derivePublicKey(fromPrivateKey: privateKey)
-        let signer = try OpalCrypto.BlindSignature.Signer()
-        let request = try OpalCrypto.BlindSignature.Request(
-            signerPublicKey: publicKey,
-            noncePoint: signer.noncePoint,
-            messageDigest: Data(repeating: 0xA2, count: 32)
-        )
-
+    @Test("Request scalar construction rejects non-canonical scalars")
+    func requestScalarConstructionRejectsNonCanonicalScalars() throws {
         do {
-            _ = try await signer.sign(
-                privateKey: privateKey,
-                requestScalar: try Data(
+            _ = try OpalCrypto.Secp256k1.Scalar(
+                rawRepresentation: Data(
                     hexadecimal: """
                     fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
                     """
                 )
             )
             Issue.record("Expected malformed request-scalar rejection.")
-        } catch let error as OpalCrypto.BlindSignature.Error {
-            #expect(error == .invalidRequestScalar)
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidTweak)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
 
-        let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
-        let signature = try request.finalize(responseScalar: response)
-
-        #expect(
-            try OpalCrypto.Signature.verifySchnorr(
-                signature: signature,
-                digest: Data(repeating: 0xA2, count: 32),
-                publicKey: publicKey
+    private func makeRequest(
+        publicKey: OpalCrypto.Secp256k1.PublicKey,
+        signer: OpalCrypto.BlindSignature.Signer,
+        digestByte: UInt8
+    ) throws -> OpalCrypto.BlindSignature.Request {
+        try OpalCrypto.BlindSignature.Request(
+            signerPublicKey: publicKey,
+            noncePoint: signer.noncePoint,
+            messageDigest: OpalCrypto.Signature.Digest(
+                rawRepresentation: Data(repeating: digestByte, count: 32)
             )
         )
     }
