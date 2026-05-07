@@ -76,6 +76,18 @@ struct PublicAPISecp256k1Validator {
         #expect(uncompressedPublicKey.uncompressedRepresentation.count == 65)
     }
 
+    @Test("Public-key construction normalizes sliced compressed SEC1 input")
+    func publicKeyConstructionNormalizesSlicedCompressedSec1Input() throws {
+        let compressedPublicKeyData = try Data(hexadecimal: generatorPublicKeyHex)
+        let slicedPublicKeyData = (Data([0xFF]) + compressedPublicKeyData).dropFirst()
+        let publicKey = try OpalCrypto.Secp256k1.PublicKey(
+            rawRepresentation: slicedPublicKeyData
+        )
+
+        #expect(publicKey.rawRepresentation == compressedPublicKeyData)
+        #expect(publicKey.rawRepresentation[0] == 0x02)
+    }
+
     @Test("Public-key construction reports the uncompressed expected length for short SEC1 input")
     func publicKeyConstructionReportsTheUncompressedExpectedLengthForShortSec1Input() {
         let truncatedUncompressedPublicKey = Data(

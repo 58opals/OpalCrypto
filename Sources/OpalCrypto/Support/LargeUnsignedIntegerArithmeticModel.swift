@@ -26,9 +26,13 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
         }
         var values: [UInt32] = .init()
         values.reserveCapacity((data.count + 3) / 4)
-        var index = data.count
-        while index > 0 {
-            let start = Swift.max(0, index - 4)
+        var index = data.endIndex
+        while index > data.startIndex {
+            let start = data.index(
+                index,
+                offsetBy: -4,
+                limitedBy: data.startIndex
+            ) ?? data.startIndex
             let chunk = data[start..<index]
             var value: UInt32 = 0
             for byte in chunk {

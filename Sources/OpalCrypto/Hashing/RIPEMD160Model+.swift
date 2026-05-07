@@ -18,15 +18,22 @@ extension RIPEMD160Model {
             var currentPosition = data.startIndex
             var remainingLength = data.count
 
-            if messageBuffer.count > 0 && messageBuffer.count + remainingLength >= 64 {
-                let chunkSize = 64 - messageBuffer.count
-                messageBuffer.append(data[..<chunkSize])
+            if messageBuffer.count > 0 {
+                let chunkSize = min(64 - messageBuffer.count, remainingLength)
+                messageBuffer.append(data[currentPosition..<currentPosition + chunkSize])
+                currentPosition += chunkSize
+                remainingLength -= chunkSize
+
+                guard messageBuffer.count == 64 else {
+                    processedBytesCount += Int64(data.count)
+                    return
+                }
+
                 guard let baseAddress = words.baseAddress else { return }
                 let wordBytes = UnsafeMutableRawBufferPointer(start: baseAddress, count: 64)
                 _ = messageBuffer.copyBytes(to: wordBytes)
                 compress(baseAddress)
-                currentPosition += chunkSize
-                remainingLength -= chunkSize
+                messageBuffer.removeAll(keepingCapacity: true)
             }
 
             while remainingLength >= 64 {

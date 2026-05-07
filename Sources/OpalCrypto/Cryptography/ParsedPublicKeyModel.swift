@@ -25,7 +25,7 @@ struct ParsedPublicKeyModel: Sendable, Equatable {
         }
 
         let compressedPublicKeyData = if publicKeyData.count == 33 {
-            publicKeyData
+            Data(publicKeyData)
         } else {
             affinePoint.encodeCompressed33()
         }

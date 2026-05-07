@@ -105,6 +105,24 @@ struct PublicAPIECDSASignatureValidator {
         }
     }
 
+    @Test("ECDSA DER construction accepts sliced Data payloads")
+    func ecdsaDerConstructionAcceptsSlicedDataPayloads() throws {
+        let rawSignature = Data(repeating: 0x00, count: 31) + Data([0x01])
+            + Data(repeating: 0x00, count: 31) + Data([0x02])
+        let derSignature = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: rawSignature,
+            format: .raw
+        ).encoded(as: .der).rawRepresentation
+        let slicedDerSignature = (Data([0xFF]) + derSignature).dropFirst()
+
+        let reparsedSignature = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: slicedDerSignature,
+            format: .der
+        )
+
+        #expect(try reparsedSignature.encoded(as: .raw).rawRepresentation == rawSignature)
+    }
+
     @Test("Reject private-key construction with invalid private key length through facade error")
     func rejectPrivateKeyConstructionWithInvalidPrivateKeyLengthThroughFacadeError() {
         do {

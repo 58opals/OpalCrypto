@@ -98,6 +98,17 @@ struct PublicAPIHashingEncodingValidator {
         }
     }
 
+    @Test("Base58 encoding accepts sliced Data payloads")
+    func base58EncodingAcceptsSlicedDataPayloads() {
+        let backingData = Data([0xFF, 0x00, 0x01, 0x02, 0x03])
+        let slicedPayload = backingData.dropFirst()
+        let normalizedPayload = Data(slicedPayload)
+        let encoded = OpalCrypto.Encoding.encodeBase58(slicedPayload)
+
+        #expect(encoded == OpalCrypto.Encoding.encodeBase58(normalizedPayload))
+        #expect(OpalCrypto.Encoding.decodeBase58(encoded) == normalizedPayload)
+    }
+
     @Test("Encode Base32 byte-mode using canonical known-answer strings")
     func encodeBase32ByteModeUsingCanonicalKnownAnswerStrings() throws {
         let vectors: [(Data, String)] = [

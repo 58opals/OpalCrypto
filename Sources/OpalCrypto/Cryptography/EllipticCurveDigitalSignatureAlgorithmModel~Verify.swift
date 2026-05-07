@@ -13,7 +13,9 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         guard compressedPublicKey.count == 33 else {
             throw Error.invalidCompressedPublicKeyLength(expected: 33, actual: compressedPublicKey.count)
         }
-        let prefix = compressedPublicKey[0]
+        guard let prefix = compressedPublicKey.first else {
+            throw Error.invalidCompressedPublicKeyLength(expected: 33, actual: compressedPublicKey.count)
+        }
         guard prefix == 0x02 || prefix == 0x03 else {
             throw Error.invalidCompressedPublicKeyPrefix(actual: prefix)
         }

@@ -6,6 +6,30 @@ import Testing
 
 @Suite("Internal signature verifier validation")
 struct InternalSignatureVerifierValidator {
+    @Test("Internal verifier accepts sliced compressed public-key payloads")
+    func internalVerifierAcceptsSlicedCompressedPublicKeyPayloads() throws {
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: Data(repeating: 0x00, count: 31) + Data([0x01])
+        )
+        let message = Data("opal-ecdsa-message".utf8)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let slicedPublicKey = (Data([0xFF]) + publicKey.rawRepresentation).dropFirst()
+        let signature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
+            format: .raw
+        )
+
+        #expect(
+            try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+                signature: signature.rawRepresentation,
+                message: message,
+                publicKey: slicedPublicKey,
+                format: .ecdsa(.raw)
+            )
+        )
+    }
+
     @Test("Internal verifier preserves invalid compressed public-key length payloads")
     func internalVerifierPreservesInvalidCompressedPublicKeyLengthPayloads() {
         do {
