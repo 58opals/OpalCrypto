@@ -22,6 +22,24 @@ struct PublicAPICommunicationEnvelopeValidator {
         }
     }
 
+    @Test("Communication raw public-key validation treats uncompressed prefixes as length declarations")
+    func communicationRawPublicKeyValidationTreatsUncompressedPrefixesAsLengthDeclarations() {
+        let severelyTruncatedUncompressedRecipientPublicKey = Data([0x04] + Array(repeating: 0x11, count: 32))
+
+        do {
+            try CommunicationBoxModel.validateSecp256k1PublicKey(
+                severelyTruncatedUncompressedRecipientPublicKey
+            )
+            Issue.record("Expected invalid public-key length error.")
+        } catch let error as CommunicationBoxModel.Error {
+            #expect(
+                error == .invalidPublicKeyLength(expected: 65, actual: 33)
+            )
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Communication private-key values reject wrong-length raw input")
     func communicationPrivateKeyValuesRejectWrongLengthRawInput() {
         do {

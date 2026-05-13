@@ -7,7 +7,7 @@ import OpalCrypto
 @Suite("Public API Pedersen validation")
 struct PublicAPIPedersenValidator {
     @Test("Pedersen commitments combine like summed amounts and nonces")
-    func pedersenCommitmentsCombineLikeSummedAmountsAndNonces() throws {
+    func validatePedersenCommitmentsCombineLikeSummedAmountsAndNonces() throws {
         let setup = try OpalCrypto.Pedersen.Setup(
             alternateBasePoint: alternateBasePoint()
         )
@@ -46,6 +46,24 @@ struct PublicAPIPedersenValidator {
                 alternateBasePoint: OpalCrypto.Secp256k1.PublicKey(
                     rawRepresentation: try Data(
                         hexadecimal: "0379be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+                    )
+                )
+            )
+            Issue.record("Expected insecure alternate base point error.")
+        } catch let error as OpalCrypto.Pedersen.Error {
+            #expect(error == .insecureAlternateBasePoint)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Pedersen setup rejects the generator as an alternate base point")
+    func pedersenSetupRejectsTheGeneratorAsAnAlternateBasePoint() {
+        do {
+            _ = try OpalCrypto.Pedersen.Setup(
+                alternateBasePoint: OpalCrypto.Secp256k1.PublicKey(
+                    rawRepresentation: try Data(
+                        hexadecimal: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
                     )
                 )
             )

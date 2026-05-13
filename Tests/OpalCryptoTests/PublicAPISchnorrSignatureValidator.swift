@@ -39,13 +39,13 @@ struct PublicAPISchnorrSignatureValidator {
     @Test("Reject public-key construction with invalid public key prefix through facade error")
     func rejectPublicKeyConstructionWithInvalidPublicKeyPrefixThroughFacadeError() {
         var publicKeyData = Data(repeating: 0x00, count: 33)
-        publicKeyData[0] = 0x04
+        publicKeyData[0] = 0x05
 
         do {
             _ = try OpalCrypto.Secp256k1.PublicKey(rawRepresentation: publicKeyData)
             Issue.record("Expected invalid public key prefix error.")
         } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPublicKeyPrefix(actual: 0x04))
+            #expect(error == .invalidPublicKeyPrefix(actual: 0x05))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

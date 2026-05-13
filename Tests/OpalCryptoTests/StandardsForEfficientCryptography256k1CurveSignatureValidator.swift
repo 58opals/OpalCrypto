@@ -1,6 +1,7 @@
 // StandardsForEfficientCryptography256k1CurveSignatureValidator.swift
 
 import Foundation
+import CryptoKit
 import Testing
 @testable import OpalCrypto
 
@@ -72,6 +73,38 @@ struct StandardsForEfficientCryptography256k1CurveSignatureValidator {
             secondScalar.data32Bytes == (try Data(
                 hexadecimal: "3ea80d98d2f09d28dc4351d0f0dc973d1b62d302ef79e98c12ba2bf9ab8b0caf"
             ))
+        )
+    }
+
+    @Test("Digest message representation signs the digest directly for ECDSA")
+    func digestMessageRepresentationSignsTheDigestDirectlyForEllipticCurveDigitalSignatureAlgorithm() throws {
+        let privateKey = makeSignatureComponent(trailingByte: 0x01)
+        let digest = SHA256.hash(data: Data("opal-ecdsa-digest-message".utf8))
+        let digestData = Data(digest)
+        let message = EllipticCurveDigitalSignatureAlgorithmModel.Message.makeDigest(digest)
+
+        let representedSignature = try EllipticCurveDigitalSignatureAlgorithmModel.sign(
+            message: message,
+            with: privateKey,
+            in: .ecdsa(.raw),
+            nonceFunction: .requestForComments6979BitcoinCashDefault
+        )
+        let directSignature = try StandardsForEfficientCryptography256k1CurveModel.sign(
+            digestData32Bytes: digestData,
+            privateKeyData32Bytes: privateKey,
+            nonce: .requestForComments6979SecureHashAlgorithm256
+        ).raw64ByteSignatureData
+        let publicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
+            .derivePublicKey(fromPrivateKeyData32Bytes: privateKey)
+
+        #expect(representedSignature == directSignature)
+        #expect(
+            try EllipticCurveDigitalSignatureAlgorithmModel.verify(
+                signature: directSignature,
+                message: message,
+                publicKey: publicKey,
+                format: .ecdsa(.raw)
+            )
         )
     }
 

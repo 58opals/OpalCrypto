@@ -149,7 +149,7 @@ struct PublicAPIKeyMaterialValidator {
     }
 
     @Test("Extended-key serialization preserves parent fingerprint and child index")
-    func extendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
+    func validateExtendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
         let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(
             seed: OpalCrypto.Key.Seed(rawRepresentation: Data(hexadecimal: seedHex))
         )

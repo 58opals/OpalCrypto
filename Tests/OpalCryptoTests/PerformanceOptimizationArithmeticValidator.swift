@@ -21,6 +21,12 @@ struct PerformanceOptimizationArithmeticValidator {
         )
     }
 
+    @Test("Field residue predicate treats zero as a residue")
+    func fieldResiduePredicateTreatsZeroAsAResidue() {
+        #expect(FieldElementModel.zero.isQuadraticResidue)
+        #expect(FieldElementModel.zero.sqrt() == .zero)
+    }
+
     @Test("Specialized scalar inversion preserves the old exponentiation result")
     func specializedScalarInversionPreservesTheOldExponentiationResult() throws {
         let scalar = try ScalarModel(

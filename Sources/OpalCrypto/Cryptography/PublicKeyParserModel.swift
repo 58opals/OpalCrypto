@@ -3,26 +3,47 @@
 import Foundation
 
 enum PublicKeyParserModel {
+    static func expectedSec1PublicKeyLength(for data: Data) -> Int {
+        guard let prefix = data.first else {
+            return 33
+        }
+
+        switch prefix {
+        case 0x04:
+            return 65
+        case 0x02, 0x03:
+            return 33
+        default:
+            return data.count > 33 ? 65 : 33
+        }
+    }
 
     static func parsePublicKey(_ data: Data) throws -> AffinePointModel {
-        switch data.count {
-        case 33:
+        guard let prefix = data.first else {
+            throw Error.invalidLength(actual: data.count)
+        }
+
+        switch prefix {
+        case 0x02, 0x03:
+            guard data.count == 33 else {
+                throw Error.invalidLength(actual: data.count)
+            }
             return try parseCompressedPublicKey(data)
-        case 65:
+        case 0x04:
+            guard data.count == 65 else {
+                throw Error.invalidLength(actual: data.count)
+            }
             return try parseUncompressedPublicKey(data)
         default:
-            throw Error.invalidLength(actual: data.count)
+            guard data.count == 33 || data.count == 65 else {
+                throw Error.invalidLength(actual: data.count)
+            }
+            throw Error.invalidPrefix(byte: prefix)
         }
     }
 
     private static func parseCompressedPublicKey(_ data: Data) throws -> AffinePointModel {
-        guard let prefix = data.first else {
-            throw Error.invalidLength(actual: data.count)
-        }
-        guard prefix == 0x02 || prefix == 0x03 else {
-            throw Error.invalidPrefix(byte: prefix)
-        }
-
+        let prefix = data[data.startIndex]
         let xData = data[data.index(after: data.startIndex)..<data.endIndex]
         let xCoordinate = try FieldElementModel(contiguousBytes32: xData)
         let ySquared = xCoordinate.square().mul(xCoordinate).add(.seven)
@@ -39,13 +60,6 @@ enum PublicKeyParserModel {
     }
 
     private static func parseUncompressedPublicKey(_ data: Data) throws -> AffinePointModel {
-        guard let prefix = data.first else {
-            throw Error.invalidLength(actual: data.count)
-        }
-        guard prefix == 0x04 else {
-            throw Error.invalidPrefix(byte: prefix)
-        }
-
         let xStartIndex = data.index(after: data.startIndex)
         let yStartIndex = data.index(xStartIndex, offsetBy: 32)
         let xData = data[xStartIndex..<yStartIndex]

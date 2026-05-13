@@ -20,6 +20,78 @@ struct PublicAPIKeyMnemonicValidator {
         #expect(koreanWords.contains(.init("가능")))
     }
 
+    @Test("Reject duplicate normalized mnemonic resource words without trapping")
+    func rejectDuplicateNormalizedMnemonicResourceWordsWithoutTrapping() {
+        var words = (0..<2048).map { "word\($0)" }
+        words[2047] = words[0]
+
+        do {
+            _ = try MnemonicWordListRepository.makeWordListData(
+                words: words,
+                language: .english
+            )
+            Issue.record("Expected duplicate word-list rejection.")
+        } catch let error as OpalCrypto.Key.Mnemonic.Error {
+            #expect(error == .invalidWordList(language: .english, actualCount: 2047))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject empty normalized mnemonic resource words")
+    func rejectEmptyNormalizedMnemonicResourceWords() {
+        var words = (0..<2048).map { "word\($0)" }
+        words[1024] = ""
+
+        do {
+            _ = try MnemonicWordListRepository.makeWordListData(
+                words: words,
+                language: .english
+            )
+            Issue.record("Expected empty word-list entry rejection.")
+        } catch let error as OpalCrypto.Key.Mnemonic.Error {
+            #expect(error == .invalidWordList(language: .english, actualCount: 2048))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject mnemonic resource words containing whitespace")
+    func rejectMnemonicResourceWordsContainingWhitespace() {
+        var words = (0..<2048).map { String(format: "word%04d", $0) }
+        words[1024] = "word 1024"
+
+        do {
+            _ = try MnemonicWordListRepository.makeWordListData(
+                words: words,
+                language: .english
+            )
+            Issue.record("Expected whitespace word-list entry rejection.")
+        } catch let error as OpalCrypto.Key.Mnemonic.Error {
+            #expect(error == .invalidWordList(language: .english, actualCount: 2048))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject unsorted mnemonic resource words")
+    func rejectUnsortedMnemonicResourceWords() {
+        var words = (0..<2048).map { String(format: "word%04d", $0) }
+        words.swapAt(1024, 1025)
+
+        do {
+            _ = try MnemonicWordListRepository.makeWordListData(
+                words: words,
+                language: .english
+            )
+            Issue.record("Expected unsorted word-list rejection.")
+        } catch let error as OpalCrypto.Key.Mnemonic.Error {
+            #expect(error == .invalidWordList(language: .english, actualCount: 2048))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Generate valid English mnemonics at every supported length")
     func generateValidEnglishMnemonicsAtEverySupportedLength() throws {
         for length in OpalCrypto.Key.Mnemonic.Length.allCases {
@@ -50,6 +122,27 @@ struct PublicAPIKeyMnemonicValidator {
         )
 
         #expect(slicedMnemonic == normalizedMnemonic)
+    }
+
+    @Test("Mnemonic entropy decoding rejects word-count and length mismatches")
+    func mnemonicEntropyDecodingRejectsWordCountAndLengthMismatches() {
+        let words = englishVectorPhrase
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+            + ["about"]
+
+        do {
+            _ = try MnemonicCodecModel.entropy(
+                from: words,
+                language: .english,
+                length: .words12
+            )
+            Issue.record("Expected invalid word-count rejection.")
+        } catch let error as OpalCrypto.Key.Mnemonic.Error {
+            #expect(error == .invalidWordCount(actual: 13))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
     }
 
     @Test("Mnemonic generation maps random byte failures to facade errors")

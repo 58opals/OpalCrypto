@@ -7,7 +7,7 @@ import Testing
 @Suite("Public API communication round-trip validation")
 struct PublicAPICommunicationRoundTripValidator {
     @Test("Secp256k1 shared secrets are symmetric")
-    func secp256k1SharedSecretsAreSymmetric() throws {
+    func validateSecp256k1SharedSecretsAreSymmetric() throws {
         let privateKeyA = try OpalCrypto.Secp256k1.PrivateKey.generate()
         let publicKeyA = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKeyA)
         let privateKeyB = try OpalCrypto.Secp256k1.PrivateKey.generate()

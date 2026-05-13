@@ -23,7 +23,7 @@ extension OpalCrypto.Secp256k1 {
                 parsedPublicKeyModel = try ParsedPublicKeyModel(publicKeyData: rawRepresentation)
             } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
                 throw Error.invalidPublicKeyLength(
-                    expected: expectedSecp256k1PublicKeyLength(for: rawRepresentation),
+                    expected: PublicKeyParserModel.expectedSec1PublicKeyLength(for: rawRepresentation),
                     actual: actual
                 )
             } catch ParsedPublicKeyModel.Error.invalidPublicKeyPrefix(let actual) {

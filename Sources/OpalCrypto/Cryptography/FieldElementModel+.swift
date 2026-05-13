@@ -44,7 +44,10 @@ extension FieldElementModel {
 
     @inlinable
     var isQuadraticResidueUsingNibbleExponentiation: Bool {
-        pow(exponentNibbles: FieldPowModel.legendreExponentNibbles) == .one
+        if isZero {
+            return true
+        }
+        return pow(exponentNibbles: FieldPowModel.legendreExponentNibbles) == .one
     }
     
     @inlinable

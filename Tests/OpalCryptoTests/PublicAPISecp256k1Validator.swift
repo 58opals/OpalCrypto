@@ -55,7 +55,7 @@ struct PublicAPISecp256k1Validator {
     }
 
     @Test("Public-key construction accepts uncompressed SEC1 input and normalizes to compressed output")
-    func publicKeyConstructionAcceptsUncompressedSec1InputAndNormalizesToCompressedOutput() throws {
+    func validatePublicKeyConstructionAcceptsUncompressedSec1InputAndNormalizesToCompressedOutput() throws {
         let privateKey = makePrivateKey(1)
         let compressedPublicKey = try OpalCrypto.Secp256k1.PublicKey(
             rawRepresentation: try StandardsForEfficientCryptography256k1CurveModel.Operation
@@ -116,6 +116,24 @@ struct PublicAPISecp256k1Validator {
             Issue.record("Expected invalid public-key length error.")
         } catch let error as OpalCrypto.Secp256k1.Error {
             #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Public-key construction treats uncompressed prefixes as length declarations")
+    func publicKeyConstructionTreatsUncompressedPrefixesAsLengthDeclarations() {
+        let severelyTruncatedUncompressedPublicKey = Data(
+            [0x04] + Array(repeating: 0x11, count: 32)
+        )
+
+        do {
+            _ = try OpalCrypto.Secp256k1.PublicKey(
+                rawRepresentation: severelyTruncatedUncompressedPublicKey
+            )
+            Issue.record("Expected invalid public-key length error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPublicKeyLength(expected: 65, actual: 33))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

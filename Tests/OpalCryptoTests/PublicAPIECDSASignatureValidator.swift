@@ -91,7 +91,7 @@ struct PublicAPIECDSASignatureValidator {
     }
 
     @Test("ECDSA raw construction rejects invalid signature scalars")
-    func ecdsaRawConstructionRejectsInvalidSignatureScalars() {
+    func rejectEcdsaRawConstructionWithInvalidSignatureScalars() {
         do {
             _ = try OpalCrypto.Signature.ECDSA(
                 rawRepresentation: Data(repeating: 0x00, count: 64),

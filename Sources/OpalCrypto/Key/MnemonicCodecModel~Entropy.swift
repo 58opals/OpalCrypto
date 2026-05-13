@@ -8,6 +8,9 @@ extension MnemonicCodecModel {
         language: OpalCrypto.Key.Mnemonic.Word.Language,
         length: OpalCrypto.Key.Mnemonic.Length
     ) throws -> Data {
+        guard words.count == length.rawValue else {
+            throw OpalCrypto.Key.Mnemonic.Error.invalidWordCount(actual: words.count)
+        }
         let wordList = try MnemonicWordListRepository.load(language)
         let entropyBitCount = length.entropyByteCount * 8
         for word in words {

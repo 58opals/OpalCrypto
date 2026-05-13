@@ -7,16 +7,6 @@ extension CommunicationBoxModel {
         33 + 16 + 16
     }
 
-    static func validateCompressedPublicKey(_ publicKey: Data) throws {
-        guard publicKey.count == 33 else {
-            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
-        }
-        let prefix = publicKey[publicKey.startIndex]
-        guard prefix == 0x02 || prefix == 0x03 else {
-            throw Error.invalidPublicKeyPrefix(actual: prefix)
-        }
-    }
-
     static func validateCiphertextEnvelope(_ ciphertext: Data) throws {
         guard ciphertext.count >= minimumCiphertextLength else {
             throw Error.invalidCiphertext
@@ -24,7 +14,6 @@ extension CommunicationBoxModel {
 
         let ephemeralPublicKey = Data(ciphertext.prefix(33))
         do {
-            try validateCompressedPublicKey(ephemeralPublicKey)
             _ = try StandardsForEfficientCryptography256k1CurveModel.Operation
                 .parsePublicKeyAffine(ephemeralPublicKey)
         } catch {
@@ -38,41 +27,27 @@ extension CommunicationBoxModel {
     }
 
     static func validateSecp256k1PublicKey(_ publicKey: Data) throws {
-        guard publicKey.count == 33 || publicKey.count == 65 else {
-            throw Error.invalidPublicKeyLength(
-                expected: expectedSecp256k1PublicKeyLength(for: publicKey),
-                actual: publicKey.count
-            )
-        }
         guard let prefix = publicKey.first else {
             throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
         }
 
-        let isValidPrefix = switch publicKey.count {
-        case 33:
-            prefix == 0x02 || prefix == 0x03
-        case 65:
-            prefix == 0x04
-        default:
-            false
-        }
-        guard isValidPrefix else {
-            throw Error.invalidPublicKeyPrefix(actual: prefix)
-        }
-    }
-
-    static func expectedSecp256k1PublicKeyLength(for publicKey: Data) -> Int {
-        guard let prefix = publicKey.first else {
-            return 33
-        }
-
         switch prefix {
-        case 0x04:
-            return 65
         case 0x02, 0x03:
-            return 33
+            guard publicKey.count == 33 else {
+                throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
+            }
+        case 0x04:
+            guard publicKey.count == 65 else {
+                throw Error.invalidPublicKeyLength(expected: 65, actual: publicKey.count)
+            }
         default:
-            return publicKey.count > 33 ? 65 : 33
+            guard publicKey.count == 33 || publicKey.count == 65 else {
+                throw Error.invalidPublicKeyLength(
+                    expected: PublicKeyParserModel.expectedSec1PublicKeyLength(for: publicKey),
+                    actual: publicKey.count
+                )
+            }
+            throw Error.invalidPublicKeyPrefix(actual: prefix)
         }
     }
 

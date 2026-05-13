@@ -3,21 +3,6 @@
 import Foundation
 
 extension OpalCrypto.Secp256k1 {
-    static func expectedSecp256k1PublicKeyLength(for publicKey: Data) -> Int {
-        guard let prefix = publicKey.first else {
-            return 33
-        }
-
-        switch prefix {
-        case 0x04:
-            return 65
-        case 0x02, 0x03:
-            return 33
-        default:
-            return publicKey.count > 33 ? 65 : 33
-        }
-    }
-
     static func validatePrivateKey(_ privateKey: Data) throws {
         do {
             _ = try StandardsForEfficientCryptography256k1CurveModel.Operation.parsePrivateKeyScalar(

@@ -46,8 +46,4 @@ struct PublicAPISurfaceValidator {
 
         throw PackageRootError.notFound
     }
-
-    private enum PackageRootError: Error {
-        case notFound
-    }
 }

@@ -64,6 +64,17 @@ extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
         guard rounds > 0 else { return baseData }
         return applyHashRounds(baseData, rounds: rounds)
     }
+
+    func makeEllipticCurveDigitalSignatureAlgorithmDigestData32Bytes() throws -> Data {
+        switch representation {
+        case .payload:
+            return SecureHashAlgorithm256Model.hash(
+                try makeDataForSignerHashingOnceSecureHashAlgorithm256Internally()
+            )
+        case .digest:
+            return try makeConsensusDigestData32Bytes()
+        }
+    }
 }
 
 private extension EllipticCurveDigitalSignatureAlgorithmModel.Message {

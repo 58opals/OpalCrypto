@@ -18,6 +18,10 @@ extension PedersenModel {
                 throw Error.invalidAlternateBasePoint
             }
 
+            guard alternateBasePointModel.affinePoint != ScalarMultiplicationModel.generator else {
+                throw Error.insecureAlternateBasePoint
+            }
+
             let combined = JacobianPointModel(affine: alternateBasePointModel.affinePoint)
                 .addAffine(ScalarMultiplicationModel.generator)
             guard let alternatePlusGenerator = combined.convertToAffine() else {
