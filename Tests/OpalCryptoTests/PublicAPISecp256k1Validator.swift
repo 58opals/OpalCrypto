@@ -88,8 +88,23 @@ struct PublicAPISecp256k1Validator {
         #expect(publicKey.rawRepresentation[0] == 0x02)
     }
 
+    @Test("Private-key construction normalizes sliced raw input")
+    func privateKeyConstructionNormalizesSlicedRawInput() throws {
+        let privateKeyData = makePrivateKey(1)
+        let slicedPrivateKeyData = (Data([0xFF]) + privateKeyData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: slicedPrivateKeyData
+        )
+
+        #expect(privateKey.rawRepresentation == privateKeyData)
+        #expect(privateKey.rawRepresentation.startIndex == 0)
+        #expect(privateKey.rawRepresentation[0] == 0x00)
+    }
+
     @Test("Public-key construction reports the uncompressed expected length for short SEC1 input")
-    func publicKeyConstructionReportsTheUncompressedExpectedLengthForShortSec1Input() {
+    func validatePublicKeyConstructionReportsTheUncompressedExpectedLengthForShortSec1Input() {
         let truncatedUncompressedPublicKey = Data(
             [0x04] + Array(repeating: 0x11, count: 63)
         )

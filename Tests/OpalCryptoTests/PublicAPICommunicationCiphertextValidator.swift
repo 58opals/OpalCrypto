@@ -7,6 +7,26 @@ import Testing
 
 @Suite("Public API communication ciphertext validation")
 struct PublicAPICommunicationCiphertextValidator {
+    @Test("Communication boxes reject too-short ciphertext during private-key decryption")
+    func rejectTooShortCiphertextDuringPrivateKeyDecryption() throws {
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let tooShortCiphertext = OpalCrypto.Communication.Ciphertext(
+            unchecked: Data([0x02])
+        )
+
+        do {
+            _ = try OpalCrypto.Communication.decrypt(
+                tooShortCiphertext,
+                privateKey: recipientPrivateKey
+            )
+            Issue.record("Expected invalid ciphertext error.")
+        } catch let error as OpalCrypto.Communication.Error {
+            #expect(error == .invalidCiphertext)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
     @Test("Communication boxes reject tampered authentication codes")
     func communicationBoxesRejectTamperedAuthenticationCodes() throws {
         let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()

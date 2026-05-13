@@ -11,11 +11,29 @@ extension CommunicationBoxModel {
         guard publicKey.count == 33 else {
             throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
         }
-        guard let prefix = publicKey.first else {
-            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
-        }
+        let prefix = publicKey[publicKey.startIndex]
         guard prefix == 0x02 || prefix == 0x03 else {
             throw Error.invalidPublicKeyPrefix(actual: prefix)
+        }
+    }
+
+    static func validateCiphertextEnvelope(_ ciphertext: Data) throws {
+        guard ciphertext.count >= minimumCiphertextLength else {
+            throw Error.invalidCiphertext
+        }
+
+        let ephemeralPublicKey = Data(ciphertext.prefix(33))
+        do {
+            try validateCompressedPublicKey(ephemeralPublicKey)
+            _ = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parsePublicKeyAffine(ephemeralPublicKey)
+        } catch {
+            throw Error.invalidCiphertext
+        }
+
+        let encryptedPayload = ciphertext.dropFirst(33).dropLast(16)
+        guard !encryptedPayload.isEmpty, encryptedPayload.count.isMultiple(of: 16) else {
+            throw Error.invalidCiphertext
         }
     }
 

@@ -3,30 +3,6 @@
 import Foundation
 
 extension OpalCrypto.Secp256k1 {
-    static func validateSecp256k1PublicKey(_ publicKey: Data) throws {
-        guard publicKey.count == 33 || publicKey.count == 65 else {
-            throw Error.invalidPublicKeyLength(
-                expected: expectedSecp256k1PublicKeyLength(for: publicKey),
-                actual: publicKey.count
-            )
-        }
-        guard let prefix = publicKey.first else {
-            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
-        }
-
-        let isValidPrefix = switch publicKey.count {
-        case 33:
-            prefix == 0x02 || prefix == 0x03
-        case 65:
-            prefix == 0x04
-        default:
-            false
-        }
-        guard isValidPrefix else {
-            throw Error.invalidPublicKeyPrefix(actual: prefix)
-        }
-    }
-
     static func expectedSecp256k1PublicKeyLength(for publicKey: Data) -> Int {
         guard let prefix = publicKey.first else {
             return 33
@@ -39,30 +15,6 @@ extension OpalCrypto.Secp256k1 {
             return 33
         default:
             return publicKey.count > 33 ? 65 : 33
-        }
-    }
-
-    static func validateTweakedPublicKeyInput(_ publicKey: Data) throws {
-        guard publicKey.count == 33 || publicKey.count == 65 else {
-            throw Error.invalidPublicKeyLength(
-                expected: expectedSecp256k1PublicKeyLength(for: publicKey),
-                actual: publicKey.count
-            )
-        }
-        guard let prefix = publicKey.first else {
-            throw Error.invalidPublicKeyLength(expected: 33, actual: publicKey.count)
-        }
-
-        let isValidPrefix = switch publicKey.count {
-        case 33:
-            prefix == 0x02 || prefix == 0x03
-        case 65:
-            prefix == 0x04
-        default:
-            false
-        }
-        guard isValidPrefix else {
-            throw Error.invalidPublicKeyPrefix(actual: prefix)
         }
     }
 

@@ -68,7 +68,9 @@ extension MnemonicCodecModel {
                 let bitIndex = startBitIndex + offset
                 wordIndex <<= 1
                 if bitIndex < entropyBitCount {
-                    let entropyByte = entropy[bitIndex / 8]
+                    let entropyByte = entropy[
+                        entropy.index(entropy.startIndex, offsetBy: bitIndex / 8)
+                    ]
                     if ((entropyByte >> (7 - (bitIndex % 8))) & 1) == 1 {
                         wordIndex |= 1
                     }

@@ -57,9 +57,6 @@ enum CommunicationBoxModel {
         privateKey: Data
     ) throws -> DecryptionResult {
         try validatePrivateKey(privateKey)
-        guard ciphertext.count >= minimumCiphertextLength else {
-            throw Error.invalidCiphertext
-        }
         let ephemeralPublicKey = Data(ciphertext.prefix(33))
         let symmetricKey: Data
         do {
@@ -83,24 +80,9 @@ enum CommunicationBoxModel {
         guard symmetricKey.count == 32 else {
             throw Error.invalidSymmetricKeyLength(actual: symmetricKey.count)
         }
-        guard ciphertext.count >= minimumCiphertextLength else {
-            throw Error.invalidCiphertext
-        }
-
-        let ephemeralPublicKey = Data(ciphertext.prefix(33))
-        do {
-            try validateCompressedPublicKey(ephemeralPublicKey)
-            _ = try StandardsForEfficientCryptography256k1CurveModel.Operation
-                .parsePublicKeyAffine(ephemeralPublicKey)
-        } catch {
-            throw Error.invalidCiphertext
-        }
+        try validateCiphertextEnvelope(ciphertext)
 
         let encryptedPayload = ciphertext.dropFirst(33).dropLast(16)
-        guard !encryptedPayload.isEmpty, encryptedPayload.count.isMultiple(of: 16) else {
-            throw Error.invalidCiphertext
-        }
-
         let authenticatedPayload = Data(ciphertext.dropLast(16))
         let expectedAuthenticationCode = Data(
             HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
@@ -122,7 +104,7 @@ enum CommunicationBoxModel {
         }
 
         let messageLength = Int(plaintext.uint32BigEndian(at: 0))
-        guard messageLength >= 0, 4 + messageLength <= plaintext.count else {
+        guard 4 + messageLength <= plaintext.count else {
             throw Error.invalidCiphertext
         }
         guard plaintext[(4 + messageLength)..<plaintext.endIndex].allSatisfy({ $0 == 0 }) else {

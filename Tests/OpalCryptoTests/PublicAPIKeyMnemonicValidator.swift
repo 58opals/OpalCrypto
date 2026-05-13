@@ -33,8 +33,27 @@ struct PublicAPIKeyMnemonicValidator {
         }
     }
 
+    @Test("Mnemonic entropy encoding accepts sliced Data")
+    func mnemonicEntropyEncodingAcceptsSlicedData() throws {
+        let entropy = Data(repeating: 0x00, count: 16)
+        let slicedEntropy = (Data([0xFF]) + entropy + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+
+        let normalizedMnemonic = try MnemonicCodecModel.makeMnemonic(
+            entropy: entropy,
+            language: .english
+        )
+        let slicedMnemonic = try MnemonicCodecModel.makeMnemonic(
+            entropy: slicedEntropy,
+            language: .english
+        )
+
+        #expect(slicedMnemonic == normalizedMnemonic)
+    }
+
     @Test("Mnemonic generation maps random byte failures to facade errors")
-    func mnemonicGenerationMapsRandomByteFailuresToFacadeErrors() {
+    func validateMnemonicGenerationMapsRandomByteFailuresToFacadeErrors() {
         do {
             _ = try OpalCrypto.Key.Mnemonic.generate(
                 length: .words12,

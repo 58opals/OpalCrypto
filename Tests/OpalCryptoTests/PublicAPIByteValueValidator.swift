@@ -7,7 +7,7 @@ import OpalCrypto
 @Suite("Public API byte-value validation")
 struct PublicAPIByteValueValidator {
     @Test("Secp256k1 byte values reject malformed raw representations")
-    func secp256k1ByteValuesRejectMalformedRawRepresentations() throws {
+    func rejectMalformedSecp256k1ByteValueRawRepresentations() throws {
         do {
             _ = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: Data(repeating: 0x01, count: 31))
             Issue.record("Expected private-key length error.")
@@ -104,6 +104,19 @@ struct PublicAPIByteValueValidator {
         }
     }
 
+    @Test("Signature digest normalizes sliced raw input")
+    func signatureDigestNormalizesSlicedRawInput() throws {
+        let digestData = Data(repeating: 0xAB, count: 32)
+        let slicedDigestData = (Data([0xFF]) + digestData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: slicedDigestData)
+
+        #expect(digest.rawRepresentation == digestData)
+        #expect(digest.rawRepresentation.startIndex == 0)
+        #expect(digest.rawRepresentation[0] == 0xAB)
+    }
+
     @Test("Communication byte values reject malformed raw representations")
     func communicationByteValuesRejectMalformedRawRepresentations() throws {
         do {
@@ -123,6 +136,21 @@ struct PublicAPIByteValueValidator {
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
+
+    @Test("Communication symmetric key normalizes sliced raw input")
+    func communicationSymmetricKeyNormalizesSlicedRawInput() throws {
+        let symmetricKeyData = Data(repeating: 0xCD, count: 32)
+        let slicedSymmetricKeyData = (Data([0xFF]) + symmetricKeyData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let symmetricKey = try OpalCrypto.Communication.SymmetricKey(
+            rawRepresentation: slicedSymmetricKeyData
+        )
+
+        #expect(symmetricKey.rawRepresentation == symmetricKeyData)
+        #expect(symmetricKey.rawRepresentation.startIndex == 0)
+        #expect(symmetricKey.rawRepresentation[0] == 0xCD)
     }
 
     @Test("Pedersen byte values reject malformed raw representations")

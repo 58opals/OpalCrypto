@@ -6,7 +6,7 @@ import Testing
 @Suite("Public API surface validation")
 struct PublicAPISurfaceValidator {
     @Test("Public facade does not expose raw Data for constrained cryptographic values")
-    func publicFacadeDoesNotExposeRawDataForConstrainedCryptographicValues() throws {
+    func validatePublicFacadeDoesNotExposeRawDataForConstrainedCryptographicValues() throws {
         let publicAPIDirectory = try packageRoot()
             .appendingPathComponent("Sources/OpalCrypto/PublicAPI", isDirectory: true)
         let fileURLs = try FileManager.default.contentsOfDirectory(

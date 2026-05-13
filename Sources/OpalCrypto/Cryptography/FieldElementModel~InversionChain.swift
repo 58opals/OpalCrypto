@@ -13,19 +13,6 @@ extension FieldElementModel {
     }
     
     @inlinable
-    static func makePowerTwoToExponentMinusOne(_ element: FieldElementModel, exponent: Int) -> FieldElementModel {
-        precondition(exponent >= 1)
-        var result = element
-        guard exponent > 1 else {
-            return result
-        }
-        for _ in 1..<exponent {
-            result = result.square().mul(element)
-        }
-        return result
-    }
-    
-    @inlinable
     func invertFast() -> FieldElementModel {
         let powerTwoToOneMinusOne = self
         let powerTwoToTwoMinusOne = powerTwoToOneMinusOne.square().mul(powerTwoToOneMinusOne)

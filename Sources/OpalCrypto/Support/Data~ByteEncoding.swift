@@ -37,14 +37,17 @@ extension Data {
     internal func uint32BigEndian(at offset: Int) -> UInt32 {
         precondition(offset >= 0)
         precondition(offset + 4 <= count)
+        let start = index(startIndex, offsetBy: offset)
 
-        return (UInt32(self[offset]) << 24)
-            | (UInt32(self[offset + 1]) << 16)
-            | (UInt32(self[offset + 2]) << 8)
-            | UInt32(self[offset + 3])
+        return (UInt32(self[start]) << 24)
+            | (UInt32(self[index(start, offsetBy: 1)]) << 16)
+            | (UInt32(self[index(start, offsetBy: 2)]) << 8)
+            | UInt32(self[index(start, offsetBy: 3)])
     }
 
     internal func dataSlice(in range: Range<Int>) -> Data {
-        Data(self[range])
+        let lowerBound = index(startIndex, offsetBy: range.lowerBound)
+        let upperBound = index(startIndex, offsetBy: range.upperBound)
+        return Data(self[lowerBound..<upperBound])
     }
 }
