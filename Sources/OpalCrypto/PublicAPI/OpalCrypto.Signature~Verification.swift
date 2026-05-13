@@ -42,26 +42,6 @@ extension OpalCrypto.Signature {
             }
         }
 
-        if let secpFacadeError = error as? OpalCrypto.Secp256k1.Error {
-            switch secpFacadeError {
-            case .invalidSignatureLength,
-                 .invalidSignature,
-                 .invalidDER,
-                 .nonCanonicalDER:
-                return true
-            case .invalidPrivateKeyLength,
-                 .invalidPrivateKey,
-                 .invalidPublicKeyLength,
-                 .invalidPublicKeyPrefix,
-                 .invalidPublicKey,
-                 .invalidTweakLength,
-                 .invalidTweak,
-                 .invalidDerivedKey,
-                 .randomGenerationFailed:
-                return false
-            }
-        }
-
         return false
     }
 }

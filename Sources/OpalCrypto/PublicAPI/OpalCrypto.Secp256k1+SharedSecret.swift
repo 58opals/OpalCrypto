@@ -10,7 +10,7 @@ extension OpalCrypto.Secp256k1 {
             guard rawRepresentation.count == 32 else {
                 throw Error.invalidDerivedKey
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }

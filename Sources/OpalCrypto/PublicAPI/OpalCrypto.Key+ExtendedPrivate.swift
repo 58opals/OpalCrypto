@@ -118,8 +118,6 @@ extension OpalCrypto.Key {
                 return .invalidVersion(actual: actual)
             case .invalidPayloadLength(let actual):
                 return .invalidPayloadLength(expected: 78, actual: actual)
-            case .invalidParentFingerprintLength(let actual):
-                return .invalidParentFingerprintLength(expected: 4, actual: actual)
             case .invalidChainCodeLength(let actual):
                 return .invalidChainCodeLength(expected: 32, actual: actual)
             case .invalidDepthMetadata:

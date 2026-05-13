@@ -10,7 +10,7 @@ extension OpalCrypto.Encoding {
             if let invalidValue = rawRepresentation.first(where: { $0 > 31 }) {
                 throw Error.invalidFiveBitValue(actual: invalidValue)
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }

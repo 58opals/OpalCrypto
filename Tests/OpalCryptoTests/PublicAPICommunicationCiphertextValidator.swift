@@ -7,6 +7,41 @@ import Testing
 
 @Suite("Public API communication ciphertext validation")
 struct PublicAPICommunicationCiphertextValidator {
+    @Test("Communication ciphertext values normalize sliced raw input")
+    func normalizeCommunicationCiphertextValuesFromSlicedRawInput() throws {
+        let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let recipientPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: recipientPrivateKey)
+        let ciphertext = try OpalCrypto.Communication.encrypt(
+            message: Data("sliced-ciphertext".utf8),
+            recipientPublicKey: recipientPublicKey
+        )
+        let slicedCiphertextData = (Data([0xFF]) + ciphertext.rawRepresentation + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let normalizedCiphertext = try OpalCrypto.Communication.Ciphertext(
+            rawRepresentation: slicedCiphertextData
+        )
+
+        #expect(normalizedCiphertext.rawRepresentation == ciphertext.rawRepresentation)
+        #expect(normalizedCiphertext.rawRepresentation.startIndex == 0)
+        #expect(normalizedCiphertext.rawRepresentation[0] == ciphertext.rawRepresentation[0])
+    }
+
+    @Test("Unchecked communication ciphertext values normalize sliced raw input")
+    func normalizeUncheckedCommunicationCiphertextValuesFromSlicedRawInput() throws {
+        let ciphertextData = Data([0x02] + Array(repeating: 0x01, count: 64))
+        let slicedCiphertextData = (Data([0xFF]) + ciphertextData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let ciphertext = OpalCrypto.Communication.Ciphertext(
+            unchecked: slicedCiphertextData
+        )
+
+        #expect(ciphertext.rawRepresentation == ciphertextData)
+        #expect(ciphertext.rawRepresentation.startIndex == 0)
+        #expect(ciphertext.rawRepresentation[0] == 0x02)
+    }
+
     @Test("Communication boxes reject too-short ciphertext during private-key decryption")
     func rejectTooShortCiphertextDuringPrivateKeyDecryption() throws {
         let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()

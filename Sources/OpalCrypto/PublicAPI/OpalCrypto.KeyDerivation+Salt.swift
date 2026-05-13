@@ -10,7 +10,7 @@ extension OpalCrypto.KeyDerivation {
             guard !rawRepresentation.isEmpty else {
                 throw Error.emptySalt
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }

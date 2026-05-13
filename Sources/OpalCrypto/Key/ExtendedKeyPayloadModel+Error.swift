@@ -8,7 +8,6 @@ extension ExtendedKeyPayloadModel {
         case invalidChecksum
         case invalidVersion(actual: UInt32)
         case invalidPayloadLength(actual: Int)
-        case invalidParentFingerprintLength(actual: Int)
         case invalidChainCodeLength(actual: Int)
         case invalidDepthMetadata
         case invalidPrivateKeyPrefix(actual: UInt8)

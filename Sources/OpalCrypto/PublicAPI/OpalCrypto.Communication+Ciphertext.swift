@@ -12,11 +12,11 @@ extension OpalCrypto.Communication {
             } catch {
                 throw Error.invalidCiphertext
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
 
         internal init(unchecked rawRepresentation: Data) {
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }

@@ -8,12 +8,12 @@ extension OpalCrypto.Key {
 
         public init(rawRepresentation: Data) throws {
             guard rawRepresentation.count == 32 else {
-                throw ExtendedPrivate.Error.invalidChainCodeLength(
+            throw ExtendedPrivate.Error.invalidChainCodeLength(
                     expected: 32,
                     actual: rawRepresentation.count
                 )
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }

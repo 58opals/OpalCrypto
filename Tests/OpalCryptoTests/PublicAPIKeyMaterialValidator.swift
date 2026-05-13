@@ -109,6 +109,45 @@ struct PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Extended-key root seed values normalize sliced raw input")
+    func normalizeExtendedKeyRootSeedValuesFromSlicedRawInput() throws {
+        let seedData = try Data(hexadecimal: seedHex)
+        let slicedSeedData = (Data([0xFF]) + seedData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let seed = try OpalCrypto.Key.Seed(rawRepresentation: slicedSeedData)
+
+        #expect(seed.rawRepresentation == seedData)
+        #expect(seed.rawRepresentation.startIndex == 0)
+        #expect(seed.rawRepresentation[0] == 0x00)
+    }
+
+    @Test("Extended-key chain-code values normalize sliced raw input")
+    func normalizeExtendedKeyChainCodeValuesFromSlicedRawInput() throws {
+        let chainCodeData = Data(repeating: 0x11, count: 32)
+        let slicedChainCodeData = (Data([0xFF]) + chainCodeData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let chainCode = try OpalCrypto.Key.ChainCode(rawRepresentation: slicedChainCodeData)
+
+        #expect(chainCode.rawRepresentation == chainCodeData)
+        #expect(chainCode.rawRepresentation.startIndex == 0)
+        #expect(chainCode.rawRepresentation[0] == 0x11)
+    }
+
+    @Test("Extended-key fingerprint values normalize sliced raw input")
+    func normalizeExtendedKeyFingerprintValuesFromSlicedRawInput() throws {
+        let fingerprintData = Data([0x12, 0x34, 0x56, 0x78])
+        let slicedFingerprintData = (Data([0xFF]) + fingerprintData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let fingerprint = try OpalCrypto.Key.Fingerprint(rawRepresentation: slicedFingerprintData)
+
+        #expect(fingerprint.rawRepresentation == fingerprintData)
+        #expect(fingerprint.rawRepresentation.startIndex == 0)
+        #expect(fingerprint.rawRepresentation[0] == 0x12)
+    }
+
     @Test("Extended-key serialization preserves parent fingerprint and child index")
     func extendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
         let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(

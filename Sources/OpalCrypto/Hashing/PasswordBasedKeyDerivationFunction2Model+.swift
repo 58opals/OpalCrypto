@@ -12,21 +12,8 @@ extension PasswordBasedKeyDerivationFunction2Model {
 
         let firstAuthenticationCode = HMAC<SHA512>.authenticationCode(for: blockInput, using: symmetricKey)
 
-        var currentBlock = Array<UInt8>(repeating: 0, count: sha512BlockSize)
-        var blockResult = Array<UInt8>(repeating: 0, count: sha512BlockSize)
-
-        firstAuthenticationCode.withUnsafeBytes { buffer in
-            let bytes = buffer.bindMemory(to: UInt8.self)
-            guard bytes.count == sha512BlockSize, let bytesAddress = bytes.baseAddress else {
-                return
-            }
-            currentBlock.withUnsafeMutableBufferPointer { currentBuffer in
-                currentBuffer.baseAddress?.update(from: bytesAddress, count: sha512BlockSize)
-            }
-            blockResult.withUnsafeMutableBufferPointer { resultBuffer in
-                resultBuffer.baseAddress?.update(from: bytesAddress, count: sha512BlockSize)
-            }
-        }
+        var currentBlock = Array(firstAuthenticationCode)
+        var blockResult = currentBlock
 
         if iterationCount > 1 {
             for _ in 2...iterationCount {

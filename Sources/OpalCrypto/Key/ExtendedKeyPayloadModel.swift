@@ -20,28 +20,6 @@ internal struct ExtendedKeyPayloadModel: Sendable, Equatable {
     internal init(
         kind: Kind,
         depth: UInt8,
-        parentFingerprint: Data,
-        childIndex: UInt32,
-        chainCode: Data,
-        keyData: Data
-    ) throws {
-        guard parentFingerprint.count == 4 else {
-            throw Error.invalidParentFingerprintLength(actual: parentFingerprint.count)
-        }
-        try self.init(
-            kind: kind,
-            depth: depth,
-            parentFingerprintUInt32BigEndian: parentFingerprint.uint32BigEndian(at: 0),
-            childIndex: childIndex,
-            chainCode: chainCode,
-            keyData: keyData,
-            validationMode: .full
-        )
-    }
-
-    internal init(
-        kind: Kind,
-        depth: UInt8,
         parentFingerprintUInt32BigEndian: UInt32,
         childIndex: UInt32,
         chainCode: Data,

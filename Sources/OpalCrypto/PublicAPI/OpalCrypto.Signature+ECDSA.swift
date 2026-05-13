@@ -20,12 +20,12 @@ extension OpalCrypto.Signature {
                     signatureModel = try StandardsForEfficientCryptography256k1CurveModel.Signature(
                         raw64ByteSignatureData: rawRepresentation
                     )
-                    self.rawRepresentation = rawRepresentation
+                    self.rawRepresentation = Data(rawRepresentation)
                 case .der:
                     signatureModel = try StandardsForEfficientCryptography256k1CurveModel.Signature(
                         distinguishedEncodingRulesEncoded: rawRepresentation
                     )
-                    self.rawRepresentation = rawRepresentation
+                    self.rawRepresentation = Data(rawRepresentation)
                 }
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Error {
                 throw Self.mapSignatureError(error, format: format)

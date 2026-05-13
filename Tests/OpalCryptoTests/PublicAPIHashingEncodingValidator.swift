@@ -158,6 +158,21 @@ struct PublicAPIHashingEncodingValidator {
         }
     }
 
+    @Test("Five-bit values normalize sliced raw input")
+    func normalizeFiveBitValuesFromSlicedRawInput() throws {
+        let fiveBitValueData = Data([0x01, 0x02, 0x1F])
+        let slicedFiveBitValueData = (Data([0xFF]) + fiveBitValueData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let fiveBitValues = try OpalCrypto.Encoding.FiveBitValues(
+            rawRepresentation: slicedFiveBitValueData
+        )
+
+        #expect(fiveBitValues.rawRepresentation == fiveBitValueData)
+        #expect(fiveBitValues.rawRepresentation.startIndex == 0)
+        #expect(fiveBitValues.rawRepresentation[0] == 0x01)
+    }
+
     @Test("Reject mixed five-bit Base32 input at the exact offending byte")
     func rejectMixedFiveBitBase32InputAtTheExactOffendingByte() {
         do {

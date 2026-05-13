@@ -155,6 +155,21 @@ struct PublicAPISecp256k1Validator {
         #expect(sharedSecretFromCompressed.rawRepresentation.count == 32)
     }
 
+    @Test("Shared-secret construction normalizes sliced raw input")
+    func normalizeSharedSecretConstructionFromSlicedRawInput() throws {
+        let sharedSecretData = Data(repeating: 0xAB, count: 32)
+        let slicedSharedSecretData = (Data([0xFF]) + sharedSecretData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let sharedSecret = try OpalCrypto.Secp256k1.SharedSecret(
+            rawRepresentation: slicedSharedSecretData
+        )
+
+        #expect(sharedSecret.rawRepresentation == sharedSecretData)
+        #expect(sharedSecret.rawRepresentation.startIndex == 0)
+        #expect(sharedSecret.rawRepresentation[0] == 0xAB)
+    }
+
     @Test("Round-trip DER encoding and reject non-canonical DER")
     func roundTripDerEncodingAndRejectNonCanonicalDer() throws {
         let rawSignature = makePrivateKey(1) + makePrivateKey(2)

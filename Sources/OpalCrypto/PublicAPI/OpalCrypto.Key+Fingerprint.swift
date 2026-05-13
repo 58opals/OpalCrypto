@@ -8,12 +8,12 @@ extension OpalCrypto.Key {
 
         public init(rawRepresentation: Data) throws {
             guard rawRepresentation.count == 4 else {
-                throw ExtendedPrivate.Error.invalidParentFingerprintLength(
+            throw ExtendedPrivate.Error.invalidParentFingerprintLength(
                     expected: 4,
                     actual: rawRepresentation.count
                 )
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }

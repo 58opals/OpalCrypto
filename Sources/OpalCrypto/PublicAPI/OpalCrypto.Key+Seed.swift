@@ -10,7 +10,7 @@ extension OpalCrypto.Key {
             guard (16...64).contains(rawRepresentation.count) else {
                 throw ExtendedPrivate.Error.invalidSeedLength(actual: rawRepresentation.count)
             }
-            self.rawRepresentation = rawRepresentation
+            self.rawRepresentation = Data(rawRepresentation)
         }
     }
 }
