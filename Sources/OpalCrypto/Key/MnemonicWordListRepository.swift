@@ -4,7 +4,7 @@ import Foundation
 
 internal enum MnemonicWordListRepository {
 
-    private static let cache = MnemonicWordListCacheModel()
+    private static let cache = MnemonicWordListCache()
 
     internal static func load(
         _ language: OpalCrypto.Key.Mnemonic.Word.Language

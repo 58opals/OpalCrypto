@@ -1,8 +1,8 @@
-// WalletImportFormatCodecModel+Error.swift
+// WalletImportFormatCodec+Error.swift
 
 import Foundation
 
-extension WalletImportFormatCodecModel {
+extension WalletImportFormatCodec {
     internal enum Error: Swift.Error, Equatable {
         case invalidBase58
         case invalidChecksum

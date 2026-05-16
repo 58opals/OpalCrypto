@@ -1,8 +1,8 @@
-// BatchJacobianPointBufferModel.swift
+// BatchJacobianPointBuffer.swift
 
 import Foundation
 
-package struct BatchJacobianPointBufferModel: Sendable {
+package struct BatchJacobianPointBuffer: Sendable {
     let points: [JacobianPointModel]
 
     init(points: [JacobianPointModel]) {

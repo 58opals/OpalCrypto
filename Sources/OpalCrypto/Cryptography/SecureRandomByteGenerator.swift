@@ -1,9 +1,9 @@
-// SecureRandomByteGenerationModel.swift
+// SecureRandomByteGenerator.swift
 
 import Foundation
 import Security
 
-internal enum SecureRandomByteGenerationModel {
+internal enum SecureRandomByteGenerator {
     
     internal static func makeBytes(count: Int) throws -> [UInt8] {
         precondition(count >= 0)

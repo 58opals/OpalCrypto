@@ -57,6 +57,7 @@ enum CommunicationBoxModel {
         privateKey: Data
     ) throws -> DecryptionResult {
         try validatePrivateKey(privateKey)
+        try validateCiphertextEnvelope(ciphertext)
         let ephemeralPublicKey = Data(ciphertext.prefix(33))
         let symmetricKey: Data
         do {
@@ -69,7 +70,7 @@ enum CommunicationBoxModel {
                 Error.invalidPublicKey {
             throw Error.invalidCiphertext
         }
-        let message = try decrypt(ciphertext, symmetricKey: symmetricKey)
+        let message = try decryptValidatedCiphertext(ciphertext, symmetricKey: symmetricKey)
         return DecryptionResult(message: message, symmetricKey: symmetricKey)
     }
 
@@ -82,6 +83,13 @@ enum CommunicationBoxModel {
         }
         try validateCiphertextEnvelope(ciphertext)
 
+        return try decryptValidatedCiphertext(ciphertext, symmetricKey: symmetricKey)
+    }
+
+    private static func decryptValidatedCiphertext(
+        _ ciphertext: Data,
+        symmetricKey: Data
+    ) throws -> Data {
         let encryptedPayload = ciphertext.dropFirst(33).dropLast(16)
         let authenticatedPayload = Data(ciphertext.dropLast(16))
         let expectedAuthenticationCode = Data(

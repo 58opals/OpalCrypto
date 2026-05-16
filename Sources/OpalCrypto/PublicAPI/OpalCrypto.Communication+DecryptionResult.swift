@@ -9,7 +9,7 @@ extension OpalCrypto.Communication {
 
         internal init(resultModel: CommunicationBoxModel.DecryptionResult) {
             self.message = resultModel.message
-            self.symmetricKey = try! SymmetricKey(rawRepresentation: resultModel.symmetricKey)
+            self.symmetricKey = SymmetricKey(validatedRawRepresentation: resultModel.symmetricKey)
         }
     }
 }

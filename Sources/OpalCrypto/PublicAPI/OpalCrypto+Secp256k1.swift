@@ -15,7 +15,7 @@ extension OpalCrypto {
                     fromPrivateKeyData32Bytes: privateKey.rawRepresentation,
                     format: .compressed
                 )
-                let publicKey = try PublicKey(rawRepresentation: publicKeyData)
+                let publicKey = try PublicKey(validatingRawRepresentation: publicKeyData)
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.publicKeyDeriveSucceeded,
                     category: OpalCryptoDiagnostics.Category.key,
@@ -46,15 +46,35 @@ extension OpalCrypto {
             _ privateKey: PrivateKey,
             tweak: Scalar
         ) throws -> PrivateKey {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("private_key_tweak_add"),
+                OpalCryptoDiagnostics.algorithmField("secp256k1"),
+                OpalCryptoDiagnostics.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
+                OpalCryptoDiagnostics.publicField("tweak_byte_count", tweak.rawRepresentation.count)
+            ]
             do {
                 let tweakedPrivateKey = try StandardsForEfficientCryptography256k1CurveModel.Operation
                     .tweakAddPrivateKeyData32Bytes(
                         privateKey.rawRepresentation,
                         tweakData32Bytes: tweak.rawRepresentation
                     )
-                return try PrivateKey(rawRepresentation: tweakedPrivateKey)
+                let parsedPrivateKey = PrivateKey(validatedRawRepresentation: tweakedPrivateKey)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.privateKeyTweakAddSucceeded,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.outputLengthField(parsedPrivateKey.rawRepresentation.count)
+                    ]
+                )
+                return parsedPrivateKey
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
-                throw mapOperationError(error)
+                let mappedError = mapOperationError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.privateKeyTweakAddFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -62,15 +82,42 @@ extension OpalCrypto {
             _ publicKey: PublicKey,
             tweak: Scalar
         ) throws -> PublicKey {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("public_key_tweak_add"),
+                OpalCryptoDiagnostics.algorithmField("secp256k1"),
+                OpalCryptoDiagnostics.publicField("public_key_byte_count", publicKey.rawRepresentation.count),
+                OpalCryptoDiagnostics.publicField("tweak_byte_count", tweak.rawRepresentation.count)
+            ]
             do {
                 let tweakedPublicKey = try StandardsForEfficientCryptography256k1CurveModel.Operation.tweakAddPublicKey(
                     publicKey.rawRepresentation,
                     tweakData32Bytes: tweak.rawRepresentation,
                     format: .compressed
                 )
-                return try PublicKey(rawRepresentation: tweakedPublicKey)
+                let parsedPublicKey = try PublicKey(validatingRawRepresentation: tweakedPublicKey)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.publicKeyTweakAddSucceeded,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.outputLengthField(parsedPublicKey.rawRepresentation.count)
+                    ]
+                )
+                return parsedPublicKey
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
-                throw mapOperationError(error)
+                let mappedError = mapOperationError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.publicKeyTweakAddFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
+            } catch let error as Error {
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.publicKeyTweakAddFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                )
+                throw error
             }
         }
 
@@ -83,7 +130,7 @@ extension OpalCrypto {
             do {
                 let publicKeys = try await StandardsForEfficientCryptography256k1CurveModel.Operation
                     .deriveCompressedPublicKeys(fromPrivateKeys32: privateKeys.map(\.rawRepresentation))
-                let parsedPublicKeys = try publicKeys.map(PublicKey.init(rawRepresentation:))
+                let parsedPublicKeys = try publicKeys.map(PublicKey.init(validatingRawRepresentation:))
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.publicKeysDeriveSucceeded,
                     category: OpalCryptoDiagnostics.Category.key,
@@ -126,7 +173,7 @@ extension OpalCrypto {
                         privateKeyData32Bytes: privateKey.rawRepresentation,
                         publicKey: publicKey.rawRepresentation
                 )
-                let parsedSharedSecret = try SharedSecret(rawRepresentation: sharedSecret)
+                let parsedSharedSecret = SharedSecret(validatedRawRepresentation: sharedSecret)
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.sharedSecretDeriveSucceeded,
                     category: OpalCryptoDiagnostics.Category.key,
@@ -152,5 +199,6 @@ extension OpalCrypto {
                 throw error
             }
         }
+
     }
 }

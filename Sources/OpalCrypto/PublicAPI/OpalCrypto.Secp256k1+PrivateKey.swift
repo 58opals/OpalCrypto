@@ -32,6 +32,10 @@ extension OpalCrypto.Secp256k1 {
             )
         }
 
+        internal init(validatedRawRepresentation: Data) {
+            self.rawRepresentation = Data(validatedRawRepresentation)
+        }
+
         public static func generate() throws -> PrivateKey {
             let fields = [
                 OpalCryptoDiagnostics.operationField("private_key_generate"),

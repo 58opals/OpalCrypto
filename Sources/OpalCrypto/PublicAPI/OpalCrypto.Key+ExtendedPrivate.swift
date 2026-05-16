@@ -13,7 +13,7 @@ extension OpalCrypto.Key {
         public var parentFingerprint: Fingerprint { try! Fingerprint(rawRepresentation: payload.parentFingerprint) }
         public var childIndex: UInt32 { payload.childIndex }
         public var privateKey: OpalCrypto.Secp256k1.PrivateKey {
-            try! OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: payload.keyData)
+            OpalCrypto.Secp256k1.PrivateKey(validatedRawRepresentation: payload.keyData)
         }
 
         public var publicKey: ExtendedPublic {

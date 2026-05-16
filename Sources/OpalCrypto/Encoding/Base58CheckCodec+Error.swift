@@ -1,8 +1,8 @@
-// Base58CheckCodecModel+Error.swift
+// Base58CheckCodec+Error.swift
 
 import Foundation
 
-extension Base58CheckCodecModel {
+extension Base58CheckCodec {
     internal enum Error: Swift.Error, Equatable {
         case invalidBase58
         case invalidPayloadLength(actual: Int)

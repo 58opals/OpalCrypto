@@ -1,6 +1,5 @@
 // CommunicationBoxModel+DecryptionResult.swift
 
-import CommonCrypto
 import Foundation
 
 extension CommunicationBoxModel {

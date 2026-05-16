@@ -1,8 +1,8 @@
-// Base58CheckCodecModel.swift
+// Base58CheckCodec.swift
 
 import Foundation
 
-internal enum Base58CheckCodecModel {
+internal enum Base58CheckCodec {
 
     internal static func encode(payload: Data) -> String {
         let checksum = SecureHash256Model.hash(payload).prefix(4)

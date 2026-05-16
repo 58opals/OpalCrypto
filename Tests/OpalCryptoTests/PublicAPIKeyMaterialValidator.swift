@@ -40,7 +40,7 @@ struct PublicAPIKeyMaterialValidator {
     @Test("Reject truncated wallet import payloads with the real payload length")
     func rejectTruncatedWalletImportPayloadsWithTheRealPayloadLength() throws {
         let truncatedPayload = Data([0x80] + Array(repeating: UInt8(0x01), count: 31))
-        let serialized = Base58CheckCodecModel.encode(payload: truncatedPayload)
+        let serialized = Base58CheckCodec.encode(payload: truncatedPayload)
 
         do {
             _ = try OpalCrypto.Key.WIF(serialized)
@@ -223,9 +223,9 @@ struct PublicAPIKeyMaterialValidator {
 
     @Test("Extended private-key parsing reports malformed private-key prefix as key material")
     func extendedPrivateKeyParsingReportsMalformedPrivateKeyPrefixAsKeyMaterial() throws {
-        var payload = try Base58CheckCodecModel.decode(rootPrivateKeyString, minimumPayloadLength: 78)
+        var payload = try Base58CheckCodec.decode(rootPrivateKeyString, minimumPayloadLength: 78)
         payload[45] = 0x01
-        let serialized = Base58CheckCodecModel.encode(payload: payload)
+        let serialized = Base58CheckCodec.encode(payload: payload)
 
         do {
             _ = try OpalCrypto.Key.ExtendedPrivate(serialized)

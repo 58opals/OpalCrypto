@@ -78,7 +78,7 @@ extension OpalCrypto.Key {
                 let mnemonic = try generate(
                     length: length,
                     language: language,
-                    makeEntropyBytes: SecureRandomByteGenerationModel.makeBytes(count:)
+                    makeEntropyBytes: SecureRandomByteGenerator.makeBytes(count:)
                 )
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.mnemonicGenerateSucceeded,
@@ -116,7 +116,7 @@ extension OpalCrypto.Key {
             let entropyBytes: [UInt8]
             do {
                 entropyBytes = try makeEntropyBytes(length.entropyByteCount)
-            } catch let error as SecureRandomByteGenerationModel.Error {
+            } catch let error as SecureRandomByteGenerator.Error {
                 switch error {
                 case .failed(let status):
                     throw Error.randomGenerationFailed(status: status)
@@ -130,12 +130,34 @@ extension OpalCrypto.Key {
         }
 
         public func deriveSeed(passphrase: String = "") throws -> OpalCrypto.Key.Seed {
-            try OpalCrypto.Key.Seed(
-                rawRepresentation: MnemonicCodecModel.deriveSeed(
-                    phrase: phrase,
-                    passphrase: passphrase
+            let fields = [
+                OpalCryptoDiagnostics.operationField("mnemonic_seed_derive"),
+                OpalCryptoDiagnostics.publicField("word_count", words.count),
+                OpalCryptoDiagnostics.publicField("language", language.rawValue)
+            ]
+            do {
+                let seed = try OpalCrypto.Key.Seed(
+                    rawRepresentation: MnemonicCodecModel.deriveSeed(
+                        phrase: phrase,
+                        passphrase: passphrase
+                    )
                 )
-            )
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.mnemonicSeedDeriveSucceeded,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.outputLengthField(seed.rawRepresentation.count)
+                    ]
+                )
+                return seed
+            } catch {
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.mnemonicSeedDeriveFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                )
+                throw error
+            }
         }
 
         internal init(parsed: MnemonicCodecModel.ParsedMnemonic) {

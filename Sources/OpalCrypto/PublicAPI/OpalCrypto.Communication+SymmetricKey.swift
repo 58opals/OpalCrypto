@@ -27,5 +27,9 @@ extension OpalCrypto.Communication {
                 fields: fields
             )
         }
+
+        internal init(validatedRawRepresentation: Data) {
+            self.rawRepresentation = Data(validatedRawRepresentation)
+        }
     }
 }

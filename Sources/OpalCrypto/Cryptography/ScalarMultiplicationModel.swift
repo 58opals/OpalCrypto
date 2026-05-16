@@ -48,7 +48,7 @@ enum ScalarMultiplicationModel {
     
     @inlinable
     static func mulG(_ scalar: ScalarModel) -> JacobianPointModel {
-        if CryptoTuningModel.shouldUseEndomorphismForGeneratorMultiplication {
+        if CryptoTuningConfiguration.shouldUseEndomorphismForGeneratorMultiplication {
             return mulGWithEndomorphism(scalar)
         }
         return mulGWithEightBitTable(scalar)

@@ -23,21 +23,13 @@ extension OpalCrypto.Key {
                 OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
             ]
             do {
-                let decoded = try WalletImportFormatCodecModel.decode(serialized)
-                self.privateKey = try OpalCrypto.Secp256k1.PrivateKey(
-                    rawRepresentation: decoded.privateKey
+                let decoded = try WalletImportFormatCodec.decode(serialized)
+                self.privateKey = OpalCrypto.Secp256k1.PrivateKey(
+                    validatedRawRepresentation: decoded.privateKey
                 )
                 self.isCompressed = decoded.isCompressed
-            } catch let error as WalletImportFormatCodecModel.Error {
+            } catch let error as WalletImportFormatCodec.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.wifParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
-                )
-                throw mappedError
-            } catch let error as OpalCrypto.Secp256k1.Error {
-                let mappedError = Self.mapSecp256k1Error(error)
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.wifParseFailed,
                     category: OpalCryptoDiagnostics.Category.key,
@@ -61,7 +53,7 @@ extension OpalCrypto.Key {
                 OpalCryptoDiagnostics.publicField("is_compressed", isCompressed)
             ]
             do {
-                let serialized = try WalletImportFormatCodecModel.encode(
+                let serialized = try WalletImportFormatCodec.encode(
                     privateKey: privateKey.rawRepresentation,
                     isCompressed: isCompressed
                 )
@@ -73,7 +65,7 @@ extension OpalCrypto.Key {
                     ]
                 )
                 return serialized
-            } catch let error as WalletImportFormatCodecModel.Error {
+            } catch let error as WalletImportFormatCodec.Error {
                 let mappedError = Self.mapError(error)
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.wifSerializeFailed,
@@ -84,7 +76,7 @@ extension OpalCrypto.Key {
             }
         }
 
-        private static func mapError(_ error: WalletImportFormatCodecModel.Error) -> Error {
+        private static func mapError(_ error: WalletImportFormatCodec.Error) -> Error {
             switch error {
             case .invalidBase58:
                 return .invalidBase58
@@ -99,27 +91,6 @@ extension OpalCrypto.Key {
             case .invalidPrivateKeyLength(let actual):
                 return .invalidPrivateKeyLength(expected: 32, actual: actual)
             case .invalidPrivateKey:
-                return .invalidPrivateKey
-            }
-        }
-
-        private static func mapSecp256k1Error(_ error: OpalCrypto.Secp256k1.Error) -> Error {
-            switch error {
-            case .invalidPrivateKeyLength(let expected, let actual):
-                return .invalidPrivateKeyLength(expected: expected, actual: actual)
-            case .invalidPrivateKey:
-                return .invalidPrivateKey
-            case .invalidPublicKeyLength,
-                 .invalidPublicKeyPrefix,
-                 .invalidPublicKey,
-                 .invalidTweakLength,
-                 .invalidTweak,
-                 .invalidDerivedKey,
-                 .invalidSignatureLength,
-                 .invalidSignature,
-                 .invalidDER,
-                 .nonCanonicalDER,
-                 .randomGenerationFailed:
                 return .invalidPrivateKey
             }
         }

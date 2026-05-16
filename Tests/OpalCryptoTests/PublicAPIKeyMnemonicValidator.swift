@@ -152,7 +152,7 @@ struct PublicAPIKeyMnemonicValidator {
                 length: .words12,
                 language: .english,
                 makeEntropyBytes: { _ in
-                    throw SecureRandomByteGenerationModel.Error.failed(status: -1)
+                    throw SecureRandomByteGenerator.Error.failed(status: -1)
                 }
             )
             Issue.record("Expected random generation failure.")

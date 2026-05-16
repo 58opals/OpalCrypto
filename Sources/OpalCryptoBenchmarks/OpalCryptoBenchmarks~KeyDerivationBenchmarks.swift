@@ -11,7 +11,7 @@ extension OpalCryptoBenchmarks {
             let derivedKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
                 password: context.basePayload,
                 salt: try OpalCrypto.KeyDerivation.Salt(
-                    rawRepresentation: context.batch64PrivateKeys[0]
+                    rawRepresentation: context.batch64PrivateKeyData[0]
                 ),
                 iterationCount: 2048,
                 derivedKeyLength: 64

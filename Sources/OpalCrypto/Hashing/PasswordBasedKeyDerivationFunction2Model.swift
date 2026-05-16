@@ -7,6 +7,7 @@ internal struct PasswordBasedKeyDerivationFunction2Model {
 
     private static let sha512BlockSize = 512 / 8
     private static let maximumDerivedKeyLength = Int(UInt64(UInt32.max) * UInt64(sha512BlockSize))
+    static let defaultDerivedKeyLength = sha512BlockSize
 
     let symmetricKey: SymmetricKey
     let salt: Data
@@ -29,7 +30,7 @@ internal struct PasswordBasedKeyDerivationFunction2Model {
             throw Error.emptySalt
         }
 
-        let resolvedDerivedKeyLength = derivedKeyLength ?? Self.sha512BlockSize
+        let resolvedDerivedKeyLength = derivedKeyLength ?? Self.defaultDerivedKeyLength
         guard resolvedDerivedKeyLength > 0 else {
             throw Error.invalidDerivedKeyLength(actual: resolvedDerivedKeyLength)
         }

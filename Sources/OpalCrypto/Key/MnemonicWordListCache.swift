@@ -1,8 +1,8 @@
-// MnemonicWordListCacheModel.swift
+// MnemonicWordListCache.swift
 
 import Foundation
 
-internal final class MnemonicWordListCacheModel: @unchecked Sendable {
+internal final class MnemonicWordListCache: @unchecked Sendable {
     private let condition = NSCondition()
     private var cachedWordLists: [OpalCrypto.Key.Mnemonic.Word.Language: MnemonicWordListRepository.WordListData] = [:]
     private var loadingLanguages: Set<OpalCrypto.Key.Mnemonic.Word.Language> = []

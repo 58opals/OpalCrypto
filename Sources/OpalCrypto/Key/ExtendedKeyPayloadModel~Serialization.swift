@@ -6,8 +6,8 @@ extension ExtendedKeyPayloadModel {
     internal init(serialized: String) throws {
         let payload: Data
         do {
-            payload = try Base58CheckCodecModel.decode(serialized, minimumPayloadLength: 78)
-        } catch let error as Base58CheckCodecModel.Error {
+            payload = try Base58CheckCodec.decode(serialized, minimumPayloadLength: 78)
+        } catch let error as Base58CheckCodec.Error {
             switch error {
             case .invalidBase58:
                 throw Error.invalidBase58
@@ -74,6 +74,6 @@ extension ExtendedKeyPayloadModel {
         case .publicKey:
             payload.append(keyData)
         }
-        return Base58CheckCodecModel.encode(payload: payload)
+        return Base58CheckCodec.encode(payload: payload)
     }
 }

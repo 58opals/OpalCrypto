@@ -25,20 +25,8 @@ extension OpalCrypto.Secp256k1 {
                 OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
             ]
             do {
-                parsedPublicKeyModel = try ParsedPublicKeyModel(publicKeyData: rawRepresentation)
-            } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
-                let mappedError = Error.invalidPublicKeyLength(
-                    expected: PublicKeyParserModel.expectedSec1PublicKeyLength(for: rawRepresentation),
-                    actual: actual
-                )
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.publicKeyParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
-                )
-                throw mappedError
-            } catch ParsedPublicKeyModel.Error.invalidPublicKeyPrefix(let actual) {
-                let mappedError = Error.invalidPublicKeyPrefix(actual: actual)
+                parsedPublicKeyModel = try Self.parsePublicKeyModel(rawRepresentation)
+            } catch let mappedError as Error {
                 OpalCryptoDiagnostics.record(
                     OpalCryptoDiagnostics.Event.publicKeyParseFailed,
                     category: OpalCryptoDiagnostics.Category.key,
@@ -67,8 +55,29 @@ extension OpalCrypto.Secp256k1 {
             self.parsedPublicKeyModel = parsedPublicKeyModel
         }
 
+        internal init(validatingRawRepresentation rawRepresentation: Data) throws {
+            self.parsedPublicKeyModel = try Self.parsePublicKeyModel(rawRepresentation)
+        }
+
         internal init(verificationKeyModel: VerificationKeyModel) {
             self.parsedPublicKeyModel = verificationKeyModel.parsedPublicKeyModel
+        }
+
+        private static func parsePublicKeyModel(
+            _ rawRepresentation: Data
+        ) throws -> ParsedPublicKeyModel {
+            do {
+                return try ParsedPublicKeyModel(publicKeyData: rawRepresentation)
+            } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
+                throw Error.invalidPublicKeyLength(
+                    expected: PublicKeyParserModel.expectedSec1PublicKeyLength(for: rawRepresentation),
+                    actual: actual
+                )
+            } catch ParsedPublicKeyModel.Error.invalidPublicKeyPrefix(let actual) {
+                throw Error.invalidPublicKeyPrefix(actual: actual)
+            } catch {
+                throw Error.invalidPublicKey
+            }
         }
 
         private static func diagnosticsFormat(for rawRepresentation: Data) -> String {

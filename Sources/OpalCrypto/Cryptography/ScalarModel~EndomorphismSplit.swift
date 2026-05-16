@@ -3,7 +3,10 @@
 import Foundation
 
 extension ScalarModel {
-    func splitForEndomorphism() -> (firstScalar: SignedScalar128Model, secondScalar: SignedScalar128Model, isFirstNegative: Bool, isSecondNegative: Bool) {
+    func splitForEndomorphism() -> (
+        firstScalar: SignedScalar128Model,
+        secondScalar: SignedScalar128Model
+    ) {
         let coefficientOne = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismCoefficientOne
         let coefficientTwo = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismCoefficientTwo
         let minusBasisOne = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismMinusBasisOne
@@ -23,7 +26,7 @@ extension ScalarModel {
         let signedFirstScalar = ScalarModel.makeSignedScalar128(from: firstScalar)
         let signedSecondScalar = ScalarModel.makeSignedScalar128(from: secondScalar)
         
-        return (signedFirstScalar, signedSecondScalar, signedFirstScalar.isNegative, signedSecondScalar.isNegative)
+        return (signedFirstScalar, signedSecondScalar)
     }
 }
 

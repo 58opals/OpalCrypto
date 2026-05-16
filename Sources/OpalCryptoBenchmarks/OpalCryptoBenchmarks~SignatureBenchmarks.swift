@@ -10,7 +10,7 @@ extension OpalCryptoBenchmarks {
         checksum ^= try runSyncBenchmark(name: "ECDSA sign", iterations: 200) {
             let signature = try OpalCrypto.Signature.ECDSA.sign(
                 message: context.ecdsaMessage,
-                privateKey: context.singlePrivateKeyValue,
+                privateKey: context.singlePrivateKey,
                 format: .der
             )
             return signature.rawRepresentation.count ^ Int(signature.rawRepresentation[0])
@@ -35,7 +35,7 @@ extension OpalCryptoBenchmarks {
         checksum ^= try runSyncBenchmark(name: "Schnorr sign", iterations: 200) {
             let signature = try OpalCrypto.Signature.Schnorr.sign(
                 digest: context.schnorrDigest,
-                privateKey: context.singlePrivateKeyValue,
+                privateKey: context.singlePrivateKey,
                 noncePolicy: .bip340Deterministic
             )
             return signature.rawRepresentation.count ^ Int(signature.rawRepresentation[0])

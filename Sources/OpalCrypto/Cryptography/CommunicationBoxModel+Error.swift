@@ -1,6 +1,5 @@
 // CommunicationBoxModel+Error.swift
 
-import CommonCrypto
 import Foundation
 
 extension CommunicationBoxModel {

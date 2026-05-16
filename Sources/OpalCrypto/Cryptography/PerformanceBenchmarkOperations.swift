@@ -1,8 +1,8 @@
-// PerformanceBenchmarkSupportModel.swift
+// PerformanceBenchmarkOperations.swift
 
 import Foundation
 
-package enum PerformanceBenchmarkSupportModel {
+package enum PerformanceBenchmarkOperations {
     package static func constructParsedPublicKey(
         publicKey: Data
     ) throws -> Data {
@@ -20,13 +20,13 @@ package enum PerformanceBenchmarkSupportModel {
 
     package static func makeBatchJacobianPointBuffer(
         from privateKeys: [Data]
-    ) throws -> BatchJacobianPointBufferModel {
+    ) throws -> BatchJacobianPointBuffer {
         let privateKeyScalars = try StandardsForEfficientCryptography256k1CurveModel.Operation
             .parsePrivateKeyScalars(
                 fromPrivateKeys32: privateKeys,
                 assumingValidPrivateKeys: false
             )
-        return BatchJacobianPointBufferModel(
+        return BatchJacobianPointBuffer(
             points: StandardsForEfficientCryptography256k1CurveModel.Operation
                 .derivePublicKeyJacobianPoints(
                     fromPrivateKeyScalars: privateKeyScalars
@@ -37,24 +37,24 @@ package enum PerformanceBenchmarkSupportModel {
     package static func multiplyBatchGeneratorScalars(
         from privateKeys: [Data]
     ) throws -> Int {
-        let batchJacobianPointBufferModel = try makeBatchJacobianPointBuffer(
+        let batchJacobianPointBuffer = try makeBatchJacobianPointBuffer(
             from: privateKeys
         )
-        guard let firstPoint = batchJacobianPointBufferModel.points.first else {
+        guard let firstPoint = batchJacobianPointBuffer.points.first else {
             return 0
         }
-        return batchJacobianPointBufferModel.points.count
+        return batchJacobianPointBuffer.points.count
             ^ Int(firstPoint.X.data32Bytes[0])
             ^ Int(firstPoint.Y.data32Bytes[0])
             ^ Int(firstPoint.Z.data32Bytes[0])
     }
 
     package static func convertBatchJacobianPointBufferToCompressedPublicKeys(
-        _ batchJacobianPointBufferModel: BatchJacobianPointBufferModel
+        _ batchJacobianPointBuffer: BatchJacobianPointBuffer
     ) throws -> [Data] {
         try StandardsForEfficientCryptography256k1CurveModel.Operation
             .encodeCompressedPublicKeys(
-                fromJacobianPoints: batchJacobianPointBufferModel.points
+                fromJacobianPoints: batchJacobianPointBuffer.points
             )
     }
 

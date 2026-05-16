@@ -1,8 +1,8 @@
-// WalletImportFormatCodecModel.swift
+// WalletImportFormatCodec.swift
 
 import Foundation
 
-internal enum WalletImportFormatCodecModel {
+internal enum WalletImportFormatCodec {
 
     private static let mainnetVersion: UInt8 = 0x80
 
@@ -20,14 +20,14 @@ internal enum WalletImportFormatCodecModel {
         if isCompressed {
             payload.append(0x01)
         }
-        return Base58CheckCodecModel.encode(payload: payload)
+        return Base58CheckCodec.encode(payload: payload)
     }
 
     internal static func decode(_ string: String) throws -> (privateKey: Data, isCompressed: Bool) {
         let payload: Data
         do {
-            payload = try Base58CheckCodecModel.decode(string, minimumPayloadLength: 33)
-        } catch let error as Base58CheckCodecModel.Error {
+            payload = try Base58CheckCodec.decode(string, minimumPayloadLength: 33)
+        } catch let error as Base58CheckCodec.Error {
             switch error {
             case .invalidBase58:
                 throw Error.invalidBase58
