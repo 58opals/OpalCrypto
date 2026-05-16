@@ -27,28 +27,74 @@ extension OpalCrypto.Key {
         }
 
         public init(_ serialized: String) throws {
-            let payload = try Self.makePayload(from: serialized)
-            try self.init(payload: payload)
+            let fields = [
+                OpalCryptoDiagnostics.operationField("extended_private_parse"),
+                OpalCryptoDiagnostics.formatField("bip32_xprv"),
+                OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
+            ]
+            do {
+                let payload = try Self.makePayload(from: serialized)
+                try self.init(payload: payload)
+            } catch let error as Error {
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.extendedPrivateParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                )
+                throw error
+            }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.extendedPrivateParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.key,
+                fields: fields
+            )
         }
 
         public static func root(seed: Seed) throws -> ExtendedPrivate {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("extended_private_root"),
+                OpalCryptoDiagnostics.formatField("bip32"),
+                OpalCryptoDiagnostics.publicField("seed_byte_count", seed.rawRepresentation.count)
+            ]
             let payload: ExtendedKeyPayloadModel
             do {
                 payload = try ExtendedKeyDerivationModel.makeRootPrivateKey(
                     seed: seed.rawRepresentation
                 )
             } catch let error as ExtendedKeyDerivationModel.Error {
+                let mappedError: Error
                 switch error {
                 case .invalidSeed:
-                    throw Error.invalidSeedLength(actual: seed.rawRepresentation.count)
+                    mappedError = Error.invalidSeedLength(actual: seed.rawRepresentation.count)
                 case .invalidKeyKind,
                      .hardenedDerivationRequiresPrivateKey,
                      .depthOverflow,
                      .invalidDerivedKey:
-                    throw Error.invalidDerivedKey
+                    mappedError = Error.invalidDerivedKey
                 }
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.extendedPrivateRootFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
-            return try ExtendedPrivate(payload: payload)
+            do {
+                let rootKey = try ExtendedPrivate(payload: payload)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.extendedPrivateRootSucceeded,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields
+                )
+                return rootKey
+            } catch let error as Error {
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.extendedPrivateRootFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                )
+                throw error
+            }
         }
 
         public func serialize() -> String {

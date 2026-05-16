@@ -52,6 +52,18 @@ extension OpalCrypto.Signature {
             format: ECDSAFormat = .der,
             noncePolicy: ECDSANoncePolicy = .rfc6979
         ) throws -> ECDSA {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("sign"),
+                OpalCryptoDiagnostics.algorithmField("ecdsa"),
+                OpalCryptoDiagnostics.formatField(format.diagnosticsName),
+                OpalCryptoDiagnostics.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalCryptoDiagnostics.messageLengthField(message.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.ecdsaSignBegin,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields
+            )
             do {
                 let signatureData = try EllipticCurveDigitalSignatureAlgorithmModel.sign(
                     message: message,
@@ -59,9 +71,23 @@ extension OpalCrypto.Signature {
                     in: format.internalFormat,
                     nonceFunction: noncePolicy.internalNoncePolicy
                 )
-                return try ECDSA(rawRepresentation: signatureData, format: format)
+                let signature = try ECDSA(rawRepresentation: signatureData, format: format)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.ecdsaSignSucceeded,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.signatureLengthField(signature.rawRepresentation.count)
+                    ]
+                )
+                return signature
             } catch {
-                throw OpalCrypto.Signature.mapCryptographyError(error)
+                let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.ecdsaSignFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -71,6 +97,18 @@ extension OpalCrypto.Signature {
             format: ECDSAFormat = .der,
             noncePolicy: ECDSANoncePolicy = .rfc6979
         ) throws -> ECDSA {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("sign"),
+                OpalCryptoDiagnostics.algorithmField("ecdsa"),
+                OpalCryptoDiagnostics.formatField(format.diagnosticsName),
+                OpalCryptoDiagnostics.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalCryptoDiagnostics.publicField("digest_byte_count", digest.rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.ecdsaSignBegin,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields
+            )
             do {
                 let signatureModel = try StandardsForEfficientCryptography256k1CurveModel
                     .sign(
@@ -78,9 +116,23 @@ extension OpalCrypto.Signature {
                         privateKeyData32Bytes: privateKey.rawRepresentation,
                         nonce: noncePolicy.internalECDSANoncePolicy
                     )
-                return try ECDSA(signatureModel: signatureModel, format: format)
+                let signature = try ECDSA(signatureModel: signatureModel, format: format)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.ecdsaSignSucceeded,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.signatureLengthField(signature.rawRepresentation.count)
+                    ]
+                )
+                return signature
             } catch {
-                throw OpalCrypto.Signature.mapCryptographyError(error)
+                let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.ecdsaSignFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -113,12 +165,42 @@ extension OpalCrypto.Signature {
             message: Data,
             verificationKey: VerificationKey
         ) throws -> Bool {
-            try OpalCrypto.Signature.verifyValidated(
-                signature: rawRepresentation,
-                message: message,
-                verificationKey: verificationKey,
-                format: format.internalFormat
+            let fields = [
+                OpalCryptoDiagnostics.operationField("verify"),
+                OpalCryptoDiagnostics.algorithmField("ecdsa"),
+                OpalCryptoDiagnostics.formatField(format.diagnosticsName),
+                OpalCryptoDiagnostics.messageLengthField(message.count),
+                OpalCryptoDiagnostics.signatureLengthField(rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.ecdsaVerifyBegin,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields
             )
+            do {
+                let result = try OpalCrypto.Signature.verifyValidated(
+                    signature: rawRepresentation,
+                    message: message,
+                    verificationKey: verificationKey,
+                    format: format.internalFormat
+                )
+                OpalCryptoDiagnostics.record(
+                    result
+                        ? OpalCryptoDiagnostics.Event.ecdsaVerifySucceeded
+                        : OpalCryptoDiagnostics.Event.ecdsaVerifyFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + [OpalCryptoDiagnostics.resultField(result)]
+                )
+                return result
+            } catch {
+                let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.ecdsaVerifyFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
+            }
         }
 
         public func verify(
@@ -135,17 +217,48 @@ extension OpalCrypto.Signature {
             digest: Digest,
             verificationKey: VerificationKey
         ) throws -> Bool {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("verify"),
+                OpalCryptoDiagnostics.algorithmField("ecdsa"),
+                OpalCryptoDiagnostics.formatField(format.diagnosticsName),
+                OpalCryptoDiagnostics.publicField("digest_byte_count", digest.rawRepresentation.count),
+                OpalCryptoDiagnostics.signatureLengthField(rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.ecdsaVerifyBegin,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields
+            )
             do {
-                return try StandardsForEfficientCryptography256k1CurveModel.verify(
+                let result = try StandardsForEfficientCryptography256k1CurveModel.verify(
                     signature: signatureModel,
                     digestData32Bytes: digest.rawRepresentation,
                     verificationKeyModel: verificationKey.verificationKeyModel
                 )
+                OpalCryptoDiagnostics.record(
+                    result
+                        ? OpalCryptoDiagnostics.Event.ecdsaVerifySucceeded
+                        : OpalCryptoDiagnostics.Event.ecdsaVerifyFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + [OpalCryptoDiagnostics.resultField(result)]
+                )
+                return result
             } catch {
                 if OpalCrypto.Signature.isInvalidVerificationSignatureError(error) {
+                    OpalCryptoDiagnostics.record(
+                        OpalCryptoDiagnostics.Event.ecdsaVerifyFailed,
+                        category: OpalCryptoDiagnostics.Category.signature,
+                        fields: fields + [OpalCryptoDiagnostics.resultField(false)]
+                    )
                     return false
                 }
-                throw OpalCrypto.Signature.mapCryptographyError(error)
+                let mappedError = OpalCrypto.Signature.mapCryptographyError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.ecdsaVerifyFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -183,6 +296,28 @@ private extension OpalCrypto.Signature.ECDSANoncePolicy {
             return .requestForComments6979SecureHashAlgorithm256
         case .random:
             return .systemRandom
+        }
+    }
+}
+
+private extension OpalCrypto.Signature.ECDSAFormat {
+    var diagnosticsName: String {
+        switch self {
+        case .raw:
+            return "raw"
+        case .der:
+            return "der"
+        }
+    }
+}
+
+private extension OpalCrypto.Signature.ECDSANoncePolicy {
+    var diagnosticsName: String {
+        switch self {
+        case .rfc6979:
+            return "rfc6979"
+        case .random:
+            return "random"
         }
     }
 }

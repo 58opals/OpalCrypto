@@ -33,6 +33,17 @@ extension OpalCrypto.Signature {
             privateKey: OpalCrypto.Secp256k1.PrivateKey,
             noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
         ) throws -> Schnorr {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("sign"),
+                OpalCryptoDiagnostics.algorithmField("schnorr"),
+                OpalCryptoDiagnostics.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalCryptoDiagnostics.publicField("digest_byte_count", digest.rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.schnorrSignBegin,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields
+            )
             do {
                 let signatureData = try EllipticCurveDigitalSignatureAlgorithmModel.sign(
                     message: digest.rawRepresentation,
@@ -40,9 +51,23 @@ extension OpalCrypto.Signature {
                     in: .schnorr,
                     nonceFunction: noncePolicy.internalNoncePolicy
                 )
-                return try Schnorr(rawRepresentation: signatureData)
+                let signature = try Schnorr(rawRepresentation: signatureData)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.schnorrSignSucceeded,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.signatureLengthField(signature.rawRepresentation.count)
+                    ]
+                )
+                return signature
             } catch {
-                throw OpalCrypto.Signature.mapCryptographyError(error)
+                let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.schnorrSignFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -60,12 +85,52 @@ extension OpalCrypto.Signature {
             digest: Digest,
             verificationKey: VerificationKey
         ) throws -> Bool {
-            try OpalCrypto.Signature.verifyValidated(
-                signature: rawRepresentation,
-                message: digest.rawRepresentation,
-                verificationKey: verificationKey,
-                format: .schnorr
+            let fields = [
+                OpalCryptoDiagnostics.operationField("verify"),
+                OpalCryptoDiagnostics.algorithmField("schnorr"),
+                OpalCryptoDiagnostics.publicField("digest_byte_count", digest.rawRepresentation.count),
+                OpalCryptoDiagnostics.signatureLengthField(rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.schnorrVerifyBegin,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields
             )
+            do {
+                let result = try OpalCrypto.Signature.verifyValidated(
+                    signature: rawRepresentation,
+                    message: digest.rawRepresentation,
+                    verificationKey: verificationKey,
+                    format: .schnorr
+                )
+                OpalCryptoDiagnostics.record(
+                    result
+                        ? OpalCryptoDiagnostics.Event.schnorrVerifySucceeded
+                        : OpalCryptoDiagnostics.Event.schnorrVerifyFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + [OpalCryptoDiagnostics.resultField(result)]
+                )
+                return result
+            } catch {
+                let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.schnorrVerifyFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
+            }
+        }
+    }
+}
+
+private extension OpalCrypto.Signature.SchnorrNoncePolicy {
+    var diagnosticsName: String {
+        switch self {
+        case .bip340Deterministic:
+            return "bip340_deterministic"
+        case .random:
+            return "random"
         }
     }
 }

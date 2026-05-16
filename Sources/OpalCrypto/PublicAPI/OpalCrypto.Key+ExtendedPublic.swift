@@ -17,8 +17,27 @@ extension OpalCrypto.Key {
         }
 
         public init(_ serialized: String) throws {
-            let payload = try Self.makePayload(from: serialized)
-            try self.init(payload: payload)
+            let fields = [
+                OpalCryptoDiagnostics.operationField("extended_public_parse"),
+                OpalCryptoDiagnostics.formatField("bip32_xpub"),
+                OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
+            ]
+            do {
+                let payload = try Self.makePayload(from: serialized)
+                try self.init(payload: payload)
+            } catch let error as Error {
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.extendedPublicParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                )
+                throw error
+            }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.extendedPublicParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.key,
+                fields: fields
+            )
         }
 
         public func serialize() -> String {

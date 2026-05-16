@@ -7,12 +7,27 @@ extension OpalCrypto.Communication {
         public let rawRepresentation: Data
 
         public init(rawRepresentation: Data) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("ciphertext_parse"),
+                OpalCryptoDiagnostics.ciphertextLengthField(rawRepresentation.count)
+            ]
             do {
                 try CommunicationBoxModel.validateCiphertextEnvelope(rawRepresentation)
             } catch {
-                throw Error.invalidCiphertext
+                let mappedError = Error.invalidCiphertext
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationCiphertextParseFailed,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
             self.rawRepresentation = Data(rawRepresentation)
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.communicationCiphertextParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.communication,
+                fields: fields
+            )
         }
 
         internal init(unchecked rawRepresentation: Data) {

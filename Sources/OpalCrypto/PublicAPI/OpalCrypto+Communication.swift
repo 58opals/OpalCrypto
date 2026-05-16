@@ -10,15 +10,41 @@ extension OpalCrypto {
             recipientPublicKey: OpalCrypto.Secp256k1.PublicKey,
             paddedPlaintextLength: Int? = nil
         ) throws -> Ciphertext {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("encrypt"),
+                OpalCryptoDiagnostics.publicField("plaintext_byte_count", message.count),
+                OpalCryptoDiagnostics.publicField("recipient_public_key_byte_count", recipientPublicKey.rawRepresentation.count),
+                OpalCryptoDiagnostics.publicField("padded_plaintext_length", paddedPlaintextLength ?? 0),
+                OpalCryptoDiagnostics.publicField("has_explicit_padding", paddedPlaintextLength != nil)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.communicationEncryptBegin,
+                category: OpalCryptoDiagnostics.Category.communication,
+                fields: fields
+            )
             do {
                 let ciphertext = try CommunicationBoxModel.encrypt(
                     message: message,
                     recipientPublicKey: recipientPublicKey.rawRepresentation,
                     paddedPlaintextLength: paddedPlaintextLength
                 )
-                return Ciphertext(unchecked: ciphertext)
+                let result = Ciphertext(unchecked: ciphertext)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationEncryptSucceeded,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.ciphertextLengthField(result.rawRepresentation.count)
+                    ]
+                )
+                return result
             } catch let error as CommunicationBoxModel.Error {
-                throw mapError(error)
+                let mappedError = mapError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationEncryptFailed,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -26,15 +52,40 @@ extension OpalCrypto {
             _ ciphertext: Ciphertext,
             privateKey: OpalCrypto.Secp256k1.PrivateKey
         ) throws -> DecryptionResult {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("decrypt"),
+                OpalCryptoDiagnostics.publicField("mode", "private_key"),
+                OpalCryptoDiagnostics.ciphertextLengthField(ciphertext.rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.communicationDecryptBegin,
+                category: OpalCryptoDiagnostics.Category.communication,
+                fields: fields
+            )
             do {
-                return DecryptionResult(
+                let result = DecryptionResult(
                     resultModel: try CommunicationBoxModel.decrypt(
                         ciphertext.rawRepresentation,
                         privateKey: privateKey.rawRepresentation
                     )
                 )
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationDecryptSucceeded,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.publicField("plaintext_byte_count", result.message.count),
+                        OpalCryptoDiagnostics.publicField("symmetric_key_byte_count", result.symmetricKey.rawRepresentation.count)
+                    ]
+                )
+                return result
             } catch let error as CommunicationBoxModel.Error {
-                throw mapError(error)
+                let mappedError = mapError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationDecryptFailed,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 
@@ -42,13 +93,37 @@ extension OpalCrypto {
             _ ciphertext: Ciphertext,
             symmetricKey: SymmetricKey
         ) throws -> Data {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("decrypt"),
+                OpalCryptoDiagnostics.publicField("mode", "symmetric_key"),
+                OpalCryptoDiagnostics.ciphertextLengthField(ciphertext.rawRepresentation.count)
+            ]
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.communicationDecryptBegin,
+                category: OpalCryptoDiagnostics.Category.communication,
+                fields: fields
+            )
             do {
-                return try CommunicationBoxModel.decrypt(
+                let message = try CommunicationBoxModel.decrypt(
                     ciphertext.rawRepresentation,
                     symmetricKey: symmetricKey.rawRepresentation
                 )
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationDecryptSucceeded,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.publicField("plaintext_byte_count", message.count)
+                    ]
+                )
+                return message
             } catch let error as CommunicationBoxModel.Error {
-                throw mapError(error)
+                let mappedError = mapError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.communicationDecryptFailed,
+                    category: OpalCryptoDiagnostics.Category.communication,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 

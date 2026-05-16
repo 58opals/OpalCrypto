@@ -21,9 +21,15 @@ let package = Package(
             targets: ["OpalCryptoBenchmarks"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/58opals/OpalDiagnostics.git", branch: "develop")
+    ],
     targets: [
         .target(
             name: "OpalCrypto",
+            dependencies: [
+                .product(name: "OpalDiagnostics", package: "OpalDiagnostics")
+            ],
             resources: [
                 .process("Resources")
             ]
@@ -34,7 +40,10 @@ let package = Package(
         ),
         .testTarget(
             name: "OpalCryptoTests",
-            dependencies: ["OpalCrypto"]
+            dependencies: [
+                "OpalCrypto",
+                .product(name: "OpalDiagnostics", package: "OpalDiagnostics")
+            ]
         )
     ]
 )

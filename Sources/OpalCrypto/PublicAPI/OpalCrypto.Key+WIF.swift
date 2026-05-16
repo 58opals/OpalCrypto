@@ -17,6 +17,11 @@ extension OpalCrypto.Key {
         }
 
         public init(_ serialized: String) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("wif_parse"),
+                OpalCryptoDiagnostics.formatField("wif"),
+                OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
+            ]
             do {
                 let decoded = try WalletImportFormatCodecModel.decode(serialized)
                 self.privateKey = try OpalCrypto.Secp256k1.PrivateKey(
@@ -24,20 +29,58 @@ extension OpalCrypto.Key {
                 )
                 self.isCompressed = decoded.isCompressed
             } catch let error as WalletImportFormatCodecModel.Error {
-                throw Self.mapError(error)
+                let mappedError = Self.mapError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.wifParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch let error as OpalCrypto.Secp256k1.Error {
-                throw Self.mapSecp256k1Error(error)
+                let mappedError = Self.mapSecp256k1Error(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.wifParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.wifParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.key,
+                fields: fields + [
+                    OpalCryptoDiagnostics.publicField("is_compressed", isCompressed)
+                ]
+            )
         }
 
         public func serialize() throws -> String {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("wif_serialize"),
+                OpalCryptoDiagnostics.formatField("wif"),
+                OpalCryptoDiagnostics.publicField("is_compressed", isCompressed)
+            ]
             do {
-                return try WalletImportFormatCodecModel.encode(
+                let serialized = try WalletImportFormatCodecModel.encode(
                     privateKey: privateKey.rawRepresentation,
                     isCompressed: isCompressed
                 )
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.wifSerializeSucceeded,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + [
+                        OpalCryptoDiagnostics.publicField("output_character_count", serialized.count)
+                    ]
+                )
+                return serialized
             } catch let error as WalletImportFormatCodecModel.Error {
-                throw Self.mapError(error)
+                let mappedError = Self.mapError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.wifSerializeFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
         }
 

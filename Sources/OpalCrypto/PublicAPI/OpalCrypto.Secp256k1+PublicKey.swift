@@ -19,18 +19,48 @@ extension OpalCrypto.Secp256k1 {
         }
 
         public init(rawRepresentation: Data) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("public_key_parse"),
+                OpalCryptoDiagnostics.formatField(Self.diagnosticsFormat(for: rawRepresentation)),
+                OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
+            ]
             do {
                 parsedPublicKeyModel = try ParsedPublicKeyModel(publicKeyData: rawRepresentation)
             } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
-                throw Error.invalidPublicKeyLength(
+                let mappedError = Error.invalidPublicKeyLength(
                     expected: PublicKeyParserModel.expectedSec1PublicKeyLength(for: rawRepresentation),
                     actual: actual
                 )
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.publicKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch ParsedPublicKeyModel.Error.invalidPublicKeyPrefix(let actual) {
-                throw Error.invalidPublicKeyPrefix(actual: actual)
+                let mappedError = Error.invalidPublicKeyPrefix(actual: actual)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.publicKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch {
-                throw Error.invalidPublicKey
+                let mappedError = Error.invalidPublicKey
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.publicKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.key,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.publicKeyParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.key,
+                fields: fields + [
+                    OpalCryptoDiagnostics.outputLengthField(parsedPublicKeyModel.compressedPublicKeyData.count)
+                ]
+            )
         }
 
         internal init(parsedPublicKeyModel: ParsedPublicKeyModel) {
@@ -39,6 +69,19 @@ extension OpalCrypto.Secp256k1 {
 
         internal init(verificationKeyModel: VerificationKeyModel) {
             self.parsedPublicKeyModel = verificationKeyModel.parsedPublicKeyModel
+        }
+
+        private static func diagnosticsFormat(for rawRepresentation: Data) -> String {
+            switch rawRepresentation.first {
+            case 0x02, 0x03:
+                return "sec1_compressed"
+            case 0x04:
+                return "sec1_uncompressed"
+            case .some:
+                return "sec1_unknown"
+            case .none:
+                return "sec1_empty"
+            }
         }
     }
 }

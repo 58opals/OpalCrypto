@@ -22,6 +22,11 @@ extension OpalCrypto.Signature {
         }
 
         public init(rawRepresentation: Data) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("verification_key_parse"),
+                OpalCryptoDiagnostics.algorithmField("secp256k1"),
+                OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
+            ]
             do {
                 self.init(
                     publicKey: try OpalCrypto.Secp256k1.PublicKey(
@@ -29,20 +34,63 @@ extension OpalCrypto.Signature {
                     )
                 )
             } catch let error as OpalCrypto.Secp256k1.Error {
-                throw OpalCrypto.Signature.mapCryptographyError(error)
+                let mappedError = OpalCrypto.Signature.mapCryptographyError(error)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.verificationKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.verificationKeyParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields + [
+                    OpalCryptoDiagnostics.outputLengthField(rawRepresentation.count)
+                ]
+            )
         }
 
         internal init(rawPublicKey: Data) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("verification_key_parse"),
+                OpalCryptoDiagnostics.algorithmField("secp256k1"),
+                OpalCryptoDiagnostics.inputLengthField(rawPublicKey.count)
+            ]
             do {
                 verificationKeyModel = try VerificationKeyModel(publicKeyData: rawPublicKey)
             } catch VerificationKeyModel.Error.invalidPublicKeyLength(let actual) {
-                throw Error.invalidPublicKeyLength(actual: actual)
+                let mappedError = Error.invalidPublicKeyLength(actual: actual)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.verificationKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch VerificationKeyModel.Error.invalidPublicKeyPrefix(let actual) {
-                throw Error.invalidPublicKeyPrefix(actual: actual)
+                let mappedError = Error.invalidPublicKeyPrefix(actual: actual)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.verificationKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch {
-                throw Error.invalidPublicKey
+                let mappedError = Error.invalidPublicKey
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.verificationKeyParseFailed,
+                    category: OpalCryptoDiagnostics.Category.signature,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.verificationKeyParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.signature,
+                fields: fields + [
+                    OpalCryptoDiagnostics.outputLengthField(rawPublicKey.count)
+                ]
+            )
         }
 
         internal init(verificationKeyModel: VerificationKeyModel) {

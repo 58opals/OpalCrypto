@@ -11,14 +11,35 @@ extension OpalCrypto.Pedersen {
         }
 
         public init(rawRepresentation: Data) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("nonce_parse"),
+                OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
+            ]
             do {
                 scalarModel = try ScalarModel(data32: rawRepresentation, requireNonZero: false)
             } catch ScalarModel.Error.invalidDataLength(let expected, let actual) {
                 precondition(expected == 32)
-                throw Error.invalidNonceLength(expected: expected, actual: actual)
+                let mappedError = Error.invalidNonceLength(expected: expected, actual: actual)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.pedersenNonceParseFailed,
+                    category: OpalCryptoDiagnostics.Category.pedersen,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch {
-                throw Error.invalidNonce
+                let mappedError = Error.invalidNonce
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.pedersenNonceParseFailed,
+                    category: OpalCryptoDiagnostics.Category.pedersen,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.pedersenNonceParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.pedersen,
+                fields: fields
+            )
         }
 
         internal init(scalarModel: ScalarModel) {

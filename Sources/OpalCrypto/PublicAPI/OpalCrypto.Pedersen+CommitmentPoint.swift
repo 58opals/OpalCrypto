@@ -19,13 +19,34 @@ extension OpalCrypto.Pedersen {
         }
 
         public init(rawRepresentation: Data) throws {
+            let fields = [
+                OpalCryptoDiagnostics.operationField("commitment_parse"),
+                OpalCryptoDiagnostics.publicField("commitment_byte_count", rawRepresentation.count)
+            ]
             do {
                 affinePoint = try PublicKeyParserModel.parsePublicKey(rawRepresentation)
             } catch PublicKeyParserModel.Error.invalidLength(let actual) {
-                throw Error.invalidCommitmentLength(actual: actual)
+                let mappedError = Error.invalidCommitmentLength(actual: actual)
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.pedersenCommitmentParseFailed,
+                    category: OpalCryptoDiagnostics.Category.pedersen,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             } catch {
-                throw Error.invalidCommitment
+                let mappedError = Error.invalidCommitment
+                OpalCryptoDiagnostics.record(
+                    OpalCryptoDiagnostics.Event.pedersenCommitmentParseFailed,
+                    category: OpalCryptoDiagnostics.Category.pedersen,
+                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                )
+                throw mappedError
             }
+            OpalCryptoDiagnostics.record(
+                OpalCryptoDiagnostics.Event.pedersenCommitmentParseSucceeded,
+                category: OpalCryptoDiagnostics.Category.pedersen,
+                fields: fields
+            )
         }
 
         internal init(affinePoint: AffinePointModel) {

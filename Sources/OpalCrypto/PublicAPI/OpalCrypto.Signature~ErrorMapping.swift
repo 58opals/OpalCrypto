@@ -83,6 +83,14 @@ extension OpalCrypto.Signature {
         return .cryptographyFailure
     }
 
+    static func mapDiagnosticsError(_ error: Swift.Error) -> Error {
+        if let facadeError = error as? Error {
+            return facadeError
+        }
+
+        return mapCryptographyError(error)
+    }
+
     static func mapVerificationKeyError(
         _ error: VerificationKey.Error
     ) -> Error {
