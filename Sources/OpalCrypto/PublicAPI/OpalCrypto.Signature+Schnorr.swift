@@ -1,6 +1,7 @@
 // OpalCrypto.Signature+Schnorr.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Signature {
     public struct Schnorr: Sendable, Equatable {
@@ -34,14 +35,14 @@ extension OpalCrypto.Signature {
             noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
         ) throws -> Schnorr {
             let fields = [
-                OpalCryptoDiagnostics.operationField("sign"),
-                OpalCryptoDiagnostics.algorithmField("schnorr"),
-                OpalCryptoDiagnostics.publicField("nonce_policy", noncePolicy.diagnosticsName),
-                OpalCryptoDiagnostics.publicField("digest_byte_count", digest.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("sign"),
+                OpalDiagnostics.Field.algorithmField("schnorr"),
+                OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)
             ]
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.schnorrSignBegin,
-                category: OpalCryptoDiagnostics.Category.signature,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                event: OpalDiagnostics.Event.schnorrSignBegin,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrSignBegin),
                 fields: fields
             )
             do {
@@ -52,20 +53,20 @@ extension OpalCrypto.Signature {
                     nonceFunction: noncePolicy.internalNoncePolicy
                 )
                 let signature = try Schnorr(rawRepresentation: signatureData)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.schnorrSignSucceeded,
-                    category: OpalCryptoDiagnostics.Category.signature,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: OpalDiagnostics.Event.schnorrSignSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrSignSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.signatureLengthField(signature.rawRepresentation.count)
+                        OpalDiagnostics.Field.signatureLengthField(signature.rawRepresentation.count)
                     ]
                 )
                 return signature
             } catch {
                 let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.schnorrSignFailed,
-                    category: OpalCryptoDiagnostics.Category.signature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: OpalDiagnostics.Event.schnorrSignFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrSignFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -86,14 +87,14 @@ extension OpalCrypto.Signature {
             verificationKey: VerificationKey
         ) throws -> Bool {
             let fields = [
-                OpalCryptoDiagnostics.operationField("verify"),
-                OpalCryptoDiagnostics.algorithmField("schnorr"),
-                OpalCryptoDiagnostics.publicField("digest_byte_count", digest.rawRepresentation.count),
-                OpalCryptoDiagnostics.signatureLengthField(rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("verify"),
+                OpalDiagnostics.Field.algorithmField("schnorr"),
+                OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count),
+                OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
             ]
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.schnorrVerifyBegin,
-                category: OpalCryptoDiagnostics.Category.signature,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                event: OpalDiagnostics.Event.schnorrVerifyBegin,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrVerifyBegin),
                 fields: fields
             )
             do {
@@ -103,20 +104,22 @@ extension OpalCrypto.Signature {
                     verificationKey: verificationKey,
                     format: .schnorr
                 )
-                OpalCryptoDiagnostics.record(
-                    result
-                        ? OpalCryptoDiagnostics.Event.schnorrVerifySucceeded
-                        : OpalCryptoDiagnostics.Event.schnorrVerifyFailed,
-                    category: OpalCryptoDiagnostics.Category.signature,
-                    fields: fields + [OpalCryptoDiagnostics.resultField(result)]
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: result
+                        ? OpalDiagnostics.Event.schnorrVerifySucceeded
+                        : OpalDiagnostics.Event.schnorrVerifyFailed,
+                    level: .opalCryptoDefault(for: result
+                        ? OpalDiagnostics.Event.schnorrVerifySucceeded
+                        : OpalDiagnostics.Event.schnorrVerifyFailed),
+                    fields: fields + [OpalDiagnostics.Field.resultField(result)]
                 )
                 return result
             } catch {
                 let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.schnorrVerifyFailed,
-                    category: OpalCryptoDiagnostics.Category.signature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: OpalDiagnostics.Event.schnorrVerifyFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrVerifyFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }

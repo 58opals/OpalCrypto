@@ -82,7 +82,7 @@ extension BlindSignatureModel {
             }
 
             self.verificationKeyModel = derivedVerificationKeyModel
-            self.messageDigest32Bytes = messageDigest32Bytes
+            self.messageDigest32Bytes = Data(messageDigest32Bytes)
             self.signatureRData32Bytes = signatureRFieldElement.data32Bytes
             self.requestScalar = isPositiveAdjustment
                 ? challengeScalar.addModN(blindingScalarB)

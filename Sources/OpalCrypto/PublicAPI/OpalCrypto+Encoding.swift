@@ -1,6 +1,7 @@
 // OpalCrypto+Encoding.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto {
     public enum Encoding {
@@ -12,12 +13,12 @@ extension OpalCrypto {
         public static func decodeBase58(_ text: String) -> Data? {
             let decoded = Base58EncodingModel.decode(text)
             if decoded == nil {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.base58DecodeFailed,
-                    category: OpalCryptoDiagnostics.Category.encoding,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.encoding).record(
+                    event: OpalDiagnostics.Event.base58DecodeFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.base58DecodeFailed),
                     fields: [
-                        OpalCryptoDiagnostics.operationField("base58_decode"),
-                        OpalCryptoDiagnostics.publicField("input_character_count", text.count)
+                        OpalDiagnostics.Field.operationField("base58_decode"),
+                        OpalDiagnostics.Field.publicField("input_character_count", text.count)
                     ]
                 )
             }
@@ -43,15 +44,7 @@ extension OpalCrypto {
                 )
             } catch let error as Base32EncodingModel.Error {
                 let mappedError = mapBase32Error(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.base32DecodeFailed,
-                    category: OpalCryptoDiagnostics.Category.encoding,
-                    fields: [
-                        OpalCryptoDiagnostics.operationField("base32_decode"),
-                        OpalCryptoDiagnostics.publicField("mode", "bytes"),
-                        OpalCryptoDiagnostics.publicField("input_character_count", text.count)
-                    ] + OpalCryptoDiagnostics.errorFields(mappedError)
-                )
+                recordBase32DecodeFailure(mappedError, text: text, mode: "bytes")
                 throw mappedError
             }
         }
@@ -76,15 +69,7 @@ extension OpalCrypto {
                 return try FiveBitValues(rawRepresentation: values)
             } catch let error as Base32EncodingModel.Error {
                 let mappedError = mapBase32Error(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.base32DecodeFailed,
-                    category: OpalCryptoDiagnostics.Category.encoding,
-                    fields: [
-                        OpalCryptoDiagnostics.operationField("base32_decode"),
-                        OpalCryptoDiagnostics.publicField("mode", "five_bit_values"),
-                        OpalCryptoDiagnostics.publicField("input_character_count", text.count)
-                    ] + OpalCryptoDiagnostics.errorFields(mappedError)
-                )
+                recordBase32DecodeFailure(mappedError, text: text, mode: "five_bit_values")
                 throw mappedError
             }
         }
@@ -100,6 +85,22 @@ extension OpalCrypto {
             case .invalidCharacterFound:
                 return .invalidCharacterFound
             }
+        }
+
+        private static func recordBase32DecodeFailure(
+            _ error: Error,
+            text: String,
+            mode: String
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.encoding).record(
+                event: OpalDiagnostics.Event.base32DecodeFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.base32DecodeFailed),
+                fields: [
+                    OpalDiagnostics.Field.operationField("base32_decode"),
+                    OpalDiagnostics.Field.publicField("mode", mode),
+                    OpalDiagnostics.Field.publicField("input_character_count", text.count)
+                ] + OpalDiagnostics.Field.errorFields(error)
+            )
         }
     }
 }

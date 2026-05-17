@@ -1,6 +1,7 @@
 // OpalCrypto.Pedersen+CommitmentPoint.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
     public struct CommitmentPoint: Sendable, Equatable {
@@ -20,31 +21,31 @@ extension OpalCrypto.Pedersen {
 
         public init(rawRepresentation: Data) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("commitment_parse"),
-                OpalCryptoDiagnostics.publicField("commitment_byte_count", rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("commitment_parse"),
+                OpalDiagnostics.Field.publicField("commitment_byte_count", rawRepresentation.count)
             ]
             do {
                 affinePoint = try PublicKeyParserModel.parsePublicKey(rawRepresentation)
             } catch PublicKeyParserModel.Error.invalidLength(let actual) {
                 let mappedError = Error.invalidCommitmentLength(actual: actual)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCommitmentParseFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCommitmentParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitmentParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch {
                 let mappedError = Error.invalidCommitment
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCommitmentParseFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCommitmentParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitmentParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.pedersenCommitmentParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.pedersen,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenCommitmentParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitmentParseSucceeded),
                 fields: fields
             )
         }

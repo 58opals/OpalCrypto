@@ -1,6 +1,7 @@
 // OpalCrypto.Key+ExtendedPrivate.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Key {
     public struct ExtendedPrivate: Sendable, Equatable {
@@ -28,33 +29,33 @@ extension OpalCrypto.Key {
 
         public init(_ serialized: String) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("extended_private_parse"),
-                OpalCryptoDiagnostics.formatField("bip32_xprv"),
-                OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
+                OpalDiagnostics.Field.operationField("extended_private_parse"),
+                OpalDiagnostics.Field.formatField("bip32_xprv"),
+                OpalDiagnostics.Field.publicField("input_character_count", serialized.count)
             ]
             do {
                 let payload = try Self.makePayload(from: serialized)
                 try self.init(payload: payload)
             } catch let error as Error {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.extendedPrivateParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.extendedPrivateParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPrivateParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(error)
                 )
                 throw error
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.extendedPrivateParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.key,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.extendedPrivateParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPrivateParseSucceeded),
                 fields: fields
             )
         }
 
         public static func root(seed: Seed) throws -> ExtendedPrivate {
             let fields = [
-                OpalCryptoDiagnostics.operationField("extended_private_root"),
-                OpalCryptoDiagnostics.formatField("bip32"),
-                OpalCryptoDiagnostics.publicField("seed_byte_count", seed.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("extended_private_root"),
+                OpalDiagnostics.Field.formatField("bip32"),
+                OpalDiagnostics.Field.publicField("seed_byte_count", seed.rawRepresentation.count)
             ]
             let payload: ExtendedKeyPayloadModel
             do {
@@ -72,26 +73,26 @@ extension OpalCrypto.Key {
                      .invalidDerivedKey:
                     mappedError = Error.invalidDerivedKey
                 }
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.extendedPrivateRootFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.extendedPrivateRootFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPrivateRootFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
             do {
                 let rootKey = try ExtendedPrivate(payload: payload)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.extendedPrivateRootSucceeded,
-                    category: OpalCryptoDiagnostics.Category.key,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.extendedPrivateRootSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPrivateRootSucceeded),
                     fields: fields
                 )
                 return rootKey
             } catch let error as Error {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.extendedPrivateRootFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.extendedPrivateRootFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPrivateRootFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(error)
                 )
                 throw error
             }

@@ -1,6 +1,7 @@
 // OpalCrypto.Secp256k1+SharedSecret.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Secp256k1 {
     public struct SharedSecret: Sendable, Equatable {
@@ -8,24 +9,24 @@ extension OpalCrypto.Secp256k1 {
 
         public init(rawRepresentation: Data) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("shared_secret_parse"),
-                OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("shared_secret_parse"),
+                OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
             guard rawRepresentation.count == 32 else {
                 let error = Error.invalidDerivedKey
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.sharedSecretParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.sharedSecretParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.sharedSecretParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(error)
                 )
                 throw error
             }
             self.rawRepresentation = Data(rawRepresentation)
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.sharedSecretParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.key,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.sharedSecretParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.sharedSecretParseSucceeded),
                 fields: fields + [
-                    OpalCryptoDiagnostics.outputLengthField(self.rawRepresentation.count)
+                    OpalDiagnostics.Field.outputLengthField(self.rawRepresentation.count)
                 ]
             )
         }

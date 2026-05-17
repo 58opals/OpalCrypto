@@ -1,6 +1,7 @@
 // OpalCrypto.Key+ExtendedPublic.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Key {
     public struct ExtendedPublic: Sendable, Equatable {
@@ -18,24 +19,24 @@ extension OpalCrypto.Key {
 
         public init(_ serialized: String) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("extended_public_parse"),
-                OpalCryptoDiagnostics.formatField("bip32_xpub"),
-                OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
+                OpalDiagnostics.Field.operationField("extended_public_parse"),
+                OpalDiagnostics.Field.formatField("bip32_xpub"),
+                OpalDiagnostics.Field.publicField("input_character_count", serialized.count)
             ]
             do {
                 let payload = try Self.makePayload(from: serialized)
                 try self.init(payload: payload)
             } catch let error as Error {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.extendedPublicParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.extendedPublicParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPublicParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(error)
                 )
                 throw error
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.extendedPublicParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.key,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.extendedPublicParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPublicParseSucceeded),
                 fields: fields
             )
         }

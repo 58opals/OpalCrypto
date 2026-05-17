@@ -1,6 +1,7 @@
 // OpalCrypto+Communication.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto {
     public enum Communication {
@@ -17,15 +18,15 @@ extension OpalCrypto {
                 ))
                 ?? 0
             let fields = [
-                OpalCryptoDiagnostics.operationField("encrypt"),
-                OpalCryptoDiagnostics.publicField("plaintext_byte_count", message.count),
-                OpalCryptoDiagnostics.publicField("recipient_public_key_byte_count", recipientPublicKey.rawRepresentation.count),
-                OpalCryptoDiagnostics.publicField("padded_plaintext_length", resolvedPaddedPlaintextLength),
-                OpalCryptoDiagnostics.publicField("has_explicit_padding", paddedPlaintextLength != nil)
+                OpalDiagnostics.Field.operationField("encrypt"),
+                OpalDiagnostics.Field.publicField("plaintext_byte_count", message.count),
+                OpalDiagnostics.Field.publicField("recipient_public_key_byte_count", recipientPublicKey.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField("padded_plaintext_length", resolvedPaddedPlaintextLength),
+                OpalDiagnostics.Field.publicField("has_explicit_padding", paddedPlaintextLength != nil)
             ]
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.communicationEncryptBegin,
-                category: OpalCryptoDiagnostics.Category.communication,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                event: OpalDiagnostics.Event.communicationEncryptBegin,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationEncryptBegin),
                 fields: fields
             )
             do {
@@ -35,20 +36,20 @@ extension OpalCrypto {
                     paddedPlaintextLength: paddedPlaintextLength
                 )
                 let result = Ciphertext(unchecked: ciphertext)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.communicationEncryptSucceeded,
-                    category: OpalCryptoDiagnostics.Category.communication,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                    event: OpalDiagnostics.Event.communicationEncryptSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationEncryptSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.ciphertextLengthField(result.rawRepresentation.count)
+                        OpalDiagnostics.Field.ciphertextLengthField(result.rawRepresentation.count)
                     ]
                 )
                 return result
             } catch let error as CommunicationBoxModel.Error {
                 let mappedError = mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.communicationEncryptFailed,
-                    category: OpalCryptoDiagnostics.Category.communication,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                    event: OpalDiagnostics.Event.communicationEncryptFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationEncryptFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -59,13 +60,13 @@ extension OpalCrypto {
             privateKey: OpalCrypto.Secp256k1.PrivateKey
         ) throws -> DecryptionResult {
             let fields = [
-                OpalCryptoDiagnostics.operationField("decrypt"),
-                OpalCryptoDiagnostics.publicField("mode", "private_key"),
-                OpalCryptoDiagnostics.ciphertextLengthField(ciphertext.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("decrypt"),
+                OpalDiagnostics.Field.publicField("mode", "private_key"),
+                OpalDiagnostics.Field.ciphertextLengthField(ciphertext.rawRepresentation.count)
             ]
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.communicationDecryptBegin,
-                category: OpalCryptoDiagnostics.Category.communication,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                event: OpalDiagnostics.Event.communicationDecryptBegin,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptBegin),
                 fields: fields
             )
             do {
@@ -75,21 +76,21 @@ extension OpalCrypto {
                         privateKey: privateKey.rawRepresentation
                     )
                 )
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.communicationDecryptSucceeded,
-                    category: OpalCryptoDiagnostics.Category.communication,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                    event: OpalDiagnostics.Event.communicationDecryptSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.publicField("plaintext_byte_count", result.message.count),
-                        OpalCryptoDiagnostics.publicField("symmetric_key_byte_count", result.symmetricKey.rawRepresentation.count)
+                        OpalDiagnostics.Field.publicField("plaintext_byte_count", result.message.count),
+                        OpalDiagnostics.Field.publicField("symmetric_key_byte_count", result.symmetricKey.rawRepresentation.count)
                     ]
                 )
                 return result
             } catch let error as CommunicationBoxModel.Error {
                 let mappedError = mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.communicationDecryptFailed,
-                    category: OpalCryptoDiagnostics.Category.communication,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                    event: OpalDiagnostics.Event.communicationDecryptFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -100,13 +101,13 @@ extension OpalCrypto {
             symmetricKey: SymmetricKey
         ) throws -> Data {
             let fields = [
-                OpalCryptoDiagnostics.operationField("decrypt"),
-                OpalCryptoDiagnostics.publicField("mode", "symmetric_key"),
-                OpalCryptoDiagnostics.ciphertextLengthField(ciphertext.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("decrypt"),
+                OpalDiagnostics.Field.publicField("mode", "symmetric_key"),
+                OpalDiagnostics.Field.ciphertextLengthField(ciphertext.rawRepresentation.count)
             ]
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.communicationDecryptBegin,
-                category: OpalCryptoDiagnostics.Category.communication,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                event: OpalDiagnostics.Event.communicationDecryptBegin,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptBegin),
                 fields: fields
             )
             do {
@@ -114,20 +115,20 @@ extension OpalCrypto {
                     ciphertext.rawRepresentation,
                     symmetricKey: symmetricKey.rawRepresentation
                 )
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.communicationDecryptSucceeded,
-                    category: OpalCryptoDiagnostics.Category.communication,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                    event: OpalDiagnostics.Event.communicationDecryptSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.publicField("plaintext_byte_count", message.count)
+                        OpalDiagnostics.Field.publicField("plaintext_byte_count", message.count)
                     ]
                 )
                 return message
             } catch let error as CommunicationBoxModel.Error {
                 let mappedError = mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.communicationDecryptFailed,
-                    category: OpalCryptoDiagnostics.Category.communication,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
+                    event: OpalDiagnostics.Event.communicationDecryptFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -135,6 +136,8 @@ extension OpalCrypto {
 
         private static func mapError(_ error: CommunicationBoxModel.Error) -> Error {
             switch error {
+            case .invalidMessageLength(let actual):
+                return .messageTooLong(maximum: Int(UInt32.max), actual: actual)
             case .messageTooLong(let actual):
                 return .messageTooLong(maximum: Int(UInt32.max), actual: actual)
             case .invalidPublicKeyLength(let expected, let actual):

@@ -2,7 +2,7 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API blind signature nonce-state validation")
 struct PublicAPIBlindSignatureNonceStateValidator {
@@ -96,6 +96,26 @@ struct PublicAPIBlindSignatureNonceStateValidator {
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
+
+    @Test("Blind request state normalizes sliced message digests")
+    func normalizeBlindRequestStateMessageDigestsFromSlicedRawInput() throws {
+        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(10)
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+        let signer = try OpalCrypto.BlindSignature.Signer()
+        let digestData = Data(repeating: 0xA1, count: 32)
+        let slicedDigestData = (Data([0xFF]) + digestData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let requestState = try BlindSignatureModel.RequestState(
+            signerPublicKey: publicKey.rawRepresentation,
+            noncePoint: signer.noncePoint.rawRepresentation,
+            messageDigest32Bytes: slicedDigestData
+        )
+
+        #expect(requestState.messageDigest32Bytes == digestData)
+        #expect(requestState.messageDigest32Bytes.startIndex == 0)
+        #expect(requestState.messageDigest32Bytes[0] == 0xA1)
     }
 
     private func makeRequest(

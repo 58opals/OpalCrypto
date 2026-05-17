@@ -1,6 +1,7 @@
 // OpalCrypto.Secp256k1+PublicKey.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Secp256k1 {
     public struct PublicKey: Sendable, Equatable {
@@ -20,33 +21,33 @@ extension OpalCrypto.Secp256k1 {
 
         public init(rawRepresentation: Data) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("public_key_parse"),
-                OpalCryptoDiagnostics.formatField(Self.diagnosticsFormat(for: rawRepresentation)),
-                OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("public_key_parse"),
+                OpalDiagnostics.Field.formatField(Self.diagnosticsFormat(for: rawRepresentation)),
+                OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
             do {
                 parsedPublicKeyModel = try Self.parsePublicKeyModel(rawRepresentation)
             } catch let mappedError as Error {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.publicKeyParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.publicKeyParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.publicKeyParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch {
                 let mappedError = Error.invalidPublicKey
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.publicKeyParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.publicKeyParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.publicKeyParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.publicKeyParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.key,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.publicKeyParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.publicKeyParseSucceeded),
                 fields: fields + [
-                    OpalCryptoDiagnostics.outputLengthField(parsedPublicKeyModel.compressedPublicKeyData.count)
+                    OpalDiagnostics.Field.outputLengthField(parsedPublicKeyModel.compressedPublicKeyData.count)
                 ]
             )
         }

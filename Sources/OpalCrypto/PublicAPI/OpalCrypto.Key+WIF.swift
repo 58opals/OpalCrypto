@@ -1,6 +1,7 @@
 // OpalCrypto.Key+WIF.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Key {
     public struct WIF: Sendable, Equatable {
@@ -18,9 +19,9 @@ extension OpalCrypto.Key {
 
         public init(_ serialized: String) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("wif_parse"),
-                OpalCryptoDiagnostics.formatField("wif"),
-                OpalCryptoDiagnostics.publicField("input_character_count", serialized.count)
+                OpalDiagnostics.Field.operationField("wif_parse"),
+                OpalDiagnostics.Field.formatField("wif"),
+                OpalDiagnostics.Field.publicField("input_character_count", serialized.count)
             ]
             do {
                 let decoded = try WalletImportFormatCodec.decode(serialized)
@@ -30,47 +31,47 @@ extension OpalCrypto.Key {
                 self.isCompressed = decoded.isCompressed
             } catch let error as WalletImportFormatCodec.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.wifParseFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.wifParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.wifParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.wifParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.key,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.wifParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.wifParseSucceeded),
                 fields: fields + [
-                    OpalCryptoDiagnostics.publicField("is_compressed", isCompressed)
+                    OpalDiagnostics.Field.publicField("is_compressed", isCompressed)
                 ]
             )
         }
 
         public func serialize() throws -> String {
             let fields = [
-                OpalCryptoDiagnostics.operationField("wif_serialize"),
-                OpalCryptoDiagnostics.formatField("wif"),
-                OpalCryptoDiagnostics.publicField("is_compressed", isCompressed)
+                OpalDiagnostics.Field.operationField("wif_serialize"),
+                OpalDiagnostics.Field.formatField("wif"),
+                OpalDiagnostics.Field.publicField("is_compressed", isCompressed)
             ]
             do {
                 let serialized = try WalletImportFormatCodec.encode(
                     privateKey: privateKey.rawRepresentation,
                     isCompressed: isCompressed
                 )
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.wifSerializeSucceeded,
-                    category: OpalCryptoDiagnostics.Category.key,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.wifSerializeSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.wifSerializeSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.publicField("output_character_count", serialized.count)
+                        OpalDiagnostics.Field.publicField("output_character_count", serialized.count)
                     ]
                 )
                 return serialized
             } catch let error as WalletImportFormatCodec.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.wifSerializeFailed,
-                    category: OpalCryptoDiagnostics.Category.key,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.wifSerializeFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.wifSerializeFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }

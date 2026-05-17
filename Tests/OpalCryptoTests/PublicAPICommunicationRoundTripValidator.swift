@@ -27,7 +27,7 @@ struct PublicAPICommunicationRoundTripValidator {
     }
 
     @Test("Communication boxes round-trip through private and symmetric decryption")
-    func communicationBoxesRoundTripThroughPrivateAndSymmetricDecryption() throws {
+    func validateCommunicationBoxesRoundTripThroughPrivateAndSymmetricDecryption() throws {
         let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
         let recipientPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
             from: recipientPrivateKey
@@ -59,7 +59,7 @@ struct PublicAPICommunicationRoundTripValidator {
     }
 
     @Test("Communication encryption accepts uncompressed recipient public keys")
-    func communicationEncryptionAcceptsUncompressedRecipientPublicKeys() throws {
+    func validateCommunicationEncryptionAcceptsUncompressedRecipientPublicKeys() throws {
         let recipientPrivateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
         let uncompressedRecipientPublicKeyData = try StandardsForEfficientCryptography256k1CurveModel
             .Operation.derivePublicKey(

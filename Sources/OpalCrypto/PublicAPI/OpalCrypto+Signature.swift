@@ -1,6 +1,7 @@
 // OpalCrypto+Signature.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto {
     public enum Signature {
@@ -8,9 +9,9 @@ extension OpalCrypto {
             from privateKey: OpalCrypto.Secp256k1.PrivateKey
         ) throws -> VerificationKey {
             let fields = [
-                OpalCryptoDiagnostics.operationField("verification_key_derive"),
-                OpalCryptoDiagnostics.algorithmField("secp256k1"),
-                OpalCryptoDiagnostics.inputLengthField(privateKey.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("verification_key_derive"),
+                OpalDiagnostics.Field.algorithmField("secp256k1"),
+                OpalDiagnostics.Field.inputLengthField(privateKey.rawRepresentation.count)
             ]
             do {
                 let verificationKeyModel = try StandardsForEfficientCryptography256k1CurveModel
@@ -18,20 +19,20 @@ extension OpalCrypto {
                         fromPrivateKeyData32Bytes: privateKey.rawRepresentation
                     )
                 let verificationKey = VerificationKey(verificationKeyModel: verificationKeyModel)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.verificationKeyDeriveSucceeded,
-                    category: OpalCryptoDiagnostics.Category.signature,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: OpalDiagnostics.Event.verificationKeyDeriveSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.verificationKeyDeriveSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.outputLengthField(verificationKey.rawRepresentation.count)
+                        OpalDiagnostics.Field.outputLengthField(verificationKey.rawRepresentation.count)
                     ]
                 )
                 return verificationKey
             } catch {
                 let mappedError = mapCryptographyError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.verificationKeyDeriveFailed,
-                    category: OpalCryptoDiagnostics.Category.signature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: OpalDiagnostics.Event.verificationKeyDeriveFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.verificationKeyDeriveFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }

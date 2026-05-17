@@ -1,6 +1,7 @@
 // OpalCrypto+KeyDerivation.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto {
     public enum KeyDerivation {
@@ -14,11 +15,11 @@ extension OpalCrypto {
             let resolvedDerivedKeyLength = derivedKeyLength
                 ?? PasswordBasedKeyDerivationFunction2Model.defaultDerivedKeyLength
             let fields = [
-                OpalCryptoDiagnostics.operationField("pbkdf2_derive"),
-                OpalCryptoDiagnostics.publicField("salt_byte_count", salt.rawRepresentation.count),
-                OpalCryptoDiagnostics.publicField("iteration_count", iterationCount),
-                OpalCryptoDiagnostics.publicField("requested_derived_key_byte_count", resolvedDerivedKeyLength),
-                OpalCryptoDiagnostics.publicField("has_explicit_derived_key_length", derivedKeyLength != nil)
+                OpalDiagnostics.Field.operationField("pbkdf2_derive"),
+                OpalDiagnostics.Field.publicField("salt_byte_count", salt.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField("iteration_count", iterationCount),
+                OpalDiagnostics.Field.publicField("requested_derived_key_byte_count", resolvedDerivedKeyLength),
+                OpalDiagnostics.Field.publicField("has_explicit_derived_key_length", derivedKeyLength != nil)
             ]
             do {
                 let derivedKey = try PasswordBasedKeyDerivationFunction2Model(
@@ -28,27 +29,27 @@ extension OpalCrypto {
                     derivedKeyLength: derivedKeyLength
                 ).deriveKey()
                 let parsedDerivedKey = try DerivedKey(rawRepresentation: derivedKey)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pbkdf2DeriveSucceeded,
-                    category: OpalCryptoDiagnostics.Category.keyDerivation,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
+                    event: OpalDiagnostics.Event.pbkdf2DeriveSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.outputLengthField(parsedDerivedKey.rawRepresentation.count)
+                        OpalDiagnostics.Field.outputLengthField(parsedDerivedKey.rawRepresentation.count)
                     ]
                 )
                 return parsedDerivedKey
             } catch let error as PasswordBasedKeyDerivationFunction2Model.Error {
                 let mappedError = mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pbkdf2DeriveFailed,
-                    category: OpalCryptoDiagnostics.Category.keyDerivation,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
+                    event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch let error as Error {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pbkdf2DeriveFailed,
-                    category: OpalCryptoDiagnostics.Category.keyDerivation,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
+                    event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(error)
                 )
                 throw error
             }

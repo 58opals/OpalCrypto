@@ -1,6 +1,7 @@
 // OpalCrypto.Signature+VerificationKey.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Signature {
     public struct VerificationKey: Sendable, Equatable {
@@ -46,33 +47,33 @@ extension OpalCrypto.Signature {
 
         private static func parseFields(
             inputByteCount: Int
-        ) -> [OpalCryptoDiagnostics.Field] {
+        ) -> [OpalDiagnostics.Field] {
             [
-                OpalCryptoDiagnostics.operationField("verification_key_parse"),
-                OpalCryptoDiagnostics.algorithmField("secp256k1"),
-                OpalCryptoDiagnostics.inputLengthField(inputByteCount)
+                OpalDiagnostics.Field.operationField("verification_key_parse"),
+                OpalDiagnostics.Field.algorithmField("secp256k1"),
+                OpalDiagnostics.Field.inputLengthField(inputByteCount)
             ]
         }
 
         private static func recordParseFailed(
             _ error: Swift.Error,
-            fields: [OpalCryptoDiagnostics.Field]
+            fields: [OpalDiagnostics.Field]
         ) {
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.verificationKeyParseFailed,
-                category: OpalCryptoDiagnostics.Category.signature,
-                fields: fields + OpalCryptoDiagnostics.errorFields(error)
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                event: OpalDiagnostics.Event.verificationKeyParseFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.verificationKeyParseFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
             )
         }
 
         private func recordParseSucceeded(
-            fields: [OpalCryptoDiagnostics.Field]
+            fields: [OpalDiagnostics.Field]
         ) {
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.verificationKeyParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.signature,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                event: OpalDiagnostics.Event.verificationKeyParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.verificationKeyParseSucceeded),
                 fields: fields + [
-                    OpalCryptoDiagnostics.outputLengthField(rawRepresentation.count)
+                    OpalDiagnostics.Field.outputLengthField(rawRepresentation.count)
                 ]
             )
         }

@@ -148,6 +148,32 @@ struct PublicAPIKeyMaterialValidator {
         #expect(fingerprint.rawRepresentation[0] == 0x12)
     }
 
+    @Test("Extended-key payloads normalize sliced key material")
+    func normalizeExtendedKeyPayloadsFromSlicedKeyMaterial() throws {
+        let chainCodeData = Data(repeating: 0x11, count: 32)
+        let slicedChainCodeData = (Data([0xFF]) + chainCodeData + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let slicedPrivateKeyData = (Data([0xFF]) + Data(privateKeyBytes) + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let payload = try ExtendedKeyPayloadModel(
+            kind: .privateKey,
+            depth: 0,
+            parentFingerprintUInt32BigEndian: 0,
+            childIndex: 0,
+            chainCode: slicedChainCodeData,
+            keyData: slicedPrivateKeyData
+        )
+
+        #expect(payload.chainCode == chainCodeData)
+        #expect(payload.chainCode.startIndex == 0)
+        #expect(payload.chainCode[0] == 0x11)
+        #expect(payload.keyData == Data(privateKeyBytes))
+        #expect(payload.keyData.startIndex == 0)
+        #expect(payload.keyData[0] == 0x00)
+    }
+
     @Test("Extended-key serialization preserves parent fingerprint and child index")
     func validateExtendedKeySerializationPreservesParentFingerprintAndChildIndex() throws {
         let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(

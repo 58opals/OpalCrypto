@@ -1,6 +1,7 @@
 // OpalCrypto.Pedersen+Setup.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
     public struct Setup: Sendable, Equatable {
@@ -8,8 +9,8 @@ extension OpalCrypto.Pedersen {
 
         public init(alternateBasePoint: OpalCrypto.Secp256k1.PublicKey) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("setup"),
-                OpalCryptoDiagnostics.publicField("alternate_base_point_byte_count", alternateBasePoint.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("setup"),
+                OpalDiagnostics.Field.publicField("alternate_base_point_byte_count", alternateBasePoint.rawRepresentation.count)
             ]
             do {
                 setupModel = try PedersenModel.Setup(
@@ -17,16 +18,16 @@ extension OpalCrypto.Pedersen {
                 )
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenSetupFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenSetupFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenSetupFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.pedersenSetupSucceeded,
-                category: OpalCryptoDiagnostics.Category.pedersen,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenSetupSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenSetupSucceeded),
                 fields: fields
             )
         }
@@ -36,8 +37,8 @@ extension OpalCrypto.Pedersen {
             nonce: Nonce? = nil
         ) throws -> Commitment {
             let fields = [
-                OpalCryptoDiagnostics.operationField("commit"),
-                OpalCryptoDiagnostics.publicField("has_provided_nonce", nonce != nil)
+                OpalDiagnostics.Field.operationField("commit"),
+                OpalDiagnostics.Field.publicField("has_provided_nonce", nonce != nil)
             ]
             do {
                 let commitment = Commitment(
@@ -46,20 +47,20 @@ extension OpalCrypto.Pedersen {
                         nonceData32Bytes: nonce?.rawRepresentation
                     )
                 )
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCommitSucceeded,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCommitSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.publicField("commitment_byte_count", commitment.point.rawRepresentation.count)
+                        OpalDiagnostics.Field.publicField("commitment_byte_count", commitment.point.rawRepresentation.count)
                     ]
                 )
                 return commitment
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCommitFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCommitFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -71,9 +72,9 @@ extension OpalCrypto.Pedersen {
             nonce: Nonce
         ) throws -> Bool {
             let fields = [
-                OpalCryptoDiagnostics.operationField("verify"),
-                OpalCryptoDiagnostics.publicField("commitment_byte_count", commitment.rawRepresentation.count),
-                OpalCryptoDiagnostics.publicField("nonce_byte_count", nonce.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("verify"),
+                OpalDiagnostics.Field.publicField("commitment_byte_count", commitment.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField("nonce_byte_count", nonce.rawRepresentation.count)
             ]
             do {
                 let result = try setupModel.verify(
@@ -81,20 +82,22 @@ extension OpalCrypto.Pedersen {
                     amount: amount,
                     nonceData32Bytes: nonce.rawRepresentation
                 )
-                OpalCryptoDiagnostics.record(
-                    result
-                        ? OpalCryptoDiagnostics.Event.pedersenVerifySucceeded
-                        : OpalCryptoDiagnostics.Event.pedersenVerifyFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + [OpalCryptoDiagnostics.resultField(result)]
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: result
+                        ? OpalDiagnostics.Event.pedersenVerifySucceeded
+                        : OpalDiagnostics.Event.pedersenVerifyFailed,
+                    level: .opalCryptoDefault(for: result
+                        ? OpalDiagnostics.Event.pedersenVerifySucceeded
+                        : OpalDiagnostics.Event.pedersenVerifyFailed),
+                    fields: fields + [OpalDiagnostics.Field.resultField(result)]
                 )
                 return result
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenVerifyFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenVerifyFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenVerifyFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -104,8 +107,8 @@ extension OpalCrypto.Pedersen {
             _ commitments: [Commitment]
         ) throws -> Commitment {
             let fields = [
-                OpalCryptoDiagnostics.operationField("combine"),
-                OpalCryptoDiagnostics.publicField("commitment_count", commitments.count)
+                OpalDiagnostics.Field.operationField("combine"),
+                OpalDiagnostics.Field.publicField("commitment_count", commitments.count)
             ]
             do {
                 let commitment = Commitment(
@@ -113,20 +116,20 @@ extension OpalCrypto.Pedersen {
                         commitments.map(\.commitmentModel)
                     )
                 )
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCombineSucceeded,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCombineSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.publicField("commitment_byte_count", commitment.point.rawRepresentation.count)
+                        OpalDiagnostics.Field.publicField("commitment_byte_count", commitment.point.rawRepresentation.count)
                     ]
                 )
                 return commitment
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCombineFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCombineFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
@@ -134,35 +137,35 @@ extension OpalCrypto.Pedersen {
 
         public static func addPoints(_ points: [CommitmentPoint]) throws -> CommitmentPoint {
             let fields = [
-                OpalCryptoDiagnostics.operationField("combine_points"),
-                OpalCryptoDiagnostics.publicField("point_count", points.count)
+                OpalDiagnostics.Field.operationField("combine_points"),
+                OpalDiagnostics.Field.publicField("point_count", points.count)
             ]
             do {
                 let point = try PedersenModel.Setup.addPoints(
                     points.map(\.rawRepresentation)
                 )
                 let commitmentPoint = try CommitmentPoint(rawRepresentation: point)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCombineSucceeded,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCombineSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.publicField("commitment_byte_count", commitmentPoint.rawRepresentation.count)
+                        OpalDiagnostics.Field.publicField("commitment_byte_count", commitmentPoint.rawRepresentation.count)
                     ]
                 )
                 return commitmentPoint
             } catch let error as PedersenModel.Error {
                 let mappedError = mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCombineFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCombineFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch let error as Error {
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenCombineFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenCombineFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(error)
                 )
                 throw error
             }

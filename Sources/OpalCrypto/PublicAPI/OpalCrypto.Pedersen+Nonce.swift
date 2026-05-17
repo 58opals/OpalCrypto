@@ -1,6 +1,7 @@
 // OpalCrypto.Pedersen+Nonce.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
     public struct Nonce: Sendable, Equatable {
@@ -12,32 +13,32 @@ extension OpalCrypto.Pedersen {
 
         public init(rawRepresentation: Data) throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("nonce_parse"),
-                OpalCryptoDiagnostics.inputLengthField(rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("nonce_parse"),
+                OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
             do {
                 scalarModel = try ScalarModel(data32: rawRepresentation, requireNonZero: false)
             } catch ScalarModel.Error.invalidDataLength(let expected, let actual) {
                 precondition(expected == 32)
                 let mappedError = Error.invalidNonceLength(expected: expected, actual: actual)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenNonceParseFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenNonceParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch {
                 let mappedError = Error.invalidNonce
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.pedersenNonceParseFailed,
-                    category: OpalCryptoDiagnostics.Category.pedersen,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                    event: OpalDiagnostics.Event.pedersenNonceParseFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.pedersenNonceParseSucceeded,
-                category: OpalCryptoDiagnostics.Category.pedersen,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenNonceParseSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseSucceeded),
                 fields: fields
             )
         }

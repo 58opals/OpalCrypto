@@ -1,6 +1,7 @@
 // OpalCrypto.BlindSignature+Signer.swift
 
 import Foundation
+import OpalDiagnostics
 
 extension OpalCrypto.BlindSignature {
     public actor Signer {
@@ -10,7 +11,7 @@ extension OpalCrypto.BlindSignature {
 
         public init() throws {
             let fields = [
-                OpalCryptoDiagnostics.operationField("signer_prepare")
+                OpalDiagnostics.Field.operationField("signer_prepare")
             ]
             do {
                 let signerState = try BlindSignatureModel.SignerState()
@@ -20,26 +21,26 @@ extension OpalCrypto.BlindSignature {
                 )
             } catch let error as BlindSignatureModel.Error {
                 let mappedError = OpalCrypto.BlindSignature.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.blindSignatureSignerPrepareFailed,
-                    category: OpalCryptoDiagnostics.Category.blindSignature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                    event: OpalDiagnostics.Event.blindSignatureSignerPrepareFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignerPrepareFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch let error as OpalCrypto.Secp256k1.Error {
                 let mappedError = OpalCrypto.BlindSignature.mapSecp256k1Error(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.blindSignatureSignerPrepareFailed,
-                    category: OpalCryptoDiagnostics.Category.blindSignature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                    event: OpalDiagnostics.Event.blindSignatureSignerPrepareFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignerPrepareFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.blindSignatureSignerPrepareSucceeded,
-                category: OpalCryptoDiagnostics.Category.blindSignature,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                event: OpalDiagnostics.Event.blindSignatureSignerPrepareSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignerPrepareSucceeded),
                 fields: fields + [
-                    OpalCryptoDiagnostics.publicField("nonce_point_byte_count", noncePoint.rawRepresentation.count)
+                    OpalDiagnostics.Field.publicField("nonce_point_byte_count", noncePoint.rawRepresentation.count)
                 ]
             )
         }
@@ -49,13 +50,13 @@ extension OpalCrypto.BlindSignature {
             requestScalar: OpalCrypto.Secp256k1.Scalar
         ) async throws -> OpalCrypto.Secp256k1.Scalar {
             let fields = [
-                OpalCryptoDiagnostics.operationField("sign"),
-                OpalCryptoDiagnostics.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
-                OpalCryptoDiagnostics.publicField("request_scalar_byte_count", requestScalar.rawRepresentation.count)
+                OpalDiagnostics.Field.operationField("sign"),
+                OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField("request_scalar_byte_count", requestScalar.rawRepresentation.count)
             ]
-            OpalCryptoDiagnostics.record(
-                OpalCryptoDiagnostics.Event.blindSignatureSignBegin,
-                category: OpalCryptoDiagnostics.Category.blindSignature,
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                event: OpalDiagnostics.Event.blindSignatureSignBegin,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignBegin),
                 fields: fields
             )
             do {
@@ -64,28 +65,28 @@ extension OpalCrypto.BlindSignature {
                     requestScalarData32Bytes: requestScalar.rawRepresentation
                 )
                 let scalar = try OpalCrypto.Secp256k1.Scalar(rawRepresentation: responseScalar)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.blindSignatureSignSucceeded,
-                    category: OpalCryptoDiagnostics.Category.blindSignature,
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                    event: OpalDiagnostics.Event.blindSignatureSignSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignSucceeded),
                     fields: fields + [
-                        OpalCryptoDiagnostics.outputLengthField(scalar.rawRepresentation.count)
+                        OpalDiagnostics.Field.outputLengthField(scalar.rawRepresentation.count)
                     ]
                 )
                 return scalar
             } catch let error as BlindSignatureModel.Error {
                 let mappedError = OpalCrypto.BlindSignature.mapError(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.blindSignatureSignFailed,
-                    category: OpalCryptoDiagnostics.Category.blindSignature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                    event: OpalDiagnostics.Event.blindSignatureSignFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             } catch let error as OpalCrypto.Secp256k1.Error {
                 let mappedError = OpalCrypto.BlindSignature.mapSecp256k1Error(error)
-                OpalCryptoDiagnostics.record(
-                    OpalCryptoDiagnostics.Event.blindSignatureSignFailed,
-                    category: OpalCryptoDiagnostics.Category.blindSignature,
-                    fields: fields + OpalCryptoDiagnostics.errorFields(mappedError)
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                    event: OpalDiagnostics.Event.blindSignatureSignFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureSignFailed),
+                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
                 )
                 throw mappedError
             }

@@ -96,7 +96,7 @@ internal struct ExtendedKeyPayloadModel: Sendable, Equatable {
         self.depth = depth
         self.parentFingerprintUInt32BigEndian = parentFingerprintUInt32BigEndian
         self.childIndex = childIndex
-        self.chainCode = chainCode
-        self.keyData = keyData
+        self.chainCode = Data(chainCode)
+        self.keyData = Data(keyData)
     }
 }

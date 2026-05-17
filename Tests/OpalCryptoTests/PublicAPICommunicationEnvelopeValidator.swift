@@ -7,7 +7,7 @@ import Testing
 @Suite("Public API communication envelope validation")
 struct PublicAPICommunicationEnvelopeValidator {
     @Test("Communication public-key values report the uncompressed expected length for short SEC1 keys")
-    func communicationPublicKeyValuesReportTheUncompressedExpectedLengthForShortSec1Keys() {
+    func validateCommunicationPublicKeyValuesReportTheUncompressedExpectedLengthForShortSec1Keys() {
         let truncatedUncompressedRecipientPublicKey = Data([0x04] + Array(repeating: 0x11, count: 63))
 
         do {
@@ -23,7 +23,7 @@ struct PublicAPICommunicationEnvelopeValidator {
     }
 
     @Test("Communication raw public-key validation treats uncompressed prefixes as length declarations")
-    func communicationRawPublicKeyValidationTreatsUncompressedPrefixesAsLengthDeclarations() {
+    func validateCommunicationRawPublicKeyValidationTreatsUncompressedPrefixesAsLengthDeclarations() {
         let severelyTruncatedUncompressedRecipientPublicKey = Data([0x04] + Array(repeating: 0x11, count: 32))
 
         do {
@@ -41,7 +41,7 @@ struct PublicAPICommunicationEnvelopeValidator {
     }
 
     @Test("Communication private-key values reject wrong-length raw input")
-    func communicationPrivateKeyValuesRejectWrongLengthRawInput() {
+    func validateCommunicationPrivateKeyValuesRejectWrongLengthRawInput() {
         do {
             _ = try OpalCrypto.Secp256k1.PrivateKey(
                 rawRepresentation: Data(repeating: 0x01, count: 31)
@@ -115,6 +115,21 @@ struct PublicAPICommunicationEnvelopeValidator {
             Issue.record("Expected oversized message-length rejection.")
         } catch let error as CommunicationBoxModel.Error {
             #expect(error == .messageTooLong(actual: oversizedMessageLength))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Communication plaintext length resolution rejects negative message lengths")
+    func rejectCommunicationPlaintextLengthResolutionWithNegativeMessageLengths() {
+        do {
+            _ = try CommunicationBoxModel.resolvePlaintextLength(
+                messageByteCount: -1,
+                paddedPlaintextLength: nil
+            )
+            Issue.record("Expected negative message-length rejection.")
+        } catch let error as CommunicationBoxModel.Error {
+            #expect(error == .invalidMessageLength(actual: -1))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

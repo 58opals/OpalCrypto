@@ -1,7 +1,5 @@
 // WalletImportFormatCodec+Error.swift
 
-import Foundation
-
 extension WalletImportFormatCodec {
     internal enum Error: Swift.Error, Equatable {
         case invalidBase58

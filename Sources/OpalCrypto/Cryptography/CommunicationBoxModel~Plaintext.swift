@@ -28,6 +28,9 @@ extension CommunicationBoxModel {
         messageByteCount: Int,
         paddedPlaintextLength: Int?
     ) throws -> Int {
+        guard messageByteCount >= 0 else {
+            throw Error.invalidMessageLength(actual: messageByteCount)
+        }
         guard messageByteCount <= Int(UInt32.max) else {
             throw Error.messageTooLong(actual: messageByteCount)
         }

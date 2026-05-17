@@ -1,6 +1,7 @@
 // Base58CheckCodec.swift
 
 import Foundation
+import OpalDiagnostics
 
 internal enum Base58CheckCodec {
 
@@ -10,20 +11,21 @@ internal enum Base58CheckCodec {
     }
 
     internal static func decode(_ string: String, minimumPayloadLength: Int = 1) throws -> Data {
+        let requiredPayloadLength = max(0, minimumPayloadLength)
         guard let decoded = Base58EncodingModel.decode(string) else {
             recordDecodeFailure(
                 .invalidBase58,
                 inputCharacterCount: string.count,
-                minimumPayloadLength: minimumPayloadLength
+                minimumPayloadLength: requiredPayloadLength
             )
             throw Error.invalidBase58
         }
-        guard decoded.count >= minimumPayloadLength + 4 else {
+        guard decoded.count >= 4, decoded.count - 4 >= requiredPayloadLength else {
             let error = Error.invalidPayloadLength(actual: max(0, decoded.count - 4))
             recordDecodeFailure(
                 error,
                 inputCharacterCount: string.count,
-                minimumPayloadLength: minimumPayloadLength
+                minimumPayloadLength: requiredPayloadLength
             )
             throw error
         }
@@ -48,14 +50,14 @@ internal enum Base58CheckCodec {
         inputCharacterCount: Int,
         minimumPayloadLength: Int
     ) {
-        OpalCryptoDiagnostics.record(
-            OpalCryptoDiagnostics.Event.base58CheckDecodeFailed,
-            category: OpalCryptoDiagnostics.Category.encoding,
+        OpalDiagnostics.logger(category: OpalDiagnostics.Category.encoding).record(
+            event: OpalDiagnostics.Event.base58CheckDecodeFailed,
+            level: .opalCryptoDefault(for: OpalDiagnostics.Event.base58CheckDecodeFailed),
             fields: [
-                OpalCryptoDiagnostics.operationField("base58check_decode"),
-                OpalCryptoDiagnostics.publicField("input_character_count", inputCharacterCount),
-                OpalCryptoDiagnostics.publicField("minimum_payload_length", minimumPayloadLength)
-            ] + OpalCryptoDiagnostics.errorFields(error)
+                OpalDiagnostics.Field.operationField("base58check_decode"),
+                OpalDiagnostics.Field.publicField("input_character_count", inputCharacterCount),
+                OpalDiagnostics.Field.publicField("minimum_payload_length", minimumPayloadLength)
+            ] + OpalDiagnostics.Field.errorFields(error)
         )
     }
 }
