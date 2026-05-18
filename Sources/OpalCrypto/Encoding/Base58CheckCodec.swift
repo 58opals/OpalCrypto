@@ -7,25 +7,25 @@ internal enum Base58CheckCodec {
 
     internal static func encode(payload: Data) -> String {
         let checksum = SecureHash256Model.hash(payload).prefix(4)
-        return Base58EncodingModel.encode(payload + checksum)
+        return Base58EncodingCodec.encode(payload + checksum)
     }
 
     internal static func decode(_ string: String, minimumPayloadLength: Int = 1) throws -> Data {
-        let requiredPayloadLength = max(0, minimumPayloadLength)
-        guard let decoded = Base58EncodingModel.decode(string) else {
+        let minimumPayloadLength = max(0, minimumPayloadLength)
+        guard let decoded = Base58EncodingCodec.decode(string) else {
             recordDecodeFailure(
                 .invalidBase58,
                 inputCharacterCount: string.count,
-                minimumPayloadLength: requiredPayloadLength
+                minimumPayloadLength: minimumPayloadLength
             )
             throw Error.invalidBase58
         }
-        guard decoded.count >= 4, decoded.count - 4 >= requiredPayloadLength else {
+        guard decoded.count >= 4, decoded.count - 4 >= minimumPayloadLength else {
             let error = Error.invalidPayloadLength(actual: max(0, decoded.count - 4))
             recordDecodeFailure(
                 error,
                 inputCharacterCount: string.count,
-                minimumPayloadLength: requiredPayloadLength
+                minimumPayloadLength: minimumPayloadLength
             )
             throw error
         }

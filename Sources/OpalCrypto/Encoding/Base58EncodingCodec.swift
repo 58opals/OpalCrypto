@@ -1,8 +1,8 @@
-// Base58EncodingModel.swift
+// Base58EncodingCodec.swift
 
 import Foundation
 
-internal struct Base58EncodingModel {
+internal struct Base58EncodingCodec {
     static let characters: [Character] = [
         "1", "2", "3", "4", "5", "6", "7", "8", "9",
         "A", "B", "C", "D", "E", "F", "G", "H",

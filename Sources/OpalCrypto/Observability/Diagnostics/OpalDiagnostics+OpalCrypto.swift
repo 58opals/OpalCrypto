@@ -180,334 +180,334 @@ extension OpalDiagnostics.Field {
 
     static func errorFields(_ error: Swift.Error) -> [OpalDiagnostics.Field] {
         [
-            publicField("error_code", errorCode(for: error)),
-            publicField("error_type", String(reflecting: Swift.type(of: error))),
-            privateField("error_message", String(describing: error))
+            OpalDiagnostics.Field.errorCode(errorCode(for: error)),
+            OpalDiagnostics.Field.errorType(error),
+            OpalDiagnostics.Field.errorMessage(String(describing: error))
         ]
     }
 
-    private static func errorCode(for error: Swift.Error) -> String {
+    private static func errorCode(for error: Swift.Error) -> OpalDiagnostics.ErrorCode {
         switch error {
         case OpalCrypto.Secp256k1.Error.invalidPrivateKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKeyLength
+            OpalDiagnostics.ErrorCode.invalidPrivateKeyLength
         case OpalCrypto.Secp256k1.Error.invalidPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKey
+            OpalDiagnostics.ErrorCode.invalidPrivateKey
         case OpalCrypto.Secp256k1.Error.invalidPublicKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyLength
+            OpalDiagnostics.ErrorCode.invalidPublicKeyLength
         case OpalCrypto.Secp256k1.Error.invalidPublicKeyPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyPrefix
+            OpalDiagnostics.ErrorCode.invalidPublicKeyPrefix
         case OpalCrypto.Secp256k1.Error.invalidPublicKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKey
+            OpalDiagnostics.ErrorCode.invalidPublicKey
         case OpalCrypto.Secp256k1.Error.invalidTweakLength:
-            OpalCryptoDiagnosticErrorCodes.invalidTweakLength
+            OpalDiagnostics.ErrorCode.invalidTweakLength
         case OpalCrypto.Secp256k1.Error.invalidTweak:
-            OpalCryptoDiagnosticErrorCodes.invalidTweak
+            OpalDiagnostics.ErrorCode.invalidTweak
         case OpalCrypto.Secp256k1.Error.invalidDerivedKey:
-            OpalCryptoDiagnosticErrorCodes.invalidDerivedKey
+            OpalDiagnostics.ErrorCode.invalidDerivedKey
         case OpalCrypto.Secp256k1.Error.invalidSignatureLength:
-            OpalCryptoDiagnosticErrorCodes.invalidSignatureLength
+            OpalDiagnostics.ErrorCode.invalidSignatureLength
         case OpalCrypto.Secp256k1.Error.invalidSignature:
-            OpalCryptoDiagnosticErrorCodes.invalidSignature
+            OpalDiagnostics.ErrorCode.invalidSignature
         case OpalCrypto.Secp256k1.Error.invalidDER:
-            OpalCryptoDiagnosticErrorCodes.invalidDER
+            OpalDiagnostics.ErrorCode.invalidDER
         case OpalCrypto.Secp256k1.Error.nonCanonicalDER:
-            OpalCryptoDiagnosticErrorCodes.nonCanonicalDER
+            OpalDiagnostics.ErrorCode.nonCanonicalDER
         case OpalCrypto.Secp256k1.Error.randomGenerationFailed:
-            OpalCryptoDiagnosticErrorCodes.randomGenerationFailed
+            OpalDiagnostics.ErrorCode.randomGenerationFailed
 
         case OpalCrypto.Signature.Error.invalidPrivateKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKeyLength
+            OpalDiagnostics.ErrorCode.invalidPrivateKeyLength
         case OpalCrypto.Signature.Error.invalidPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKey
+            OpalDiagnostics.ErrorCode.invalidPrivateKey
         case OpalCrypto.Signature.Error.invalidPublicKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyLength
+            OpalDiagnostics.ErrorCode.invalidPublicKeyLength
         case OpalCrypto.Signature.Error.invalidPublicKeyPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyPrefix
+            OpalDiagnostics.ErrorCode.invalidPublicKeyPrefix
         case OpalCrypto.Signature.Error.invalidPublicKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKey
+            OpalDiagnostics.ErrorCode.invalidPublicKey
         case OpalCrypto.Signature.Error.invalidDigestLength:
-            OpalCryptoDiagnosticErrorCodes.invalidDigestLength
+            OpalDiagnostics.ErrorCode.invalidDigestLength
         case OpalCrypto.Signature.Error.invalidSignatureLength:
-            OpalCryptoDiagnosticErrorCodes.invalidSignatureLength
+            OpalDiagnostics.ErrorCode.invalidSignatureLength
         case OpalCrypto.Signature.Error.invalidSignature:
-            OpalCryptoDiagnosticErrorCodes.invalidSignature
+            OpalDiagnostics.ErrorCode.invalidSignature
         case OpalCrypto.Signature.Error.invalidDER:
-            OpalCryptoDiagnosticErrorCodes.invalidDER
+            OpalDiagnostics.ErrorCode.invalidDER
         case OpalCrypto.Signature.Error.nonCanonicalDER:
-            OpalCryptoDiagnosticErrorCodes.nonCanonicalDER
+            OpalDiagnostics.ErrorCode.nonCanonicalDER
         case OpalCrypto.Signature.Error.cryptographyFailure:
-            OpalCryptoDiagnosticErrorCodes.cryptographyFailure
+            OpalDiagnostics.ErrorCode.cryptographyFailure
 
         case OpalCrypto.Signature.VerificationKey.Error.invalidPublicKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyLength
+            OpalDiagnostics.ErrorCode.invalidPublicKeyLength
         case OpalCrypto.Signature.VerificationKey.Error.invalidPublicKeyPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyPrefix
+            OpalDiagnostics.ErrorCode.invalidPublicKeyPrefix
         case OpalCrypto.Signature.VerificationKey.Error.invalidPublicKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKey
+            OpalDiagnostics.ErrorCode.invalidPublicKey
 
         case OpalCrypto.KeyDerivation.Error.invalidIterationCount:
-            OpalCryptoDiagnosticErrorCodes.invalidIterationCount
+            OpalDiagnostics.ErrorCode.invalidIterationCount
         case OpalCrypto.KeyDerivation.Error.emptySalt:
-            OpalCryptoDiagnosticErrorCodes.emptySalt
+            OpalDiagnostics.ErrorCode.emptySalt
         case OpalCrypto.KeyDerivation.Error.invalidDerivedKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidDerivedKeyLength
+            OpalDiagnostics.ErrorCode.invalidDerivedKeyLength
         case OpalCrypto.KeyDerivation.Error.derivedKeyLengthExceedsLimit:
-            OpalCryptoDiagnosticErrorCodes.derivedKeyLengthExceedsLimit
+            OpalDiagnostics.ErrorCode.derivedKeyLengthExceedsLimit
 
         case OpalCrypto.Key.Mnemonic.Error.invalidWordCount:
-            OpalCryptoDiagnosticErrorCodes.invalidWordCount
+            OpalDiagnostics.ErrorCode.invalidWordCount
         case OpalCrypto.Key.Mnemonic.Error.invalidEntropyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidEntropyLength
+            OpalDiagnostics.ErrorCode.invalidEntropyLength
         case OpalCrypto.Key.Mnemonic.Error.invalidWord:
-            OpalCryptoDiagnosticErrorCodes.invalidWord
+            OpalDiagnostics.ErrorCode.invalidWord
         case OpalCrypto.Key.Mnemonic.Error.invalidChecksum:
-            OpalCryptoDiagnosticErrorCodes.invalidChecksum
+            OpalDiagnostics.ErrorCode.invalidChecksum
         case OpalCrypto.Key.Mnemonic.Error.ambiguousLanguage:
-            OpalCryptoDiagnosticErrorCodes.ambiguousLanguage
+            OpalDiagnostics.ErrorCode.ambiguousLanguage
         case OpalCrypto.Key.Mnemonic.Error.randomGenerationFailed:
-            OpalCryptoDiagnosticErrorCodes.randomGenerationFailed
+            OpalDiagnostics.ErrorCode.randomGenerationFailed
         case OpalCrypto.Key.Mnemonic.Error.wordListResourceMissing:
-            OpalCryptoDiagnosticErrorCodes.wordListResourceMissing
+            OpalDiagnostics.ErrorCode.wordListResourceMissing
         case OpalCrypto.Key.Mnemonic.Error.invalidWordList:
-            OpalCryptoDiagnosticErrorCodes.invalidWordList
+            OpalDiagnostics.ErrorCode.invalidWordList
 
         case OpalCrypto.Key.WIF.Error.invalidBase58:
-            OpalCryptoDiagnosticErrorCodes.invalidBase58
+            OpalDiagnostics.ErrorCode.invalidBase58
         case OpalCrypto.Key.WIF.Error.invalidChecksum:
-            OpalCryptoDiagnosticErrorCodes.invalidChecksum
+            OpalDiagnostics.ErrorCode.invalidChecksum
         case OpalCrypto.Key.WIF.Error.invalidPayloadLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPayloadLength
+            OpalDiagnostics.ErrorCode.invalidPayloadLength
         case OpalCrypto.Key.WIF.Error.invalidVersion:
-            OpalCryptoDiagnosticErrorCodes.invalidVersion
+            OpalDiagnostics.ErrorCode.invalidVersion
         case OpalCrypto.Key.WIF.Error.invalidCompressionMarker:
-            OpalCryptoDiagnosticErrorCodes.invalidCompressionMarker
+            OpalDiagnostics.ErrorCode.invalidCompressionMarker
         case OpalCrypto.Key.WIF.Error.invalidPrivateKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKeyLength
+            OpalDiagnostics.ErrorCode.invalidPrivateKeyLength
         case OpalCrypto.Key.WIF.Error.invalidPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKey
+            OpalDiagnostics.ErrorCode.invalidPrivateKey
 
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidBase58:
-            OpalCryptoDiagnosticErrorCodes.invalidBase58
+            OpalDiagnostics.ErrorCode.invalidBase58
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidChecksum:
-            OpalCryptoDiagnosticErrorCodes.invalidChecksum
+            OpalDiagnostics.ErrorCode.invalidChecksum
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidVersion:
-            OpalCryptoDiagnosticErrorCodes.invalidVersion
+            OpalDiagnostics.ErrorCode.invalidVersion
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidPayloadLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPayloadLength
+            OpalDiagnostics.ErrorCode.invalidPayloadLength
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidParentFingerprintLength:
-            OpalCryptoDiagnosticErrorCodes.invalidParentFingerprintLength
+            OpalDiagnostics.ErrorCode.invalidParentFingerprintLength
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidChainCodeLength:
-            OpalCryptoDiagnosticErrorCodes.invalidChainCodeLength
+            OpalDiagnostics.ErrorCode.invalidChainCodeLength
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidSeedLength:
-            OpalCryptoDiagnosticErrorCodes.invalidSeedLength
+            OpalDiagnostics.ErrorCode.invalidSeedLength
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidPrivateKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKeyLength
+            OpalDiagnostics.ErrorCode.invalidPrivateKeyLength
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKey
+            OpalDiagnostics.ErrorCode.invalidPrivateKey
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidDepthMetadata:
-            OpalCryptoDiagnosticErrorCodes.invalidDepthMetadata
+            OpalDiagnostics.ErrorCode.invalidDepthMetadata
         case OpalCrypto.Key.ExtendedPrivate.Error.depthOverflow:
-            OpalCryptoDiagnosticErrorCodes.depthOverflow
+            OpalDiagnostics.ErrorCode.depthOverflow
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidDerivedKey:
-            OpalCryptoDiagnosticErrorCodes.invalidDerivedKey
+            OpalDiagnostics.ErrorCode.invalidDerivedKey
 
         case OpalCrypto.Key.ExtendedPublic.Error.invalidBase58:
-            OpalCryptoDiagnosticErrorCodes.invalidBase58
+            OpalDiagnostics.ErrorCode.invalidBase58
         case OpalCrypto.Key.ExtendedPublic.Error.invalidChecksum:
-            OpalCryptoDiagnosticErrorCodes.invalidChecksum
+            OpalDiagnostics.ErrorCode.invalidChecksum
         case OpalCrypto.Key.ExtendedPublic.Error.invalidVersion:
-            OpalCryptoDiagnosticErrorCodes.invalidVersion
+            OpalDiagnostics.ErrorCode.invalidVersion
         case OpalCrypto.Key.ExtendedPublic.Error.invalidPayloadLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPayloadLength
+            OpalDiagnostics.ErrorCode.invalidPayloadLength
         case OpalCrypto.Key.ExtendedPublic.Error.invalidParentFingerprintLength:
-            OpalCryptoDiagnosticErrorCodes.invalidParentFingerprintLength
+            OpalDiagnostics.ErrorCode.invalidParentFingerprintLength
         case OpalCrypto.Key.ExtendedPublic.Error.invalidChainCodeLength:
-            OpalCryptoDiagnosticErrorCodes.invalidChainCodeLength
+            OpalDiagnostics.ErrorCode.invalidChainCodeLength
         case OpalCrypto.Key.ExtendedPublic.Error.invalidPublicKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyLength
+            OpalDiagnostics.ErrorCode.invalidPublicKeyLength
         case OpalCrypto.Key.ExtendedPublic.Error.invalidPublicKeyPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyPrefix
+            OpalDiagnostics.ErrorCode.invalidPublicKeyPrefix
         case OpalCrypto.Key.ExtendedPublic.Error.invalidPublicKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKey
+            OpalDiagnostics.ErrorCode.invalidPublicKey
         case OpalCrypto.Key.ExtendedPublic.Error.invalidDepthMetadata:
-            OpalCryptoDiagnosticErrorCodes.invalidDepthMetadata
+            OpalDiagnostics.ErrorCode.invalidDepthMetadata
         case OpalCrypto.Key.ExtendedPublic.Error.hardenedDerivationRequiresPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.hardenedDerivationRequiresPrivateKey
+            OpalDiagnostics.ErrorCode.hardenedDerivationRequiresPrivateKey
         case OpalCrypto.Key.ExtendedPublic.Error.depthOverflow:
-            OpalCryptoDiagnosticErrorCodes.depthOverflow
+            OpalDiagnostics.ErrorCode.depthOverflow
         case OpalCrypto.Key.ExtendedPublic.Error.invalidDerivedKey:
-            OpalCryptoDiagnosticErrorCodes.invalidDerivedKey
+            OpalDiagnostics.ErrorCode.invalidDerivedKey
 
         case OpalCrypto.Communication.Error.messageTooLong:
-            OpalCryptoDiagnosticErrorCodes.messageTooLong
+            OpalDiagnostics.ErrorCode.messageTooLong
         case OpalCrypto.Communication.Error.invalidPublicKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyLength
+            OpalDiagnostics.ErrorCode.invalidPublicKeyLength
         case OpalCrypto.Communication.Error.invalidPublicKeyPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyPrefix
+            OpalDiagnostics.ErrorCode.invalidPublicKeyPrefix
         case OpalCrypto.Communication.Error.invalidPublicKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKey
+            OpalDiagnostics.ErrorCode.invalidPublicKey
         case OpalCrypto.Communication.Error.invalidPrivateKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKeyLength
+            OpalDiagnostics.ErrorCode.invalidPrivateKeyLength
         case OpalCrypto.Communication.Error.invalidPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKey
+            OpalDiagnostics.ErrorCode.invalidPrivateKey
         case OpalCrypto.Communication.Error.invalidSymmetricKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidSymmetricKeyLength
+            OpalDiagnostics.ErrorCode.invalidSymmetricKeyLength
         case OpalCrypto.Communication.Error.invalidPaddedPlaintextLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPaddedPlaintextLength
+            OpalDiagnostics.ErrorCode.invalidPaddedPlaintextLength
         case OpalCrypto.Communication.Error.paddedPlaintextLengthMustBeMultipleOf16:
-            OpalCryptoDiagnosticErrorCodes.paddedPlaintextLengthMustBeMultipleOf16
+            OpalDiagnostics.ErrorCode.paddedPlaintextLengthMustBeMultipleOf16
         case OpalCrypto.Communication.Error.invalidCiphertext:
-            OpalCryptoDiagnosticErrorCodes.invalidCiphertext
+            OpalDiagnostics.ErrorCode.invalidCiphertext
         case OpalCrypto.Communication.Error.cryptographyFailure:
-            OpalCryptoDiagnosticErrorCodes.cryptographyFailure
+            OpalDiagnostics.ErrorCode.cryptographyFailure
 
         case OpalCrypto.Encoding.Error.invalidFiveBitValue:
-            OpalCryptoDiagnosticErrorCodes.invalidFiveBitValue
+            OpalDiagnostics.ErrorCode.invalidFiveBitValue
         case OpalCrypto.Encoding.Error.invalidCharacterFound:
-            OpalCryptoDiagnosticErrorCodes.invalidCharacterFound
+            OpalDiagnostics.ErrorCode.invalidCharacterFound
 
         case OpalCrypto.Pedersen.Error.invalidAlternateBasePointLength:
-            OpalCryptoDiagnosticErrorCodes.invalidAlternateBasePointLength
+            OpalDiagnostics.ErrorCode.invalidAlternateBasePointLength
         case OpalCrypto.Pedersen.Error.invalidAlternateBasePointPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidAlternateBasePointPrefix
+            OpalDiagnostics.ErrorCode.invalidAlternateBasePointPrefix
         case OpalCrypto.Pedersen.Error.invalidAlternateBasePoint:
-            OpalCryptoDiagnosticErrorCodes.invalidAlternateBasePoint
+            OpalDiagnostics.ErrorCode.invalidAlternateBasePoint
         case OpalCrypto.Pedersen.Error.insecureAlternateBasePoint:
-            OpalCryptoDiagnosticErrorCodes.insecureAlternateBasePoint
+            OpalDiagnostics.ErrorCode.insecureAlternateBasePoint
         case OpalCrypto.Pedersen.Error.invalidNonceLength:
-            OpalCryptoDiagnosticErrorCodes.invalidNonceLength
+            OpalDiagnostics.ErrorCode.invalidNonceLength
         case OpalCrypto.Pedersen.Error.invalidNonce:
-            OpalCryptoDiagnosticErrorCodes.invalidNonce
+            OpalDiagnostics.ErrorCode.invalidNonce
         case OpalCrypto.Pedersen.Error.invalidCommitmentLength:
-            OpalCryptoDiagnosticErrorCodes.invalidCommitmentLength
+            OpalDiagnostics.ErrorCode.invalidCommitmentLength
         case OpalCrypto.Pedersen.Error.invalidCommitment:
-            OpalCryptoDiagnosticErrorCodes.invalidCommitment
+            OpalDiagnostics.ErrorCode.invalidCommitment
         case OpalCrypto.Pedersen.Error.emptyCommitmentList:
-            OpalCryptoDiagnosticErrorCodes.emptyCommitmentList
+            OpalDiagnostics.ErrorCode.emptyCommitmentList
         case OpalCrypto.Pedersen.Error.mismatchedSetup:
-            OpalCryptoDiagnosticErrorCodes.mismatchedSetup
+            OpalDiagnostics.ErrorCode.mismatchedSetup
         case OpalCrypto.Pedersen.Error.cryptographyFailure:
-            OpalCryptoDiagnosticErrorCodes.cryptographyFailure
+            OpalDiagnostics.ErrorCode.cryptographyFailure
 
         case OpalCrypto.BlindSignature.Error.invalidPublicKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyLength
+            OpalDiagnostics.ErrorCode.invalidPublicKeyLength
         case OpalCrypto.BlindSignature.Error.invalidPublicKeyPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKeyPrefix
+            OpalDiagnostics.ErrorCode.invalidPublicKeyPrefix
         case OpalCrypto.BlindSignature.Error.invalidPublicKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPublicKey
+            OpalDiagnostics.ErrorCode.invalidPublicKey
         case OpalCrypto.BlindSignature.Error.invalidNoncePointLength:
-            OpalCryptoDiagnosticErrorCodes.invalidNoncePointLength
+            OpalDiagnostics.ErrorCode.invalidNoncePointLength
         case OpalCrypto.BlindSignature.Error.invalidNoncePointPrefix:
-            OpalCryptoDiagnosticErrorCodes.invalidNoncePointPrefix
+            OpalDiagnostics.ErrorCode.invalidNoncePointPrefix
         case OpalCrypto.BlindSignature.Error.invalidNoncePoint:
-            OpalCryptoDiagnosticErrorCodes.invalidNoncePoint
+            OpalDiagnostics.ErrorCode.invalidNoncePoint
         case OpalCrypto.BlindSignature.Error.invalidDigestLength:
-            OpalCryptoDiagnosticErrorCodes.invalidDigestLength
+            OpalDiagnostics.ErrorCode.invalidDigestLength
         case OpalCrypto.BlindSignature.Error.invalidPrivateKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKeyLength
+            OpalDiagnostics.ErrorCode.invalidPrivateKeyLength
         case OpalCrypto.BlindSignature.Error.invalidPrivateKey:
-            OpalCryptoDiagnosticErrorCodes.invalidPrivateKey
+            OpalDiagnostics.ErrorCode.invalidPrivateKey
         case OpalCrypto.BlindSignature.Error.invalidRequestLength:
-            OpalCryptoDiagnosticErrorCodes.invalidRequestLength
+            OpalDiagnostics.ErrorCode.invalidRequestLength
         case OpalCrypto.BlindSignature.Error.invalidRequestScalar:
-            OpalCryptoDiagnosticErrorCodes.invalidRequestScalar
+            OpalDiagnostics.ErrorCode.invalidRequestScalar
         case OpalCrypto.BlindSignature.Error.invalidResponseLength:
-            OpalCryptoDiagnosticErrorCodes.invalidResponseLength
+            OpalDiagnostics.ErrorCode.invalidResponseLength
         case OpalCrypto.BlindSignature.Error.invalidResponseScalar:
-            OpalCryptoDiagnosticErrorCodes.invalidResponseScalar
+            OpalDiagnostics.ErrorCode.invalidResponseScalar
         case OpalCrypto.BlindSignature.Error.nonceAlreadyUsed:
-            OpalCryptoDiagnosticErrorCodes.nonceAlreadyUsed
+            OpalDiagnostics.ErrorCode.nonceAlreadyUsed
         case OpalCrypto.BlindSignature.Error.cryptographyFailure:
-            OpalCryptoDiagnosticErrorCodes.cryptographyFailure
+            OpalDiagnostics.ErrorCode.cryptographyFailure
         case OpalCrypto.BlindSignature.Error.verificationFailed:
-            OpalCryptoDiagnosticErrorCodes.verificationFailed
+            OpalDiagnostics.ErrorCode.verificationFailed
 
-        case Base32EncodingModel.Error.invalidFiveBitValue:
-            OpalCryptoDiagnosticErrorCodes.invalidFiveBitValue
-        case Base32EncodingModel.Error.invalidCharacterFound:
-            OpalCryptoDiagnosticErrorCodes.invalidCharacterFound
+        case Base32EncodingCodec.Error.invalidFiveBitValue:
+            OpalDiagnostics.ErrorCode.invalidFiveBitValue
+        case Base32EncodingCodec.Error.invalidCharacterFound:
+            OpalDiagnostics.ErrorCode.invalidCharacterFound
         case Base58CheckCodec.Error.invalidBase58:
-            OpalCryptoDiagnosticErrorCodes.invalidBase58
+            OpalDiagnostics.ErrorCode.invalidBase58
         case Base58CheckCodec.Error.invalidChecksum:
-            OpalCryptoDiagnosticErrorCodes.invalidChecksum
+            OpalDiagnostics.ErrorCode.invalidChecksum
         case Base58CheckCodec.Error.invalidPayloadLength:
-            OpalCryptoDiagnosticErrorCodes.invalidPayloadLength
+            OpalDiagnostics.ErrorCode.invalidPayloadLength
         case PasswordBasedKeyDerivationFunction2Model.Error.invalidIterationCount:
-            OpalCryptoDiagnosticErrorCodes.invalidIterationCount
+            OpalDiagnostics.ErrorCode.invalidIterationCount
         case PasswordBasedKeyDerivationFunction2Model.Error.emptySalt:
-            OpalCryptoDiagnosticErrorCodes.emptySalt
+            OpalDiagnostics.ErrorCode.emptySalt
         case PasswordBasedKeyDerivationFunction2Model.Error.invalidDerivedKeyLength:
-            OpalCryptoDiagnosticErrorCodes.invalidDerivedKeyLength
+            OpalDiagnostics.ErrorCode.invalidDerivedKeyLength
         case PasswordBasedKeyDerivationFunction2Model.Error.keyLengthExceedsLimit:
-            OpalCryptoDiagnosticErrorCodes.derivedKeyLengthExceedsLimit
+            OpalDiagnostics.ErrorCode.derivedKeyLengthExceedsLimit
 
         default:
-            String(reflecting: Swift.type(of: error))
+            OpalDiagnostics.ErrorCode(rawValue: String(reflecting: Swift.type(of: error)))
         }
     }
 }
 
-private enum OpalCryptoDiagnosticErrorCodes {
-    static let ambiguousLanguage = "ambiguous_language"
-    static let cryptographyFailure = "cryptography_failure"
-    static let derivedKeyLengthExceedsLimit = "derived_key_length_exceeds_limit"
-    static let depthOverflow = "depth_overflow"
-    static let emptyCommitmentList = "empty_commitment_list"
-    static let emptySalt = "empty_salt"
-    static let hardenedDerivationRequiresPrivateKey = "hardened_derivation_requires_private_key"
-    static let insecureAlternateBasePoint = "insecure_alternate_base_point"
-    static let invalidAlternateBasePoint = "invalid_alternate_base_point"
-    static let invalidAlternateBasePointLength = "invalid_alternate_base_point_length"
-    static let invalidAlternateBasePointPrefix = "invalid_alternate_base_point_prefix"
-    static let invalidBase58 = "invalid_base58"
-    static let invalidChainCodeLength = "invalid_chain_code_length"
-    static let invalidCharacterFound = "invalid_character_found"
-    static let invalidChecksum = "invalid_checksum"
-    static let invalidCiphertext = "invalid_ciphertext"
-    static let invalidCommitment = "invalid_commitment"
-    static let invalidCommitmentLength = "invalid_commitment_length"
-    static let invalidCompressionMarker = "invalid_compression_marker"
-    static let invalidDerivedKey = "invalid_derived_key"
-    static let invalidDerivedKeyLength = "invalid_derived_key_length"
-    static let invalidDepthMetadata = "invalid_depth_metadata"
-    static let invalidDigestLength = "invalid_digest_length"
-    static let invalidDER = "invalid_der"
-    static let invalidEntropyLength = "invalid_entropy_length"
-    static let invalidFiveBitValue = "invalid_five_bit_value"
-    static let invalidIterationCount = "invalid_iteration_count"
-    static let invalidNonce = "invalid_nonce"
-    static let invalidNonceLength = "invalid_nonce_length"
-    static let invalidNoncePoint = "invalid_nonce_point"
-    static let invalidNoncePointLength = "invalid_nonce_point_length"
-    static let invalidNoncePointPrefix = "invalid_nonce_point_prefix"
-    static let invalidPaddedPlaintextLength = "invalid_padded_plaintext_length"
-    static let invalidParentFingerprintLength = "invalid_parent_fingerprint_length"
-    static let invalidPayloadLength = "invalid_payload_length"
-    static let invalidPrivateKey = "invalid_private_key"
-    static let invalidPrivateKeyLength = "invalid_private_key_length"
-    static let invalidPublicKey = "invalid_public_key"
-    static let invalidPublicKeyLength = "invalid_public_key_length"
-    static let invalidPublicKeyPrefix = "invalid_public_key_prefix"
-    static let invalidRequestLength = "invalid_request_length"
-    static let invalidRequestScalar = "invalid_request_scalar"
-    static let invalidResponseLength = "invalid_response_length"
-    static let invalidResponseScalar = "invalid_response_scalar"
-    static let invalidSeedLength = "invalid_seed_length"
-    static let invalidSignature = "invalid_signature"
-    static let invalidSignatureLength = "invalid_signature_length"
-    static let invalidSymmetricKeyLength = "invalid_symmetric_key_length"
-    static let invalidTweak = "invalid_tweak"
-    static let invalidTweakLength = "invalid_tweak_length"
-    static let invalidVersion = "invalid_version"
-    static let invalidWord = "invalid_word"
-    static let invalidWordCount = "invalid_word_count"
-    static let invalidWordList = "invalid_word_list"
-    static let messageTooLong = "message_too_long"
-    static let mismatchedSetup = "mismatched_setup"
-    static let nonceAlreadyUsed = "nonce_already_used"
-    static let nonCanonicalDER = "non_canonical_der"
-    static let paddedPlaintextLengthMustBeMultipleOf16 = "padded_plaintext_length_must_be_multiple_of_16"
-    static let randomGenerationFailed = "random_generation_failed"
-    static let verificationFailed = "verification_failed"
-    static let wordListResourceMissing = "word_list_resource_missing"
+private extension OpalDiagnostics.ErrorCode {
+    static let ambiguousLanguage = Self(rawValue: "ambiguous_language")
+    static let cryptographyFailure = Self(rawValue: "cryptography_failure")
+    static let derivedKeyLengthExceedsLimit = Self(rawValue: "derived_key_length_exceeds_limit")
+    static let depthOverflow = Self(rawValue: "depth_overflow")
+    static let emptyCommitmentList = Self(rawValue: "empty_commitment_list")
+    static let emptySalt = Self(rawValue: "empty_salt")
+    static let hardenedDerivationRequiresPrivateKey = Self(rawValue: "hardened_derivation_requires_private_key")
+    static let insecureAlternateBasePoint = Self(rawValue: "insecure_alternate_base_point")
+    static let invalidAlternateBasePoint = Self(rawValue: "invalid_alternate_base_point")
+    static let invalidAlternateBasePointLength = Self(rawValue: "invalid_alternate_base_point_length")
+    static let invalidAlternateBasePointPrefix = Self(rawValue: "invalid_alternate_base_point_prefix")
+    static let invalidBase58 = Self(rawValue: "invalid_base58")
+    static let invalidChainCodeLength = Self(rawValue: "invalid_chain_code_length")
+    static let invalidCharacterFound = Self(rawValue: "invalid_character_found")
+    static let invalidChecksum = Self(rawValue: "invalid_checksum")
+    static let invalidCiphertext = Self(rawValue: "invalid_ciphertext")
+    static let invalidCommitment = Self(rawValue: "invalid_commitment")
+    static let invalidCommitmentLength = Self(rawValue: "invalid_commitment_length")
+    static let invalidCompressionMarker = Self(rawValue: "invalid_compression_marker")
+    static let invalidDerivedKey = Self(rawValue: "invalid_derived_key")
+    static let invalidDerivedKeyLength = Self(rawValue: "invalid_derived_key_length")
+    static let invalidDepthMetadata = Self(rawValue: "invalid_depth_metadata")
+    static let invalidDigestLength = Self(rawValue: "invalid_digest_length")
+    static let invalidDER = Self(rawValue: "invalid_der")
+    static let invalidEntropyLength = Self(rawValue: "invalid_entropy_length")
+    static let invalidFiveBitValue = Self(rawValue: "invalid_five_bit_value")
+    static let invalidIterationCount = Self(rawValue: "invalid_iteration_count")
+    static let invalidNonce = Self(rawValue: "invalid_nonce")
+    static let invalidNonceLength = Self(rawValue: "invalid_nonce_length")
+    static let invalidNoncePoint = Self(rawValue: "invalid_nonce_point")
+    static let invalidNoncePointLength = Self(rawValue: "invalid_nonce_point_length")
+    static let invalidNoncePointPrefix = Self(rawValue: "invalid_nonce_point_prefix")
+    static let invalidPaddedPlaintextLength = Self(rawValue: "invalid_padded_plaintext_length")
+    static let invalidParentFingerprintLength = Self(rawValue: "invalid_parent_fingerprint_length")
+    static let invalidPayloadLength = Self(rawValue: "invalid_payload_length")
+    static let invalidPrivateKey = Self(rawValue: "invalid_private_key")
+    static let invalidPrivateKeyLength = Self(rawValue: "invalid_private_key_length")
+    static let invalidPublicKey = Self(rawValue: "invalid_public_key")
+    static let invalidPublicKeyLength = Self(rawValue: "invalid_public_key_length")
+    static let invalidPublicKeyPrefix = Self(rawValue: "invalid_public_key_prefix")
+    static let invalidRequestLength = Self(rawValue: "invalid_request_length")
+    static let invalidRequestScalar = Self(rawValue: "invalid_request_scalar")
+    static let invalidResponseLength = Self(rawValue: "invalid_response_length")
+    static let invalidResponseScalar = Self(rawValue: "invalid_response_scalar")
+    static let invalidSeedLength = Self(rawValue: "invalid_seed_length")
+    static let invalidSignature = Self(rawValue: "invalid_signature")
+    static let invalidSignatureLength = Self(rawValue: "invalid_signature_length")
+    static let invalidSymmetricKeyLength = Self(rawValue: "invalid_symmetric_key_length")
+    static let invalidTweak = Self(rawValue: "invalid_tweak")
+    static let invalidTweakLength = Self(rawValue: "invalid_tweak_length")
+    static let invalidVersion = Self(rawValue: "invalid_version")
+    static let invalidWord = Self(rawValue: "invalid_word")
+    static let invalidWordCount = Self(rawValue: "invalid_word_count")
+    static let invalidWordList = Self(rawValue: "invalid_word_list")
+    static let messageTooLong = Self(rawValue: "message_too_long")
+    static let mismatchedSetup = Self(rawValue: "mismatched_setup")
+    static let nonceAlreadyUsed = Self(rawValue: "nonce_already_used")
+    static let nonCanonicalDER = Self(rawValue: "non_canonical_der")
+    static let paddedPlaintextLengthMustBeMultipleOf16 = Self(rawValue: "padded_plaintext_length_must_be_multiple_of_16")
+    static let randomGenerationFailed = Self(rawValue: "random_generation_failed")
+    static let verificationFailed = Self(rawValue: "verification_failed")
+    static let wordListResourceMissing = Self(rawValue: "word_list_resource_missing")
 }

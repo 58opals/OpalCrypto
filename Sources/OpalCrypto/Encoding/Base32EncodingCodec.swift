@@ -1,8 +1,8 @@
-// Base32EncodingModel.swift
+// Base32EncodingCodec.swift
 
 import Foundation
 
-internal struct Base32EncodingModel {
+internal struct Base32EncodingCodec {
     static let characters: [Character] = [
         "q", "p", "z", "r", "y", "9", "x", "8",
         "g", "f", "2", "t", "v", "d", "w", "0",
@@ -59,13 +59,7 @@ internal struct Base32EncodingModel {
         case true:
             data.reserveCapacity(string.count)
             for asciiValue in string.utf8 {
-                guard asciiValue < 128 else {
-                    throw Error.invalidCharacterFound
-                }
-                let index = asciiLookup[Int(asciiValue)]
-                guard index >= 0 else {
-                    throw Error.invalidCharacterFound
-                }
+                let index = try decodedIndex(for: asciiValue)
                 data.append(UInt8(index))
             }
         case false:
@@ -73,13 +67,7 @@ internal struct Base32EncodingModel {
             var leadingZeroCharacterCount = 0
             var isReadingLeadingZeroes = true
             for asciiValue in string.utf8 {
-                guard asciiValue < 128 else {
-                    throw Error.invalidCharacterFound
-                }
-                let index = asciiLookup[Int(asciiValue)]
-                guard index >= 0 else {
-                    throw Error.invalidCharacterFound
-                }
+                let index = try decodedIndex(for: asciiValue)
                 if isReadingLeadingZeroes, index == 0 {
                     leadingZeroCharacterCount += 1
                 } else {
@@ -92,6 +80,17 @@ internal struct Base32EncodingModel {
             data.append(value.serialize())
         }
         return data
+    }
+
+    private static func decodedIndex(for asciiValue: UInt8) throws -> Int {
+        guard asciiValue < 128 else {
+            throw Error.invalidCharacterFound
+        }
+        let index = asciiLookup[Int(asciiValue)]
+        guard index >= 0 else {
+            throw Error.invalidCharacterFound
+        }
+        return Int(index)
     }
 
     private static func hasMixedCaseLetters(_ string: String) -> Bool {

@@ -1,4 +1,4 @@
-// OpalCryptoDiagnosticsValidator.swift
+// DiagnosticsIntegrationValidator.swift
 
 import Foundation
 import OpalDiagnostics
@@ -6,7 +6,7 @@ import Testing
 @testable import OpalCrypto
 
 @Suite(.serialized)
-struct OpalCryptoDiagnosticsValidator {
+struct DiagnosticsIntegrationValidator {
     @Test("OpalDiagnostics catalog exposes stable typed values")
     func opalDiagnosticsCatalogExposesStableTypedValues() {
         let category: OpalDiagnostics.Category = .key
@@ -44,6 +44,17 @@ struct OpalCryptoDiagnosticsValidator {
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58CheckDecodeFailed))
             #expect(field("minimum_payload_length", in: record)?.value == "0")
+
+            OpalDiagnostics.clearRecentRecords()
+
+            let validBase58Check = Base58CheckCodec.encode(payload: Data([0x01]))
+            let invalidChecksum = String(validBase58Check.dropLast()) + (validBase58Check.last == "1" ? "2" : "1")
+            #expect(throws: Base58CheckCodec.Error.invalidChecksum) {
+                _ = try Base58CheckCodec.decode(invalidChecksum, minimumPayloadLength: -4)
+            }
+
+            let checksumRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58CheckDecodeFailed))
+            #expect(field("minimum_payload_length", in: checksumRecord)?.value == "0")
         }
     }
 
@@ -400,6 +411,29 @@ struct OpalCryptoDiagnosticsValidator {
         }
     }
 
+    @Test("Communication encrypt invalid explicit padding diagnostics report requested length")
+    func communicationEncryptInvalidExplicitPaddingDiagnosticsReportRequestedLength() throws {
+        try withDiagnosticsCapture {
+            let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(37)
+            let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+
+            OpalDiagnostics.clearRecentRecords()
+
+            #expect(throws: OpalCrypto.Communication.Error.invalidPaddedPlaintextLength(minimum: 8, actual: 5)) {
+                _ = try OpalCrypto.Communication.encrypt(
+                    message: Data("abcd".utf8),
+                    recipientPublicKey: publicKey,
+                    paddedPlaintextLength: 5
+                )
+            }
+
+            let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.communicationEncryptFailed))
+            #expect(field("padded_plaintext_length", in: record)?.value == "5")
+            #expect(field("has_explicit_padding", in: record)?.value == "true")
+            #expect(field("error_code", in: record)?.value == "invalid_padded_plaintext_length")
+        }
+    }
+
     @Test("WIF parsing does not emit nested private-key parse diagnostics")
     func wifParsingDoesNotEmitNestedPrivateKeyParseDiagnostics() throws {
         try withDiagnosticsCapture {
@@ -477,6 +511,9 @@ struct OpalCryptoDiagnosticsValidator {
             #expect(events.contains(OpalDiagnostics.Event.base58CheckDecodeFailed))
             #expect(events.contains(OpalDiagnostics.Event.wifParseFailed))
             #expect(events.contains(OpalDiagnostics.Event(rawValue: "opalcrypto.base.filtered")) == false)
+
+            let base58Record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58DecodeFailed))
+            #expect(field("error_code", in: base58Record)?.value == "invalid_base58")
 
             let encodingRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58CheckDecodeFailed))
             #expect(encodingRecord.category == OpalDiagnostics.Category.encoding)

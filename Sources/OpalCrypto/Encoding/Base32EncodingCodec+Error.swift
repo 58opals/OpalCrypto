@@ -1,6 +1,6 @@
-// Base32EncodingModel+Error.swift
+// Base32EncodingCodec+Error.swift
 
-extension Base32EncodingModel {
+extension Base32EncodingCodec {
     internal enum Error: Swift.Error {
         case invalidFiveBitValue(actual: UInt8)
         case invalidCharacterFound

@@ -11,7 +11,7 @@ extension OpalCrypto {
             recipientPublicKey: OpalCrypto.Secp256k1.PublicKey,
             paddedPlaintextLength: Int? = nil
         ) throws -> Ciphertext {
-            let resolvedPaddedPlaintextLength = paddedPlaintextLength
+            let reportedPaddedPlaintextLength = paddedPlaintextLength
                 ?? (try? CommunicationBoxModel.resolvePlaintextLength(
                     messageByteCount: message.count,
                     paddedPlaintextLength: nil
@@ -21,7 +21,7 @@ extension OpalCrypto {
                 OpalDiagnostics.Field.operationField("encrypt"),
                 OpalDiagnostics.Field.publicField("plaintext_byte_count", message.count),
                 OpalDiagnostics.Field.publicField("recipient_public_key_byte_count", recipientPublicKey.rawRepresentation.count),
-                OpalDiagnostics.Field.publicField("padded_plaintext_length", resolvedPaddedPlaintextLength),
+                OpalDiagnostics.Field.publicField("padded_plaintext_length", reportedPaddedPlaintextLength),
                 OpalDiagnostics.Field.publicField("has_explicit_padding", paddedPlaintextLength != nil)
             ]
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
