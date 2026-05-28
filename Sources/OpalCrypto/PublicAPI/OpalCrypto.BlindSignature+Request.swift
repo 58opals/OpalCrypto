@@ -45,7 +45,9 @@ extension OpalCrypto.BlindSignature {
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
                 event: OpalDiagnostics.Event.blindSignatureRequestSucceeded,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureRequestSucceeded),
-                fields: fields
+                fields: fields + [
+                    OpalDiagnostics.Field.publicField("request_scalar_byte_count", scalar.rawRepresentation.count)
+                ]
             )
         }
 

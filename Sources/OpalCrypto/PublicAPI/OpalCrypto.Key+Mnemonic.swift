@@ -72,31 +72,52 @@ extension OpalCrypto.Key {
             length: Length,
             language: Word.Language
         ) throws -> Mnemonic {
-            let fields = [
-                OpalDiagnostics.Field.operationField("mnemonic_generate"),
-                OpalDiagnostics.Field.publicField("word_count", length.rawValue),
-                OpalDiagnostics.Field.publicField("language", language.rawValue)
-            ]
+            let fields = Self.generateFields(length: length, language: language)
             do {
                 let mnemonic = try generate(
                     length: length,
                     language: language,
                     makeEntropyBytes: SecureRandomByteGenerator.makeBytes(count:)
                 )
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                    event: OpalDiagnostics.Event.mnemonicGenerateSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicGenerateSucceeded),
-                    fields: fields
-                )
+                Self.recordGenerateSucceeded(fields: fields)
                 return mnemonic
             } catch let error as Error {
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                    event: OpalDiagnostics.Event.mnemonicGenerateFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicGenerateFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(error)
-                )
+                Self.recordGenerateFailed(error, fields: fields)
                 throw error
             }
+        }
+
+        private static func generateFields(
+            length: Length,
+            language: Word.Language
+        ) -> [OpalDiagnostics.Field] {
+            [
+                OpalDiagnostics.Field.operationField("mnemonic_generate"),
+                OpalDiagnostics.Field.publicField("word_count", length.rawValue),
+                OpalDiagnostics.Field.publicField("language", language.rawValue),
+                OpalDiagnostics.Field.publicField("entropy_byte_count", length.entropyByteCount)
+            ]
+        }
+
+        private static func recordGenerateSucceeded(
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.mnemonicGenerateSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicGenerateSucceeded),
+                fields: fields
+            )
+        }
+
+        private static func recordGenerateFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.mnemonicGenerateFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicGenerateFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
 
         private static func parseFields(

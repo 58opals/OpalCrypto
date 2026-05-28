@@ -10,6 +10,7 @@ extension OpalCrypto.Communication {
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("symmetric_key_parse"),
+                OpalDiagnostics.Field.publicField("symmetric_key_byte_count", rawRepresentation.count),
                 OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
             guard rawRepresentation.count == 32 else {

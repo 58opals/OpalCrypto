@@ -136,6 +136,14 @@ struct DiagnosticsIntegrationValidator {
                 noncePoint: signer.noncePoint,
                 messageDigest: digest
             )
+
+            let requestRecord = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.blindSignatureRequestSucceeded)
+            )
+            #expect(requestRecord.category == OpalDiagnostics.Category.blindSignature)
+            #expect(field("operation", in: requestRecord)?.value == "request")
+            expectPublicField("request_scalar_byte_count", in: requestRecord, equals: "32")
+
             let response = try await signer.sign(
                 privateKey: privateKey,
                 requestScalar: request.scalar
@@ -278,7 +286,7 @@ struct DiagnosticsIntegrationValidator {
     }
 
     @Test("Malformed key parsing records redacted diagnostics")
-    func malformedKeyParsingRecordsRedactedDiagnostics() throws {
+    func validateMalformedKeyParsingRecordsRedactedDiagnostics() throws {
         try withDiagnosticsCapture {
             let malformedPrivateKey = Data(repeating: 0x01, count: 31)
 
@@ -294,6 +302,7 @@ struct DiagnosticsIntegrationValidator {
             #expect(field("error_code", in: privateKeyRecord)?.value == "invalid_private_key_length")
             #expect(field("error_type", in: privateKeyRecord)?.privacy == .public)
             #expect(field("error_message", in: privateKeyRecord)?.value == "<redacted>")
+            #expect(field("private_key", in: privateKeyRecord) == nil)
             #expect(privateKeyRecord.fields.contains { $0.value.contains("010101") } == false)
 
             OpalDiagnostics.clearRecentRecords()
@@ -311,6 +320,7 @@ struct DiagnosticsIntegrationValidator {
             #expect(field("error_code", in: publicKeyRecord)?.value == "invalid_public_key_prefix")
             #expect(field("error_type", in: publicKeyRecord)?.privacy == .public)
             #expect(field("error_message", in: publicKeyRecord)?.value == "<redacted>")
+            #expect(field("public_key", in: publicKeyRecord) == nil)
             #expect(publicKeyRecord.fields.contains { $0.value.contains("050000") } == false)
         }
     }
@@ -381,7 +391,7 @@ struct DiagnosticsIntegrationValidator {
     }
 
     @Test("PBKDF2 default length diagnostics report the effective byte count")
-    func pbkdf2DefaultLengthDiagnosticsReportEffectiveByteCount() throws {
+    func validatePBKDF2DefaultLengthDiagnosticsReportEffectiveByteCount() throws {
         try withDiagnosticsCapture {
             let salt = try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
 
@@ -394,10 +404,18 @@ struct DiagnosticsIntegrationValidator {
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.pbkdf2DeriveSucceeded))
             #expect(derivedKey.rawRepresentation.count == 64)
+            #expect(record.category == OpalDiagnostics.Category.keyDerivation)
+            #expect(record.level == .debug)
+            #expect(field("operation", in: record)?.value == "pbkdf2_derive")
             expectPublicField("password_byte_count", in: record, equals: "24")
-            #expect(field("requested_derived_key_byte_count", in: record)?.value == "64")
-            #expect(field("has_explicit_derived_key_length", in: record)?.value == "false")
-            #expect(field("output_byte_count", in: record)?.value == "64")
+            expectPublicField("salt_byte_count", in: record, equals: String(salt.rawRepresentation.count))
+            expectPublicField("iteration_count", in: record, equals: "1")
+            expectPublicField("requested_derived_key_byte_count", in: record, equals: "64")
+            expectPublicField("has_explicit_derived_key_length", in: record, equals: "false")
+            expectPublicField("output_byte_count", in: record, equals: "64")
+            #expect(field("password", in: record) == nil)
+            #expect(field("salt", in: record) == nil)
+            #expect(record.fields.contains { $0.value.contains("wallet-password-material") } == false)
         }
     }
 
@@ -427,8 +445,32 @@ struct DiagnosticsIntegrationValidator {
         }
     }
 
+    @Test("Mnemonic generation records public-safe entropy length")
+    func validateMnemonicGenerationRecordsPublicSafeEntropyLength() throws {
+        try withDiagnosticsCapture {
+            let mnemonic = try OpalCrypto.Key.Mnemonic.generate(
+                length: .words12,
+                language: .english
+            )
+
+            let record = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.mnemonicGenerateSucceeded)
+            )
+            #expect(record.category == OpalDiagnostics.Category.key)
+            #expect(record.level == .debug)
+            #expect(field("operation", in: record)?.value == "mnemonic_generate")
+            expectPublicField("word_count", in: record, equals: "12")
+            expectPublicField("language", in: record, equals: "english")
+            expectPublicField("entropy_byte_count", in: record, equals: "16")
+            #expect(field("entropy", in: record) == nil)
+            #expect(field("phrase", in: record) == nil)
+            #expect(field("mnemonic", in: record) == nil)
+            #expect(mnemonic.words.count == 12)
+        }
+    }
+
     @Test("Tweak-add failures record stable error codes")
-    func tweakAddFailuresRecordStableErrorCodes() throws {
+    func validateTweakAddFailuresRecordStableErrorCodes() throws {
         try withDiagnosticsCapture {
             let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(1)
             let cancelingTweak = try OpalCrypto.Secp256k1.Scalar(
@@ -448,13 +490,17 @@ struct DiagnosticsIntegrationValidator {
             #expect(record.category == OpalDiagnostics.Category.key)
             #expect(record.level == .error)
             #expect(field("operation", in: record)?.value == "private_key_tweak_add")
+            expectPublicField("private_key_byte_count", in: record, equals: "32")
+            expectPublicField("tweak_byte_count", in: record, equals: "32")
             #expect(field("error_code", in: record)?.value == "invalid_derived_key")
+            #expect(field("private_key", in: record) == nil)
+            #expect(field("tweak", in: record) == nil)
             #expect(record.fields.contains { $0.value.contains("FFFFFFFF") } == false)
         }
     }
 
     @Test("Public-key derivation and tweak-add avoid nested parse diagnostics")
-    func publicKeyDerivationAndTweakAddAvoidNestedParseDiagnostics() throws {
+    func validatePublicKeyDerivationAndTweakAddAvoidNestedParseDiagnostics() throws {
         try withDiagnosticsCapture {
             let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(23)
             let tweak = try OpalCryptoTestSupport.makeScalar(1)
@@ -467,6 +513,7 @@ struct DiagnosticsIntegrationValidator {
             #expect(deriveRecord.category == OpalDiagnostics.Category.key)
             #expect(field("operation", in: deriveRecord)?.value == "public_key_derive")
             #expect(field("algorithm", in: deriveRecord)?.value == "secp256k1")
+            expectPublicField("private_key_byte_count", in: deriveRecord, equals: "32")
             #expect(field("output_byte_count", in: deriveRecord)?.value == "33")
             #expect(diagnosticRecord(named: OpalDiagnostics.Event.publicKeyParseSucceeded) == nil)
 
@@ -478,13 +525,36 @@ struct DiagnosticsIntegrationValidator {
             #expect(tweakRecord.category == OpalDiagnostics.Category.key)
             #expect(field("operation", in: tweakRecord)?.value == "public_key_tweak_add")
             #expect(field("algorithm", in: tweakRecord)?.value == "secp256k1")
+            expectPublicField("public_key_byte_count", in: tweakRecord, equals: "33")
+            expectPublicField("tweak_byte_count", in: tweakRecord, equals: "32")
             #expect(field("output_byte_count", in: tweakRecord)?.value == "33")
             #expect(diagnosticRecord(named: OpalDiagnostics.Event.publicKeyParseSucceeded) == nil)
         }
     }
 
+    @Test("Public-key batch derivation records public-safe key counts")
+    func validatePublicKeyBatchDerivationRecordsPublicSafeKeyCounts() async throws {
+        try await withDiagnosticsCapture {
+            let privateKeys = try [
+                OpalCryptoTestSupport.makeTypedPrivateKey(24),
+                OpalCryptoTestSupport.makeTypedPrivateKey(25)
+            ]
+
+            _ = try await OpalCrypto.Secp256k1.derivePublicKeys(from: privateKeys)
+
+            let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.publicKeysDeriveSucceeded))
+            #expect(record.category == OpalDiagnostics.Category.key)
+            #expect(field("operation", in: record)?.value == "public_key_batch_derive")
+            #expect(field("algorithm", in: record)?.value == "secp256k1")
+            #expect(field("key_count", in: record)?.value == "2")
+            expectPublicField("private_key_byte_count", in: record, equals: "32")
+            #expect(field("output_key_count", in: record)?.value == "2")
+            #expect(field("private_key", in: record) == nil)
+        }
+    }
+
     @Test("Uncompressed verification-key parsing records normalized output length")
-    func uncompressedVerificationKeyParsingRecordsNormalizedOutputLength() throws {
+    func validateUncompressedVerificationKeyParsingRecordsNormalizedOutputLength() throws {
         try withDiagnosticsCapture {
             let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(11)
             let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
@@ -497,6 +567,9 @@ struct DiagnosticsIntegrationValidator {
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.verificationKeyParseSucceeded))
             #expect(verificationKey.rawRepresentation.count == 33)
+            #expect(record.category == OpalDiagnostics.Category.signature)
+            #expect(field("operation", in: record)?.value == "verification_key_parse")
+            #expect(field("algorithm", in: record)?.value == "secp256k1")
             #expect(field("input_byte_count", in: record)?.value == "65")
             #expect(field("output_byte_count", in: record)?.value == "33")
             #expect(diagnosticRecord(named: OpalDiagnostics.Event.publicKeyParseSucceeded) == nil)
@@ -504,7 +577,7 @@ struct DiagnosticsIntegrationValidator {
     }
 
     @Test("Shared-secret raw parsing records parse diagnostics")
-    func sharedSecretRawParsingRecordsParseDiagnostics() throws {
+    func validateSharedSecretRawParsingRecordsParseDiagnostics() throws {
         try withDiagnosticsCapture {
             let validSecret = Data(repeating: 0x01, count: 32)
 
@@ -512,9 +585,11 @@ struct DiagnosticsIntegrationValidator {
 
             let successRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.sharedSecretParseSucceeded))
             #expect(successRecord.category == OpalDiagnostics.Category.key)
+            #expect(successRecord.level == .debug)
             #expect(field("operation", in: successRecord)?.value == "shared_secret_parse")
-            #expect(field("input_byte_count", in: successRecord)?.value == "32")
-            #expect(field("output_byte_count", in: successRecord)?.value == "32")
+            expectPublicField("input_byte_count", in: successRecord, equals: "32")
+            expectPublicField("output_byte_count", in: successRecord, equals: "32")
+            #expect(field("shared_secret", in: successRecord) == nil)
 
             OpalDiagnostics.clearRecentRecords()
 
@@ -526,8 +601,13 @@ struct DiagnosticsIntegrationValidator {
 
             let failureRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.sharedSecretParseFailed))
             #expect(failureRecord.category == OpalDiagnostics.Category.key)
+            #expect(failureRecord.level == .error)
             #expect(field("operation", in: failureRecord)?.value == "shared_secret_parse")
-            #expect(field("input_byte_count", in: failureRecord)?.value == "31")
+            expectPublicField("input_byte_count", in: failureRecord, equals: "31")
+            #expect(field("error_code", in: failureRecord)?.value == "invalid_derived_key")
+            #expect(field("error_type", in: failureRecord)?.privacy == .public)
+            #expect(field("error_message", in: failureRecord)?.value == "<redacted>")
+            #expect(field("shared_secret", in: failureRecord) == nil)
             #expect(diagnosticRecord(named: OpalDiagnostics.Event.sharedSecretDeriveFailed) == nil)
         }
     }
@@ -559,7 +639,7 @@ struct DiagnosticsIntegrationValidator {
     }
 
     @Test("Extended-key validated accessors do not emit parse diagnostics")
-    func extendedKeyValidatedAccessorsDoNotEmitParseDiagnostics() throws {
+    func validateExtendedKeyValidatedAccessorsDoNotEmitParseDiagnostics() throws {
         try withDiagnosticsCapture {
             let seed = try OpalCrypto.Key.Seed(
                 rawRepresentation: Data((0..<16).map { UInt8($0) })
@@ -574,6 +654,80 @@ struct DiagnosticsIntegrationValidator {
 
             #expect(diagnosticRecord(named: OpalDiagnostics.Event.privateKeyParseSucceeded) == nil)
             #expect(diagnosticRecord(named: OpalDiagnostics.Event.publicKeyParseSucceeded) == nil)
+            #expect(OpalDiagnostics.recentRecords.isEmpty)
+        }
+    }
+
+    @Test("Extended-private root records public-safe component lengths")
+    func validateExtendedPrivateRootRecordsPublicSafeComponentLengths() throws {
+        try withDiagnosticsCapture {
+            let seed = try OpalCrypto.Key.Seed(
+                rawRepresentation: Data((0..<16).map { UInt8($0) })
+            )
+
+            _ = try OpalCrypto.Key.ExtendedPrivate.root(seed: seed)
+
+            let record = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.extendedPrivateRootSucceeded)
+            )
+            #expect(record.category == OpalDiagnostics.Category.key)
+            #expect(field("operation", in: record)?.value == "extended_private_root")
+            #expect(field("format", in: record)?.value == "bip32")
+            expectPublicField("seed_byte_count", in: record, equals: "16")
+            expectPublicField("private_key_byte_count", in: record, equals: "32")
+            expectPublicField("chain_code_byte_count", in: record, equals: "32")
+            #expect(field("seed", in: record) == nil)
+            #expect(field("private_key", in: record) == nil)
+            #expect(field("chain_code", in: record) == nil)
+        }
+    }
+
+    @Test("Extended-key parsing records public-safe component lengths")
+    func validateExtendedKeyParsingRecordsPublicSafeComponentLengths() throws {
+        try withDiagnosticsCapture {
+            let seed = try OpalCrypto.Key.Seed(
+                rawRepresentation: Data((0..<16).map { UInt8($0) })
+            )
+            let extendedPrivateKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: seed)
+            let extendedPrivateKeyString = extendedPrivateKey.serialize()
+            let extendedPublicKeyString = extendedPrivateKey.publicKey.serialize()
+
+            OpalDiagnostics.clearRecentRecords()
+
+            _ = try OpalCrypto.Key.ExtendedPrivate(extendedPrivateKeyString)
+            _ = try OpalCrypto.Key.ExtendedPublic(extendedPublicKeyString)
+
+            let privateRecord = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.extendedPrivateParseSucceeded)
+            )
+            #expect(privateRecord.category == OpalDiagnostics.Category.key)
+            #expect(field("operation", in: privateRecord)?.value == "extended_private_parse")
+            #expect(field("format", in: privateRecord)?.value == "bip32_xprv")
+            expectPublicField(
+                "input_character_count",
+                in: privateRecord,
+                equals: String(extendedPrivateKeyString.count)
+            )
+            expectPublicField("private_key_byte_count", in: privateRecord, equals: "32")
+            expectPublicField("chain_code_byte_count", in: privateRecord, equals: "32")
+            #expect(field("private_key", in: privateRecord) == nil)
+            #expect(field("chain_code", in: privateRecord) == nil)
+
+            let publicRecord = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.extendedPublicParseSucceeded)
+            )
+            #expect(publicRecord.category == OpalDiagnostics.Category.key)
+            #expect(field("operation", in: publicRecord)?.value == "extended_public_parse")
+            #expect(field("format", in: publicRecord)?.value == "bip32_xpub")
+            expectPublicField(
+                "input_character_count",
+                in: publicRecord,
+                equals: String(extendedPublicKeyString.count)
+            )
+            expectPublicField("public_key_byte_count", in: publicRecord, equals: "33")
+            expectPublicField("chain_code_byte_count", in: publicRecord, equals: "32")
+            #expect(field("public_key", in: publicRecord) == nil)
+            #expect(field("chain_code", in: publicRecord) == nil)
         }
     }
 
@@ -662,6 +816,91 @@ struct DiagnosticsIntegrationValidator {
             #expect(field("mode", in: successRecord)?.value == "symmetric_key")
             #expect(field("plaintext_byte_count", in: successRecord)?.value == "21")
             #expect(field("symmetric_key_byte_count", in: successRecord)?.value == "32")
+        }
+    }
+
+    @Test("Symmetric-key parsing records public-safe key length")
+    func validateSymmetricKeyParsingRecordsPublicSafeKeyLength() throws {
+        try withDiagnosticsCapture {
+            _ = try OpalCrypto.Communication.SymmetricKey(
+                rawRepresentation: Data(repeating: 0x42, count: 32)
+            )
+
+            let record = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.communicationSymmetricKeyParseSucceeded)
+            )
+            #expect(record.category == OpalDiagnostics.Category.communication)
+            #expect(field("operation", in: record)?.value == "symmetric_key_parse")
+            expectPublicField("symmetric_key_byte_count", in: record, equals: "32")
+            #expect(field("input_byte_count", in: record)?.value == "32")
+            #expect(field("symmetric_key", in: record) == nil)
+        }
+    }
+
+    @Test("Communication ciphertext parsing records envelope length boundaries")
+    func validateCommunicationCiphertextParsingRecordsEnvelopeLengthBoundaries() throws {
+        try withDiagnosticsCapture {
+            let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(33)
+            let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+            let ciphertext = try OpalCrypto.Communication.encrypt(
+                message: Data("ciphertext-diagnostics".utf8),
+                recipientPublicKey: publicKey
+            )
+
+            OpalDiagnostics.clearRecentRecords()
+
+            _ = try OpalCrypto.Communication.Ciphertext(
+                rawRepresentation: ciphertext.rawRepresentation
+            )
+
+            let successRecord = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.communicationCiphertextParseSucceeded)
+            )
+            #expect(successRecord.category == OpalDiagnostics.Category.communication)
+            #expect(successRecord.level == .debug)
+            #expect(field("operation", in: successRecord)?.value == "ciphertext_parse")
+            expectPublicField(
+                "ciphertext_byte_count",
+                in: successRecord,
+                equals: String(ciphertext.rawRepresentation.count)
+            )
+            expectPublicField(
+                "minimum_ciphertext_byte_count",
+                in: successRecord,
+                equals: String(CommunicationBoxModel.minimumCiphertextLength)
+            )
+            #expect(field("ciphertext", in: successRecord) == nil)
+
+            OpalDiagnostics.clearRecentRecords()
+
+            let shortCiphertext = Data(
+                repeating: 0,
+                count: CommunicationBoxModel.minimumCiphertextLength - 1
+            )
+            #expect(throws: OpalCrypto.Communication.Error.self) {
+                _ = try OpalCrypto.Communication.Ciphertext(rawRepresentation: shortCiphertext)
+            }
+
+            let failureRecord = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.communicationCiphertextParseFailed)
+            )
+            #expect(failureRecord.category == OpalDiagnostics.Category.communication)
+            #expect(failureRecord.level == .error)
+            #expect(field("operation", in: failureRecord)?.value == "ciphertext_parse")
+            expectPublicField(
+                "ciphertext_byte_count",
+                in: failureRecord,
+                equals: String(shortCiphertext.count)
+            )
+            expectPublicField(
+                "minimum_ciphertext_byte_count",
+                in: failureRecord,
+                equals: String(CommunicationBoxModel.minimumCiphertextLength)
+            )
+            #expect(field("error_code", in: failureRecord)?.value == "invalid_ciphertext")
+            #expect(field("error_type", in: failureRecord)?.privacy == .public)
+            #expect(field("error_message", in: failureRecord)?.value == "<redacted>")
+            #expect(field("ciphertext", in: failureRecord) == nil)
         }
     }
 
@@ -793,7 +1032,7 @@ struct DiagnosticsIntegrationValidator {
     }
 
     @Test("Crypto category filter includes diagnostics subcategories")
-    func cryptoCategoryFilterIncludesDiagnosticsSubcategories() throws {
+    func validateCryptoCategoryFilterIncludesDiagnosticsSubcategories() throws {
         try OpalDiagnostics.withConfiguration(Self.diagnosticsConfiguration) {
             OpalDiagnostics.clearRecentRecords()
 
@@ -813,11 +1052,26 @@ struct DiagnosticsIntegrationValidator {
             #expect(events.contains(OpalDiagnostics.Event(rawValue: "opalcrypto.base.filtered")) == false)
 
             let base58Record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58DecodeFailed))
-            #expect(field("error_code", in: base58Record)?.value == "invalid_base58")
+            #expect(base58Record.category == OpalDiagnostics.Category.encoding)
+            #expect(base58Record.level == .error)
+            #expect(field("operation", in: base58Record)?.value == "base58_decode")
+            expectPublicField("input_character_count", in: base58Record, equals: "1")
+            expectPublicField("error_code", in: base58Record, equals: "invalid_base58")
 
             let encodingRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58CheckDecodeFailed))
             #expect(encodingRecord.category == OpalDiagnostics.Category.encoding)
-            #expect(field("input_character_count", in: encodingRecord)?.value == "1")
+            #expect(encodingRecord.level == .error)
+            #expect(field("operation", in: encodingRecord)?.value == "base58check_decode")
+            expectPublicField("input_character_count", in: encodingRecord, equals: "1")
+
+            let wifRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.wifParseFailed))
+            #expect(wifRecord.category == OpalDiagnostics.Category.key)
+            #expect(wifRecord.level == .error)
+            #expect(field("operation", in: wifRecord)?.value == "wif_parse")
+            #expect(field("format", in: wifRecord)?.value == "wif")
+            expectPublicField("input_character_count", in: wifRecord, equals: "1")
+            expectPublicField("error_code", in: wifRecord, equals: "invalid_base58")
+            #expect(field("private_key", in: wifRecord) == nil)
         }
     }
 

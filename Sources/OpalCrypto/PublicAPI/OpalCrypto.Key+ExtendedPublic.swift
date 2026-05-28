@@ -23,8 +23,9 @@ extension OpalCrypto.Key {
                 OpalDiagnostics.Field.formatField("bip32_xpub"),
                 OpalDiagnostics.Field.publicField("input_character_count", serialized.count)
             ]
+            let payload: ExtendedKeyPayloadModel
             do {
-                let payload = try Self.makePayload(from: serialized)
+                payload = try Self.makePayload(from: serialized)
                 try self.init(payload: payload)
             } catch let error as Error {
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
@@ -37,7 +38,10 @@ extension OpalCrypto.Key {
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                 event: OpalDiagnostics.Event.extendedPublicParseSucceeded,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.extendedPublicParseSucceeded),
-                fields: fields
+                fields: fields + [
+                    OpalDiagnostics.Field.publicField("public_key_byte_count", payload.keyData.count),
+                    OpalDiagnostics.Field.publicField("chain_code_byte_count", payload.chainCode.count)
+                ]
             )
         }
 
