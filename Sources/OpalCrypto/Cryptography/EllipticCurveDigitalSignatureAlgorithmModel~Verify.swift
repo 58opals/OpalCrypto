@@ -107,7 +107,7 @@ private extension EllipticCurveDigitalSignatureAlgorithmModel {
         format: SignatureFormat.EllipticCurveDigitalSignatureAlgorithm
     ) throws -> Bool {
         switch format {
-        case .raw, .compact:
+        case .raw:
             let ecdsaSignature = try StandardsForEfficientCryptography256k1CurveModel.Signature(
                 raw64ByteSignatureData: signature
             )

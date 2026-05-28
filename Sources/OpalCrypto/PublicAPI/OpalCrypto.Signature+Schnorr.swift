@@ -38,6 +38,7 @@ extension OpalCrypto.Signature {
                 OpalDiagnostics.Field.operationField("sign"),
                 OpalDiagnostics.Field.algorithmField("schnorr"),
                 OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)
             ]
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
@@ -90,6 +91,7 @@ extension OpalCrypto.Signature {
                 OpalDiagnostics.Field.operationField("verify"),
                 OpalDiagnostics.Field.algorithmField("schnorr"),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField("verification_key_byte_count", verificationKey.rawRepresentation.count),
                 OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
             ]
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(

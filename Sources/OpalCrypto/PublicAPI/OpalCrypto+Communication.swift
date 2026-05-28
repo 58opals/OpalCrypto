@@ -59,11 +59,14 @@ extension OpalCrypto {
             _ ciphertext: Ciphertext,
             privateKey: OpalCrypto.Secp256k1.PrivateKey
         ) throws -> DecryptionResult {
-            let fields = [
-                OpalDiagnostics.Field.operationField("decrypt"),
-                OpalDiagnostics.Field.publicField("mode", "private_key"),
-                OpalDiagnostics.Field.ciphertextLengthField(ciphertext.rawRepresentation.count)
-            ]
+            let fields = decryptFields(
+                mode: "private_key",
+                ciphertextByteCount: ciphertext.rawRepresentation.count,
+                keyLengthField: OpalDiagnostics.Field.publicField(
+                    "private_key_byte_count",
+                    privateKey.rawRepresentation.count
+                )
+            )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
                 event: OpalDiagnostics.Event.communicationDecryptBegin,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptBegin),
@@ -100,11 +103,14 @@ extension OpalCrypto {
             _ ciphertext: Ciphertext,
             symmetricKey: SymmetricKey
         ) throws -> Data {
-            let fields = [
-                OpalDiagnostics.Field.operationField("decrypt"),
-                OpalDiagnostics.Field.publicField("mode", "symmetric_key"),
-                OpalDiagnostics.Field.ciphertextLengthField(ciphertext.rawRepresentation.count)
-            ]
+            let fields = decryptFields(
+                mode: "symmetric_key",
+                ciphertextByteCount: ciphertext.rawRepresentation.count,
+                keyLengthField: OpalDiagnostics.Field.publicField(
+                    "symmetric_key_byte_count",
+                    symmetricKey.rawRepresentation.count
+                )
+            )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.communication).record(
                 event: OpalDiagnostics.Event.communicationDecryptBegin,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.communicationDecryptBegin),
@@ -161,6 +167,19 @@ extension OpalCrypto {
             case .cryptographyFailure:
                 return .cryptographyFailure
             }
+        }
+
+        private static func decryptFields(
+            mode: String,
+            ciphertextByteCount: Int,
+            keyLengthField: OpalDiagnostics.Field
+        ) -> [OpalDiagnostics.Field] {
+            [
+                OpalDiagnostics.Field.operationField("decrypt"),
+                OpalDiagnostics.Field.publicField("mode", mode),
+                OpalDiagnostics.Field.ciphertextLengthField(ciphertextByteCount),
+                keyLengthField
+            ]
         }
     }
 }

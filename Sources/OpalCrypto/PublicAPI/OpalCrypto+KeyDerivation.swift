@@ -16,6 +16,7 @@ extension OpalCrypto {
                 ?? PasswordBasedKeyDerivationFunction2Model.defaultDerivedKeyLength
             let fields = [
                 OpalDiagnostics.Field.operationField("pbkdf2_derive"),
+                OpalDiagnostics.Field.publicField("password_byte_count", password.count),
                 OpalDiagnostics.Field.publicField("salt_byte_count", salt.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("iteration_count", iterationCount),
                 OpalDiagnostics.Field.publicField("requested_derived_key_byte_count", resolvedDerivedKeyLength),
@@ -39,20 +40,23 @@ extension OpalCrypto {
                 return parsedDerivedKey
             } catch let error as PasswordBasedKeyDerivationFunction2Model.Error {
                 let mappedError = mapError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
-                    event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                recordDeriveFailed(mappedError, fields: fields)
                 throw mappedError
             } catch let error as Error {
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
-                    event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(error)
-                )
+                recordDeriveFailed(error, fields: fields)
                 throw error
             }
+        }
+
+        private static func recordDeriveFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
+                event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
 
         private static func mapError(_ error: PasswordBasedKeyDerivationFunction2Model.Error) -> Error {

@@ -43,10 +43,9 @@ extension OpalCrypto.Secp256k1 {
                 OpalDiagnostics.Field.algorithmField("secp256k1")
             ]
             do {
-                let privateKey = try PrivateKey(
-                    rawRepresentation: StandardsForEfficientCryptography256k1CurveModel.Operation
-                        .generatePrivateKeyData32Bytes()
-                )
+                let privateKeyData = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                    .generatePrivateKeyData32Bytes()
+                let privateKey = PrivateKey(validatedRawRepresentation: privateKeyData)
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                     event: OpalDiagnostics.Event.privateKeyGenerateSucceeded,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.privateKeyGenerateSucceeded),

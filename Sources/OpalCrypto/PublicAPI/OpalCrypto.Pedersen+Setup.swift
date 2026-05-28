@@ -144,7 +144,7 @@ extension OpalCrypto.Pedersen {
                 let point = try PedersenModel.Setup.addPoints(
                     points.map(\.rawRepresentation)
                 )
-                let commitmentPoint = try CommitmentPoint(rawRepresentation: point)
+                let commitmentPoint = try CommitmentPoint(validatingRawRepresentation: point)
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
                     event: OpalDiagnostics.Event.pedersenCombineSucceeded,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
@@ -155,20 +155,23 @@ extension OpalCrypto.Pedersen {
                 return commitmentPoint
             } catch let error as PedersenModel.Error {
                 let mappedError = mapError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCombineFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                recordCombineFailed(mappedError, fields: fields)
                 throw mappedError
             } catch let error as Error {
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCombineFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(error)
-                )
+                recordCombineFailed(error, fields: fields)
                 throw error
             }
+        }
+
+        private static func recordCombineFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenCombineFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
 
         private static func mapError(_ error: PedersenModel.Error) -> Error {

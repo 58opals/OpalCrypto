@@ -84,7 +84,7 @@ private extension EllipticCurveDigitalSignatureAlgorithmModel {
             nonce: nonce
         )
         switch format {
-        case .raw, .compact:
+        case .raw:
             return ecdsaSignature.raw64ByteSignatureData
         case .distinguishedEncodingRules:
             return try ecdsaSignature.encodeDistinguishedEncodingRules()

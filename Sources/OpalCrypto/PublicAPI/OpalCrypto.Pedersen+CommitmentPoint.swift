@@ -26,21 +26,9 @@ extension OpalCrypto.Pedersen {
             ]
             do {
                 affinePoint = try PublicKeyParserModel.parsePublicKey(rawRepresentation)
-            } catch PublicKeyParserModel.Error.invalidLength(let actual) {
-                let mappedError = Error.invalidCommitmentLength(actual: actual)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCommitmentParseFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitmentParseFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
-                throw mappedError
             } catch {
-                let mappedError = Error.invalidCommitment
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCommitmentParseFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitmentParseFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                let mappedError = Self.mapParseError(error)
+                Self.recordParseFailed(mappedError, fields: fields)
                 throw mappedError
             }
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
@@ -52,6 +40,28 @@ extension OpalCrypto.Pedersen {
 
         internal init(affinePoint: AffinePointModel) {
             self.affinePoint = affinePoint
+        }
+
+        internal init(validatingRawRepresentation rawRepresentation: Data) throws {
+            self.affinePoint = try PublicKeyParserModel.parsePublicKey(rawRepresentation)
+        }
+
+        private static func mapParseError(_ error: Swift.Error) -> Error {
+            if case PublicKeyParserModel.Error.invalidLength(let actual) = error {
+                return .invalidCommitmentLength(actual: actual)
+            }
+            return .invalidCommitment
+        }
+
+        private static func recordParseFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenCommitmentParseFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitmentParseFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
     }
 }

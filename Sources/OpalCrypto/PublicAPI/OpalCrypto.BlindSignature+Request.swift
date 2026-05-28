@@ -55,6 +55,7 @@ extension OpalCrypto.BlindSignature {
         ) throws -> OpalCrypto.Signature.Schnorr {
             let fields = [
                 OpalDiagnostics.Field.operationField("unblind"),
+                OpalDiagnostics.Field.publicField("request_scalar_byte_count", scalar.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("response_scalar_byte_count", responseScalar.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("verify", verify)
             ]
@@ -69,18 +70,22 @@ extension OpalCrypto.BlindSignature {
                     verify: verify
                 )
                 let parsedSignature = try OpalCrypto.Signature.Schnorr(rawRepresentation: signature)
+                let signatureLengthField = OpalDiagnostics.Field.signatureLengthField(
+                    parsedSignature.rawRepresentation.count
+                )
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
                     event: OpalDiagnostics.Event.blindSignatureUnblindSucceeded,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureUnblindSucceeded),
-                    fields: fields + [
-                        OpalDiagnostics.Field.signatureLengthField(parsedSignature.rawRepresentation.count)
-                    ]
+                    fields: fields + [signatureLengthField]
                 )
                 if verify {
                     OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
                         event: OpalDiagnostics.Event.blindSignatureVerifySucceeded,
                         level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureVerifySucceeded),
-                        fields: fields + [OpalDiagnostics.Field.resultField(true)]
+                        fields: fields + [
+                            signatureLengthField,
+                            OpalDiagnostics.Field.resultField(true)
+                        ]
                     )
                 }
                 return parsedSignature
@@ -93,21 +98,24 @@ extension OpalCrypto.BlindSignature {
                         fields: fields + [OpalDiagnostics.Field.resultField(false)]
                     )
                 }
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
-                    event: OpalDiagnostics.Event.blindSignatureUnblindFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureUnblindFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                Self.recordUnblindFailed(mappedError, fields: fields)
                 throw mappedError
             } catch is OpalCrypto.Signature.Error {
                 let mappedError = OpalCrypto.BlindSignature.Error.verificationFailed
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
-                    event: OpalDiagnostics.Event.blindSignatureUnblindFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureUnblindFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                Self.recordUnblindFailed(mappedError, fields: fields)
                 throw mappedError
             }
+        }
+
+        private static func recordUnblindFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.blindSignature).record(
+                event: OpalDiagnostics.Event.blindSignatureUnblindFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.blindSignatureUnblindFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
     }
 }

@@ -17,7 +17,7 @@ extension OpalCrypto.BlindSignature {
                 let signerState = try BlindSignatureModel.SignerState()
                 self.signerState = signerState
                 self.noncePoint = try OpalCrypto.Secp256k1.PublicKey(
-                    rawRepresentation: signerState.noncePointData
+                    validatingRawRepresentation: signerState.noncePointData
                 )
             } catch let error as BlindSignatureModel.Error {
                 let mappedError = OpalCrypto.BlindSignature.mapError(error)

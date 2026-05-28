@@ -53,13 +53,12 @@ extension OpalCrypto.Signature {
             format: ECDSAFormat = .der,
             noncePolicy: ECDSANoncePolicy = .rfc6979
         ) throws -> ECDSA {
-            let fields = [
-                OpalDiagnostics.Field.operationField("sign"),
-                OpalDiagnostics.Field.algorithmField("ecdsa"),
-                OpalDiagnostics.Field.formatField(format.diagnosticsName),
-                OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
-                OpalDiagnostics.Field.messageLengthField(message.count)
-            ]
+            let fields = signFields(
+                format: format,
+                noncePolicy: noncePolicy,
+                privateKey: privateKey,
+                payloadLengthField: OpalDiagnostics.Field.messageLengthField(message.count)
+            )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
                 event: OpalDiagnostics.Event.ecdsaSignBegin,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaSignBegin),
@@ -98,13 +97,15 @@ extension OpalCrypto.Signature {
             format: ECDSAFormat = .der,
             noncePolicy: ECDSANoncePolicy = .rfc6979
         ) throws -> ECDSA {
-            let fields = [
-                OpalDiagnostics.Field.operationField("sign"),
-                OpalDiagnostics.Field.algorithmField("ecdsa"),
-                OpalDiagnostics.Field.formatField(format.diagnosticsName),
-                OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
-                OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)
-            ]
+            let fields = signFields(
+                format: format,
+                noncePolicy: noncePolicy,
+                privateKey: privateKey,
+                payloadLengthField: OpalDiagnostics.Field.publicField(
+                    "digest_byte_count",
+                    digest.rawRepresentation.count
+                )
+            )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
                 event: OpalDiagnostics.Event.ecdsaSignBegin,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaSignBegin),
@@ -137,6 +138,22 @@ extension OpalCrypto.Signature {
             }
         }
 
+        private static func signFields(
+            format: ECDSAFormat,
+            noncePolicy: ECDSANoncePolicy,
+            privateKey: OpalCrypto.Secp256k1.PrivateKey,
+            payloadLengthField: OpalDiagnostics.Field
+        ) -> [OpalDiagnostics.Field] {
+            [
+                OpalDiagnostics.Field.operationField("sign"),
+                OpalDiagnostics.Field.algorithmField("ecdsa"),
+                OpalDiagnostics.Field.formatField(format.diagnosticsName),
+                OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
+                payloadLengthField
+            ]
+        }
+
         public func encoded(as format: ECDSAFormat) throws -> ECDSA {
             try ECDSA(signatureModel: signatureModel, format: format)
         }
@@ -166,13 +183,10 @@ extension OpalCrypto.Signature {
             message: Data,
             verificationKey: VerificationKey
         ) throws -> Bool {
-            let fields = [
-                OpalDiagnostics.Field.operationField("verify"),
-                OpalDiagnostics.Field.algorithmField("ecdsa"),
-                OpalDiagnostics.Field.formatField(format.diagnosticsName),
-                OpalDiagnostics.Field.messageLengthField(message.count),
-                OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
-            ]
+            let fields = verifyFields(
+                payloadLengthField: OpalDiagnostics.Field.messageLengthField(message.count),
+                verificationKey: verificationKey
+            )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
                 event: OpalDiagnostics.Event.ecdsaVerifyBegin,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyBegin),
@@ -220,13 +234,13 @@ extension OpalCrypto.Signature {
             digest: Digest,
             verificationKey: VerificationKey
         ) throws -> Bool {
-            let fields = [
-                OpalDiagnostics.Field.operationField("verify"),
-                OpalDiagnostics.Field.algorithmField("ecdsa"),
-                OpalDiagnostics.Field.formatField(format.diagnosticsName),
-                OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count),
-                OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
-            ]
+            let fields = verifyFields(
+                payloadLengthField: OpalDiagnostics.Field.publicField(
+                    "digest_byte_count",
+                    digest.rawRepresentation.count
+                ),
+                verificationKey: verificationKey
+            )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
                 event: OpalDiagnostics.Event.ecdsaVerifyBegin,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyBegin),
@@ -265,6 +279,20 @@ extension OpalCrypto.Signature {
                 )
                 throw mappedError
             }
+        }
+
+        private func verifyFields(
+            payloadLengthField: OpalDiagnostics.Field,
+            verificationKey: VerificationKey
+        ) -> [OpalDiagnostics.Field] {
+            [
+                OpalDiagnostics.Field.operationField("verify"),
+                OpalDiagnostics.Field.algorithmField("ecdsa"),
+                OpalDiagnostics.Field.formatField(format.diagnosticsName),
+                payloadLengthField,
+                OpalDiagnostics.Field.publicField("verification_key_byte_count", verificationKey.rawRepresentation.count),
+                OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
+            ]
         }
 
         private static func mapSignatureError(
