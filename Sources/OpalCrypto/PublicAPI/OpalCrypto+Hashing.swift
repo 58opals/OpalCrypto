@@ -7,7 +7,7 @@ extension OpalCrypto {
     public enum Hashing {
         public static func sha256(_ data: Data) -> Data {
             let digest = SecureHashAlgorithm256Model.hash(data)
-            recordHashSucceeded(
+            recordHashingSucceeded(
                 OpalDiagnostics.Event.sha256Succeeded,
                 algorithm: "sha256",
                 inputByteCount: data.count,
@@ -18,7 +18,7 @@ extension OpalCrypto {
 
         public static func hash256(_ data: Data) -> Data {
             let digest = SecureHash256Model.hash(data)
-            recordHashSucceeded(
+            recordHashingSucceeded(
                 OpalDiagnostics.Event.hash256Succeeded,
                 algorithm: "hash256",
                 inputByteCount: data.count,
@@ -29,7 +29,7 @@ extension OpalCrypto {
 
         public static func hash160(_ data: Data) -> Data {
             let digest = SecureHash160Model.hash(data)
-            recordHashSucceeded(
+            recordHashingSucceeded(
                 OpalDiagnostics.Event.hash160Succeeded,
                 algorithm: "hash160",
                 inputByteCount: data.count,
@@ -41,8 +41,9 @@ extension OpalCrypto {
         public static func hmacSHA512(data: Data, key: Data) -> Data {
             let digest = HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model
                 .hash(data, key: key)
-            recordHashSucceeded(
+            recordHashingSucceeded(
                 OpalDiagnostics.Event.hmacSHA512Succeeded,
+                operation: "hmac",
                 algorithm: "hmac_sha512",
                 inputByteCount: data.count,
                 outputByteCount: digest.count,
@@ -54,8 +55,9 @@ extension OpalCrypto {
         public static func hmacSHA256(data: Data, key: Data) -> Data {
             let digest = HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
                 .hash(data, key: key)
-            recordHashSucceeded(
+            recordHashingSucceeded(
                 OpalDiagnostics.Event.hmacSHA256Succeeded,
+                operation: "hmac",
                 algorithm: "hmac_sha256",
                 inputByteCount: data.count,
                 outputByteCount: digest.count,
@@ -64,15 +66,16 @@ extension OpalCrypto {
             return digest
         }
 
-        private static func recordHashSucceeded(
+        private static func recordHashingSucceeded(
             _ event: OpalDiagnostics.Event,
+            operation: String = "hash",
             algorithm: String,
             inputByteCount: Int,
             outputByteCount: Int,
             keyByteCount: Int? = nil
         ) {
             var fields = [
-                OpalDiagnostics.Field.operationField("hash"),
+                OpalDiagnostics.Field.operationField(operation),
                 OpalDiagnostics.Field.algorithmField(algorithm),
                 OpalDiagnostics.Field.inputLengthField(inputByteCount),
                 OpalDiagnostics.Field.outputLengthField(outputByteCount)

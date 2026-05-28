@@ -23,7 +23,7 @@ extension OpalCrypto.Signature {
         }
 
         public init(rawRepresentation: Data) throws {
-            let fields = Self.parseFields(inputByteCount: rawRepresentation.count)
+            let fields = Self.parseFields(rawRepresentation: rawRepresentation)
             do {
                 verificationKeyModel = try VerificationKeyModel(publicKeyData: rawRepresentation)
             } catch VerificationKeyModel.Error.invalidPublicKeyLength(let actual) {
@@ -46,12 +46,15 @@ extension OpalCrypto.Signature {
         }
 
         private static func parseFields(
-            inputByteCount: Int
+            rawRepresentation: Data
         ) -> [OpalDiagnostics.Field] {
             [
                 OpalDiagnostics.Field.operationField("verification_key_parse"),
                 OpalDiagnostics.Field.algorithmField("secp256k1"),
-                OpalDiagnostics.Field.inputLengthField(inputByteCount)
+                OpalDiagnostics.Field.formatField(
+                    PublicKeyParserModel.sec1DiagnosticsFormat(for: rawRepresentation)
+                ),
+                OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
         }
 

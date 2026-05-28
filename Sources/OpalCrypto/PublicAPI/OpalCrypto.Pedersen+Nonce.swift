@@ -21,25 +21,37 @@ extension OpalCrypto.Pedersen {
             } catch ScalarModel.Error.invalidDataLength(let expected, let actual) {
                 precondition(expected == 32)
                 let mappedError = Error.invalidNonceLength(expected: expected, actual: actual)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenNonceParseFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                Self.recordParseFailed(mappedError, fields: fields)
                 throw mappedError
             } catch {
                 let mappedError = Error.invalidNonce
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenNonceParseFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                Self.recordParseFailed(mappedError, fields: fields)
                 throw mappedError
             }
+            Self.recordParseSucceeded(rawRepresentation: rawRepresentation, fields: fields)
+        }
+
+        private static func recordParseSucceeded(
+            rawRepresentation: Data,
+            fields: [OpalDiagnostics.Field]
+        ) {
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
                 event: OpalDiagnostics.Event.pedersenNonceParseSucceeded,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseSucceeded),
-                fields: fields
+                fields: fields + [
+                    OpalDiagnostics.Field.publicField("nonce_byte_count", rawRepresentation.count)
+                ]
+            )
+        }
+
+        private static func recordParseFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenNonceParseFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenNonceParseFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
             )
         }
 

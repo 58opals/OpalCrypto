@@ -6,24 +6,15 @@ import Testing
 
 @Suite("Internal Base58Check validation")
 struct InternalBase58CheckValidator {
-    @Test("Reject invalid minimum payload lengths without trapping")
-    func rejectInvalidMinimumPayloadLengthsWithoutTrapping() {
-        do {
-            _ = try Base58CheckCodec.decode("", minimumPayloadLength: -4)
-            Issue.record("Expected invalid payload length error.")
-        } catch let error as Base58CheckCodec.Error {
-            #expect(error == .invalidPayloadLength(actual: 0))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-
-        do {
-            _ = try Base58CheckCodec.decode("", minimumPayloadLength: Int.max)
-            Issue.record("Expected invalid payload length error.")
-        } catch let error as Base58CheckCodec.Error {
-            #expect(error == .invalidPayloadLength(actual: 0))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
+    @Test(
+        "Reject invalid minimum payload lengths without trapping",
+        arguments: [-4, Int.max]
+    )
+    func validateBase58CheckRejectsInvalidMinimumPayloadLengthsWithoutTrapping(
+        minimumPayloadLength: Int
+    ) {
+        #expect(throws: Base58CheckCodec.Error.invalidPayloadLength(actual: 0)) {
+            _ = try Base58CheckCodec.decode("", minimumPayloadLength: minimumPayloadLength)
         }
     }
 }

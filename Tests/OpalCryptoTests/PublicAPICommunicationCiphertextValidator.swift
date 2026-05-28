@@ -49,16 +49,11 @@ struct PublicAPICommunicationCiphertextValidator {
             unchecked: Data([0x02])
         )
 
-        do {
+        #expect(throws: OpalCrypto.Communication.Error.invalidCiphertext) {
             _ = try OpalCrypto.Communication.decrypt(
                 tooShortCiphertext,
                 privateKey: recipientPrivateKey
             )
-            Issue.record("Expected invalid ciphertext error.")
-        } catch let error as OpalCrypto.Communication.Error {
-            #expect(error == .invalidCiphertext)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -76,13 +71,8 @@ struct PublicAPICommunicationCiphertextValidator {
             rawRepresentation: tamperedCiphertextData
         )
 
-        do {
+        #expect(throws: OpalCrypto.Communication.Error.invalidCiphertext) {
             _ = try OpalCrypto.Communication.decrypt(tamperedCiphertext, privateKey: recipientPrivateKey)
-            Issue.record("Expected invalid ciphertext error.")
-        } catch let error as OpalCrypto.Communication.Error {
-            #expect(error == .invalidCiphertext)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 

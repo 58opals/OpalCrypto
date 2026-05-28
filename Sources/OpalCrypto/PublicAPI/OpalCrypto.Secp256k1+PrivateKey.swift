@@ -40,7 +40,8 @@ extension OpalCrypto.Secp256k1 {
         public static func generate() throws -> PrivateKey {
             let fields = [
                 OpalDiagnostics.Field.operationField("private_key_generate"),
-                OpalDiagnostics.Field.algorithmField("secp256k1")
+                OpalDiagnostics.Field.algorithmField("secp256k1"),
+                OpalDiagnostics.Field.formatField("raw")
             ]
             do {
                 let privateKeyData = try StandardsForEfficientCryptography256k1CurveModel.Operation
@@ -56,20 +57,23 @@ extension OpalCrypto.Secp256k1 {
                 return privateKey
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 let mappedError = OpalCrypto.Secp256k1.mapOperationError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                    event: OpalDiagnostics.Event.privateKeyGenerateFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.privateKeyGenerateFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                recordGenerateFailed(mappedError, fields: fields)
                 throw mappedError
             } catch let error as Error {
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                    event: OpalDiagnostics.Event.privateKeyGenerateFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.privateKeyGenerateFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(error)
-                )
+                recordGenerateFailed(error, fields: fields)
                 throw error
             }
+        }
+
+        private static func recordGenerateFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.privateKeyGenerateFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.privateKeyGenerateFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
     }
 }

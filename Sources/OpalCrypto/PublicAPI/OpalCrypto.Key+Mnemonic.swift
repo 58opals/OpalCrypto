@@ -63,7 +63,8 @@ extension OpalCrypto.Key {
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicParseSucceeded),
                 fields: fields + [
                     OpalDiagnostics.Field.publicField("resolved_language", self.language.rawValue),
-                    OpalDiagnostics.Field.publicField("resolved_word_count", self.words.count)
+                    OpalDiagnostics.Field.publicField("resolved_word_count", self.words.count),
+                    OpalDiagnostics.Field.publicField("entropy_byte_count", self.length.entropyByteCount)
                 ]
             )
         }
@@ -74,7 +75,7 @@ extension OpalCrypto.Key {
         ) throws -> Mnemonic {
             let fields = Self.generateFields(length: length, language: language)
             do {
-                let mnemonic = try generate(
+                let mnemonic = try makeGeneratedMnemonic(
                     length: length,
                     language: language,
                     makeEntropyBytes: SecureRandomByteGenerator.makeBytes(count:)
@@ -93,6 +94,7 @@ extension OpalCrypto.Key {
         ) -> [OpalDiagnostics.Field] {
             [
                 OpalDiagnostics.Field.operationField("mnemonic_generate"),
+                OpalDiagnostics.Field.formatField("bip39"),
                 OpalDiagnostics.Field.publicField("word_count", length.rawValue),
                 OpalDiagnostics.Field.publicField("language", language.rawValue),
                 OpalDiagnostics.Field.publicField("entropy_byte_count", length.entropyByteCount)
@@ -132,7 +134,7 @@ extension OpalCrypto.Key {
             ]
         }
 
-        internal static func generate(
+        internal static func makeGeneratedMnemonic(
             length: Length,
             language: Word.Language,
             makeEntropyBytes: (Int) throws -> [UInt8]
@@ -154,12 +156,7 @@ extension OpalCrypto.Key {
         }
 
         public func deriveSeed(passphrase: String = "") throws -> OpalCrypto.Key.Seed {
-            let fields = [
-                OpalDiagnostics.Field.operationField("mnemonic_seed_derive"),
-                OpalDiagnostics.Field.publicField("word_count", words.count),
-                OpalDiagnostics.Field.publicField("language", language.rawValue),
-                OpalDiagnostics.Field.publicField("passphrase_byte_count", passphrase.utf8.count)
-            ]
+            let fields = seedDeriveFields(passphrase: passphrase)
             do {
                 let seed = try OpalCrypto.Key.Seed(
                     rawRepresentation: MnemonicCodecModel.deriveSeed(
@@ -167,22 +164,46 @@ extension OpalCrypto.Key {
                         passphrase: passphrase
                     )
                 )
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                    event: OpalDiagnostics.Event.mnemonicSeedDeriveSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicSeedDeriveSucceeded),
-                    fields: fields + [
-                        OpalDiagnostics.Field.outputLengthField(seed.rawRepresentation.count)
-                    ]
-                )
+                Self.recordSeedDeriveSucceeded(seed: seed, fields: fields)
                 return seed
             } catch {
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                    event: OpalDiagnostics.Event.mnemonicSeedDeriveFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicSeedDeriveFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(error)
-                )
+                Self.recordSeedDeriveFailed(error, fields: fields)
                 throw error
             }
+        }
+
+        private func seedDeriveFields(passphrase: String) -> [OpalDiagnostics.Field] {
+            [
+                OpalDiagnostics.Field.operationField("mnemonic_seed_derive"),
+                OpalDiagnostics.Field.formatField("bip39"),
+                OpalDiagnostics.Field.publicField("word_count", words.count),
+                OpalDiagnostics.Field.publicField("language", language.rawValue),
+                OpalDiagnostics.Field.publicField("passphrase_byte_count", passphrase.utf8.count)
+            ]
+        }
+
+        private static func recordSeedDeriveSucceeded(
+            seed: OpalCrypto.Key.Seed,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.mnemonicSeedDeriveSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicSeedDeriveSucceeded),
+                fields: fields + [
+                    OpalDiagnostics.Field.outputLengthField(seed.rawRepresentation.count)
+                ]
+            )
+        }
+
+        private static func recordSeedDeriveFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                event: OpalDiagnostics.Event.mnemonicSeedDeriveFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicSeedDeriveFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
 
         internal init(parsed: MnemonicCodecModel.ParsedMnemonic) {

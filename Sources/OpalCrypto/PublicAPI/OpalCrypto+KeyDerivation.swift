@@ -30,13 +30,7 @@ extension OpalCrypto {
                     derivedKeyLength: derivedKeyLength
                 ).deriveKey()
                 let parsedDerivedKey = try DerivedKey(rawRepresentation: derivedKey)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
-                    event: OpalDiagnostics.Event.pbkdf2DeriveSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveSucceeded),
-                    fields: fields + [
-                        OpalDiagnostics.Field.outputLengthField(parsedDerivedKey.rawRepresentation.count)
-                    ]
-                )
+                recordDeriveSucceeded(parsedDerivedKey, fields: fields)
                 return parsedDerivedKey
             } catch let error as PasswordBasedKeyDerivationFunction2Model.Error {
                 let mappedError = mapError(error)
@@ -46,6 +40,23 @@ extension OpalCrypto {
                 recordDeriveFailed(error, fields: fields)
                 throw error
             }
+        }
+
+        private static func recordDeriveSucceeded(
+            _ derivedKey: DerivedKey,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
+                event: OpalDiagnostics.Event.pbkdf2DeriveSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveSucceeded),
+                fields: fields + [
+                    OpalDiagnostics.Field.outputLengthField(derivedKey.rawRepresentation.count),
+                    OpalDiagnostics.Field.publicField(
+                        "derived_key_byte_count",
+                        derivedKey.rawRepresentation.count
+                    )
+                ]
+            )
         }
 
         private static func recordDeriveFailed(

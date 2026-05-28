@@ -22,7 +22,9 @@ extension OpalCrypto.Secp256k1 {
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("public_key_parse"),
-                OpalDiagnostics.Field.formatField(Self.diagnosticsFormat(for: rawRepresentation)),
+                OpalDiagnostics.Field.formatField(
+                    PublicKeyParserModel.sec1DiagnosticsFormat(for: rawRepresentation)
+                ),
                 OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
             do {
@@ -81,17 +83,5 @@ extension OpalCrypto.Secp256k1 {
             }
         }
 
-        private static func diagnosticsFormat(for rawRepresentation: Data) -> String {
-            switch rawRepresentation.first {
-            case 0x02, 0x03:
-                return "sec1_compressed"
-            case 0x04:
-                return "sec1_uncompressed"
-            case .some:
-                return "sec1_unknown"
-            case .none:
-                return "sec1_empty"
-            }
-        }
     }
 }

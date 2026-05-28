@@ -11,19 +11,20 @@ extension OpalCrypto {
         }
 
         public static func decodeBase58(_ text: String) -> Data? {
-            let decoded = Base58EncodingCodec.decode(text)
-            if decoded == nil {
+            guard let decoded = Base58EncodingCodec.decode(text) else {
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.encoding).record(
                     event: OpalDiagnostics.Event.base58DecodeFailed,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.base58DecodeFailed),
                     fields: [
                         OpalDiagnostics.Field.operationField("base58_decode"),
+                        OpalDiagnostics.Field.formatField("base58"),
                         OpalDiagnostics.Field.publicField("input_character_count", text.count),
                         OpalDiagnostics.Field.errorCode(
                             OpalDiagnostics.ErrorCode(rawValue: "invalid_base58")
                         )
                     ]
                 )
+                return nil
             }
             return decoded
         }
@@ -40,16 +41,7 @@ extension OpalCrypto {
         }
 
         public static func decodeBase32Bytes(_ text: String) throws -> Data {
-            do {
-                return try Base32EncodingCodec.decode(
-                    text,
-                    interpretedAsFiveBitValues: false
-                )
-            } catch let error as Base32EncodingCodec.Error {
-                let mappedError = mapBase32Error(error)
-                recordBase32DecodeFailure(mappedError, text: text, mode: "bytes")
-                throw mappedError
-            }
+            try decodeBase32(text, interpretedAsFiveBitValues: false, mode: "bytes")
         }
 
         public static func encodeBase32Values(_ values: FiveBitValues) throws -> String {
@@ -64,17 +56,12 @@ extension OpalCrypto {
         }
 
         public static func decodeBase32Values(_ text: String) throws -> FiveBitValues {
-            do {
-                let values = try Base32EncodingCodec.decode(
-                    text,
-                    interpretedAsFiveBitValues: true
-                )
-                return try FiveBitValues(rawRepresentation: values)
-            } catch let error as Base32EncodingCodec.Error {
-                let mappedError = mapBase32Error(error)
-                recordBase32DecodeFailure(mappedError, text: text, mode: "five_bit_values")
-                throw mappedError
-            }
+            let values = try decodeBase32(
+                text,
+                interpretedAsFiveBitValues: true,
+                mode: "five_bit_values"
+            )
+            return try FiveBitValues(rawRepresentation: values)
         }
 
         public static func computePolymodChecksum(_ values: FiveBitValues) -> UInt64 {
@@ -90,6 +77,23 @@ extension OpalCrypto {
             }
         }
 
+        private static func decodeBase32(
+            _ text: String,
+            interpretedAsFiveBitValues: Bool,
+            mode: String
+        ) throws -> Data {
+            do {
+                return try Base32EncodingCodec.decode(
+                    text,
+                    interpretedAsFiveBitValues: interpretedAsFiveBitValues
+                )
+            } catch let error as Base32EncodingCodec.Error {
+                let mappedError = mapBase32Error(error)
+                recordBase32DecodeFailure(mappedError, text: text, mode: mode)
+                throw mappedError
+            }
+        }
+
         private static func recordBase32DecodeFailure(
             _ error: Error,
             text: String,
@@ -100,6 +104,7 @@ extension OpalCrypto {
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.base32DecodeFailed),
                 fields: [
                     OpalDiagnostics.Field.operationField("base32_decode"),
+                    OpalDiagnostics.Field.formatField("base32"),
                     OpalDiagnostics.Field.publicField("mode", mode),
                     OpalDiagnostics.Field.publicField("input_character_count", text.count)
                 ] + OpalDiagnostics.Field.errorFields(error)

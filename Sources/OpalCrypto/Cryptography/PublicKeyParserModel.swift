@@ -3,6 +3,19 @@
 import Foundation
 
 enum PublicKeyParserModel {
+    static func sec1DiagnosticsFormat(for data: Data) -> String {
+        switch data.first {
+        case 0x02, 0x03:
+            return "sec1_compressed"
+        case 0x04:
+            return "sec1_uncompressed"
+        case .some:
+            return "sec1_unknown"
+        case .none:
+            return "sec1_empty"
+        }
+    }
+
     static func expectedSec1PublicKeyLength(for data: Data) -> Int {
         guard let prefix = data.first else {
             return 33

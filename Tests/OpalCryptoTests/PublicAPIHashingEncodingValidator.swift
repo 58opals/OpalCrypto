@@ -192,38 +192,23 @@ struct PublicAPIHashingEncodingValidator {
     }
 
     @Test("Reject invalid Base32 decode characters through the public facade")
-    func rejectInvalidBase32DecodeCharactersThroughThePublicFacade() {
-        do {
+    func validateBase32DecodeRejectsInvalidCharactersThroughPublicFacade() {
+        #expect(throws: OpalCrypto.Encoding.Error.invalidCharacterFound) {
             _ = try OpalCrypto.Encoding.decodeBase32Values("!")
-            Issue.record("Expected invalid Base32 decode character error.")
-        } catch let error as OpalCrypto.Encoding.Error {
-            #expect(error == .invalidCharacterFound)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
     @Test("Reject mixed-case Base32 decode in five-bit mode")
-    func rejectMixedCaseBase32DecodeInFiveBitMode() {
-        do {
+    func validateBase32DecodeRejectsMixedCaseInFiveBitMode() {
+        #expect(throws: OpalCrypto.Encoding.Error.invalidCharacterFound) {
             _ = try OpalCrypto.Encoding.decodeBase32Values("qP")
-            Issue.record("Expected mixed-case Base32 decode error.")
-        } catch let error as OpalCrypto.Encoding.Error {
-            #expect(error == .invalidCharacterFound)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
     @Test("Reject mixed-case Base32 decode in byte mode")
-    func rejectMixedCaseBase32DecodeInByteMode() {
-        do {
+    func validateBase32DecodeRejectsMixedCaseInByteMode() {
+        #expect(throws: OpalCrypto.Encoding.Error.invalidCharacterFound) {
             _ = try OpalCrypto.Encoding.decodeBase32Bytes("qP")
-            Issue.record("Expected mixed-case Base32 decode error.")
-        } catch let error as OpalCrypto.Encoding.Error {
-            #expect(error == .invalidCharacterFound)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 }

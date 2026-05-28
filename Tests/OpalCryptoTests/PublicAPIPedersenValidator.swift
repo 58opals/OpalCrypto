@@ -40,8 +40,8 @@ struct PublicAPIPedersenValidator {
     }
 
     @Test("Pedersen setup rejects an insecure alternate base point")
-    func pedersenSetupRejectsAnInsecureAlternateBasePoint() {
-        do {
+    func validatePedersenSetupRejectsInsecureAlternateBasePoint() {
+        #expect(throws: OpalCrypto.Pedersen.Error.insecureAlternateBasePoint) {
             _ = try OpalCrypto.Pedersen.Setup(
                 alternateBasePoint: OpalCrypto.Secp256k1.PublicKey(
                     rawRepresentation: try Data(
@@ -49,17 +49,12 @@ struct PublicAPIPedersenValidator {
                     )
                 )
             )
-            Issue.record("Expected insecure alternate base point error.")
-        } catch let error as OpalCrypto.Pedersen.Error {
-            #expect(error == .insecureAlternateBasePoint)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
     @Test("Pedersen setup rejects the generator as an alternate base point")
-    func pedersenSetupRejectsTheGeneratorAsAnAlternateBasePoint() {
-        do {
+    func validatePedersenSetupRejectsGeneratorAsAlternateBasePoint() {
+        #expect(throws: OpalCrypto.Pedersen.Error.insecureAlternateBasePoint) {
             _ = try OpalCrypto.Pedersen.Setup(
                 alternateBasePoint: OpalCrypto.Secp256k1.PublicKey(
                     rawRepresentation: try Data(
@@ -67,11 +62,6 @@ struct PublicAPIPedersenValidator {
                     )
                 )
             )
-            Issue.record("Expected insecure alternate base point error.")
-        } catch let error as OpalCrypto.Pedersen.Error {
-            #expect(error == .insecureAlternateBasePoint)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 

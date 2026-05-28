@@ -37,13 +37,13 @@ extension OpalCrypto.Signature {
             let fields = [
                 OpalDiagnostics.Field.operationField("sign"),
                 OpalDiagnostics.Field.algorithmField("schnorr"),
+                OpalDiagnostics.Field.formatField("bip340"),
                 OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
                 OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)
             ]
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+            Self.recordSchnorr(
                 event: OpalDiagnostics.Event.schnorrSignBegin,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrSignBegin),
                 fields: fields
             )
             do {
@@ -54,9 +54,8 @@ extension OpalCrypto.Signature {
                     nonceFunction: noncePolicy.internalNoncePolicy
                 )
                 let signature = try Schnorr(rawRepresentation: signatureData)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                Self.recordSchnorr(
                     event: OpalDiagnostics.Event.schnorrSignSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrSignSucceeded),
                     fields: fields + [
                         OpalDiagnostics.Field.signatureLengthField(signature.rawRepresentation.count)
                     ]
@@ -64,10 +63,10 @@ extension OpalCrypto.Signature {
                 return signature
             } catch {
                 let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                Self.recordSchnorrFailed(
                     event: OpalDiagnostics.Event.schnorrSignFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrSignFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
+                    error: mappedError,
+                    fields: fields
                 )
                 throw mappedError
             }
@@ -90,13 +89,13 @@ extension OpalCrypto.Signature {
             let fields = [
                 OpalDiagnostics.Field.operationField("verify"),
                 OpalDiagnostics.Field.algorithmField("schnorr"),
+                OpalDiagnostics.Field.formatField("bip340"),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("verification_key_byte_count", verificationKey.rawRepresentation.count),
                 OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
             ]
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+            Self.recordSchnorr(
                 event: OpalDiagnostics.Event.schnorrVerifyBegin,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrVerifyBegin),
                 fields: fields
             )
             do {
@@ -106,25 +105,44 @@ extension OpalCrypto.Signature {
                     verificationKey: verificationKey,
                     format: .schnorr
                 )
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                Self.recordSchnorr(
                     event: result
                         ? OpalDiagnostics.Event.schnorrVerifySucceeded
                         : OpalDiagnostics.Event.schnorrVerifyFailed,
-                    level: .opalCryptoDefault(for: result
-                        ? OpalDiagnostics.Event.schnorrVerifySucceeded
-                        : OpalDiagnostics.Event.schnorrVerifyFailed),
                     fields: fields + [OpalDiagnostics.Field.resultField(result)]
                 )
                 return result
             } catch {
                 let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                Self.recordSchnorrFailed(
                     event: OpalDiagnostics.Event.schnorrVerifyFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.schnorrVerifyFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
+                    error: mappedError,
+                    fields: fields
                 )
                 throw mappedError
             }
+        }
+
+        private static func recordSchnorr(
+            event: OpalDiagnostics.Event,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                event: event,
+                level: .opalCryptoDefault(for: event),
+                fields: fields
+            )
+        }
+
+        private static func recordSchnorrFailed(
+            event: OpalDiagnostics.Event,
+            error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            recordSchnorr(
+                event: event,
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
     }
 }

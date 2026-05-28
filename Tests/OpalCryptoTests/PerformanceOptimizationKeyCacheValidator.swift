@@ -36,7 +36,7 @@ struct PerformanceOptimizationKeyCacheValidator {
     }
 
     @Test("Parsed public-key model canonicalizes encodings and caches the HDKD fingerprint")
-    func parsedPublicKeyModelCanonicalizesEncodingsAndCachesTheHdkdFingerprint() throws {
+    func validateParsedPublicKeyModelCanonicalizesEncodingsAndCachesTheHDKDFingerprint() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(7)
         let compressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
             from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
@@ -55,7 +55,7 @@ struct PerformanceOptimizationKeyCacheValidator {
     }
 
     @Test("Parsed private-key model caches the compressed public key and HDKD fingerprint")
-    func parsedPrivateKeyModelCachesTheCompressedPublicKeyAndHdkdFingerprint() throws {
+    func validateParsedPrivateKeyModelCachesTheCompressedPublicKeyAndHDKDFingerprint() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(9)
         let expectedCompressedPublicKey = try OpalCrypto.Secp256k1.derivePublicKey(
             from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
@@ -70,7 +70,7 @@ struct PerformanceOptimizationKeyCacheValidator {
     }
 
     @Test("Trusted extended-key payload factories match validated constructors on known-good inputs")
-    func trustedExtendedKeyPayloadFactoriesMatchValidatedConstructorsOnKnownGoodInputs() throws {
+    func validateTrustedExtendedKeyPayloadFactoriesMatchValidatedConstructorsOnKnownGoodInputs() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(41)
         let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(
             from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
@@ -109,14 +109,18 @@ struct PerformanceOptimizationKeyCacheValidator {
             publicKeyData33Bytes: publicKey
         )
 
-        #expect(validatedPrivatePayload == trustedPrivatePayload)
-        #expect(validatedPrivatePayload.serialize() == trustedPrivatePayload.serialize())
-        #expect(validatedPublicPayload == trustedPublicPayload)
-        #expect(validatedPublicPayload.serialize() == trustedPublicPayload.serialize())
+        expectTrustedPayloadMatchesValidatedPayload(
+            trustedPrivatePayload,
+            validatedPayload: validatedPrivatePayload
+        )
+        expectTrustedPayloadMatchesValidatedPayload(
+            trustedPublicPayload,
+            validatedPayload: validatedPublicPayload
+        )
     }
 
     @Test("Verification-key verification parity survives the parsed-key cache split")
-    func verificationKeyVerificationParitySurvivesTheParsedKeyCacheSplit() throws {
+    func validateVerificationKeyVerificationParitySurvivesTheParsedKeyCacheSplit() throws {
         let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(29)
         let message = Data("opal-ecdsa-cache-split".utf8)
         let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0x29, count: 32))
@@ -163,12 +167,14 @@ struct PerformanceOptimizationKeyCacheValidator {
 
         #expect(rawEcdsaResult == cachedEcdsaResult)
         #expect(rawSchnorrResult == cachedSchnorrResult)
+        #expect(rawEcdsaResult)
+        #expect(rawSchnorrResult)
         #expect(cachedEcdsaResult)
         #expect(cachedSchnorrResult)
     }
 
     @Test("Parsed public-key tweak-add matches the raw and cached verification-key paths")
-    func parsedPublicKeyTweakAddMatchesTheRawAndCachedVerificationKeyPaths() throws {
+    func validateParsedPublicKeyTweakAddMatchesTheRawAndCachedVerificationKeyPaths() throws {
         let privateKey = OpalCryptoTestSupport.makePrivateKey(31)
         let tweak = OpalCryptoTestSupport.makePrivateKey(37)
         let typedPrivateKey = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: privateKey)
@@ -190,10 +196,11 @@ struct PerformanceOptimizationKeyCacheValidator {
 
         #expect(parsedTweakedPublicKey == rawTweakedPublicKey)
         #expect(cachedTweakedPublicKey == rawTweakedPublicKey)
+        #expect(parsedTweakedPublicKey == cachedTweakedPublicKey)
     }
 
     @Test("Extended public and private derivation remain aligned with cached key fast paths")
-    func extendedPublicAndPrivateDerivationRemainAlignedWithCachedKeyFastPaths() throws {
+    func validateExtendedPublicAndPrivateDerivationRemainAlignedWithCachedKeyFastPaths() throws {
         let seed = try OpalCrypto.Key.Seed(rawRepresentation: Data((0..<16).map(UInt8.init)))
         let rootPrivateKey = try OpalCrypto.Key.ExtendedPrivate.root(seed: seed)
         let hardenedPrivateChild = try rootPrivateKey.derived(indices: [0x8000_0000])
@@ -201,5 +208,17 @@ struct PerformanceOptimizationKeyCacheValidator {
         let derivedFromPublic = try hardenedPrivateChild.publicKey.derived(indices: [1, 2, 3])
 
         #expect(derivedFromPublic == derivedFromPrivate)
+        #expect(derivedFromPublic.depth == derivedFromPrivate.depth)
+        #expect(derivedFromPublic.childIndex == derivedFromPrivate.childIndex)
+        #expect(derivedFromPublic.parentFingerprint == derivedFromPrivate.parentFingerprint)
+        #expect(derivedFromPublic.chainCode == derivedFromPrivate.chainCode)
+    }
+
+    private func expectTrustedPayloadMatchesValidatedPayload(
+        _ trustedPayload: ExtendedKeyPayloadModel,
+        validatedPayload: ExtendedKeyPayloadModel
+    ) {
+        #expect(trustedPayload == validatedPayload)
+        #expect(trustedPayload.serialize() == validatedPayload.serialize())
     }
 }

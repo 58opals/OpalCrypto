@@ -36,10 +36,7 @@ extension OpalCrypto.Pedersen {
             amount: Int64,
             nonce: Nonce? = nil
         ) throws -> Commitment {
-            let fields = [
-                OpalDiagnostics.Field.operationField("commit"),
-                OpalDiagnostics.Field.publicField("has_provided_nonce", nonce != nil)
-            ]
+            let fields = Self.commitFields(nonce: nonce)
             do {
                 let commitment = Commitment(
                     commitmentModel: try setupModel.commit(
@@ -47,23 +44,59 @@ extension OpalCrypto.Pedersen {
                         nonceData32Bytes: nonce?.rawRepresentation
                     )
                 )
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCommitSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitSucceeded),
-                    fields: fields + [
-                        OpalDiagnostics.Field.publicField("commitment_byte_count", commitment.point.rawRepresentation.count)
-                    ]
+                Self.recordCommitSucceeded(
+                    commitment: commitment,
+                    fields: fields
                 )
                 return commitment
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCommitFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                Self.recordCommitFailed(mappedError, fields: fields)
                 throw mappedError
             }
+        }
+
+        private static func commitFields(nonce: Nonce?) -> [OpalDiagnostics.Field] {
+            var fields = [
+                OpalDiagnostics.Field.operationField("commit"),
+                OpalDiagnostics.Field.publicField("has_provided_nonce", nonce != nil)
+            ]
+            if let nonce {
+                fields.append(
+                    OpalDiagnostics.Field.publicField(
+                        "nonce_byte_count",
+                        nonce.rawRepresentation.count
+                    )
+                )
+            }
+            return fields
+        }
+
+        private static func recordCommitSucceeded(
+            commitment: Commitment,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenCommitSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitSucceeded),
+                fields: fields + [
+                    OpalDiagnostics.Field.publicField(
+                        "commitment_byte_count",
+                        commitment.point.rawRepresentation.count
+                    )
+                ]
+            )
+        }
+
+        private static func recordCommitFailed(
+            _ error: Swift.Error,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenCommitFailed,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitFailed),
+                fields: fields + OpalDiagnostics.Field.errorFields(error)
+            )
         }
 
         public func verify(

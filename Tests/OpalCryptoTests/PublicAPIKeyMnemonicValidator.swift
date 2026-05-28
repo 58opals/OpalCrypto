@@ -7,7 +7,7 @@ import Testing
 @Suite("Public API key mnemonic validation")
 struct PublicAPIKeyMnemonicValidator {
     @Test("Load English and Korean BIP-39 word lists")
-    func loadEnglishAndKoreanBip39WordLists() throws {
+    func validateEnglishAndKoreanBip39WordListsLoad() throws {
         let englishWords = try OpalCrypto.Key.Mnemonic.WordList.load(.english)
         let koreanWords = try OpalCrypto.Key.Mnemonic.WordList.load(.korean)
 
@@ -93,7 +93,7 @@ struct PublicAPIKeyMnemonicValidator {
     }
 
     @Test("Generate valid English mnemonics at every supported length")
-    func generateValidEnglishMnemonicsAtEverySupportedLength() throws {
+    func validateEnglishMnemonicGenerationAtEverySupportedLength() throws {
         for length in OpalCrypto.Key.Mnemonic.Length.allCases {
             let mnemonic = try OpalCrypto.Key.Mnemonic.generate(length: length, language: .english)
             let reparsed = try OpalCrypto.Key.Mnemonic(phrase: mnemonic.phrase, language: .english)
@@ -125,41 +125,31 @@ struct PublicAPIKeyMnemonicValidator {
     }
 
     @Test("Mnemonic entropy decoding rejects word-count and length mismatches")
-    func mnemonicEntropyDecodingRejectsWordCountAndLengthMismatches() {
+    func validateMnemonicEntropyDecodingRejectsWordCountAndLengthMismatches() {
         let words = englishVectorPhrase
             .split(whereSeparator: \.isWhitespace)
             .map(String.init)
             + ["about"]
 
-        do {
+        #expect(throws: OpalCrypto.Key.Mnemonic.Error.invalidWordCount(actual: 13)) {
             _ = try MnemonicCodecModel.entropy(
                 from: words,
                 language: .english,
                 length: .words12
             )
-            Issue.record("Expected invalid word-count rejection.")
-        } catch let error as OpalCrypto.Key.Mnemonic.Error {
-            #expect(error == .invalidWordCount(actual: 13))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
     @Test("Mnemonic generation maps random byte failures to facade errors")
     func validateMnemonicGenerationMapsRandomByteFailuresToFacadeErrors() {
-        do {
-            _ = try OpalCrypto.Key.Mnemonic.generate(
+        #expect(throws: OpalCrypto.Key.Mnemonic.Error.randomGenerationFailed(status: -1)) {
+            _ = try OpalCrypto.Key.Mnemonic.makeGeneratedMnemonic(
                 length: .words12,
                 language: .english,
                 makeEntropyBytes: { _ in
                     throw SecureRandomByteGenerator.Error.failed(status: -1)
                 }
             )
-            Issue.record("Expected random generation failure.")
-        } catch let error as OpalCrypto.Key.Mnemonic.Error {
-            #expect(error == .randomGenerationFailed(status: -1))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -183,18 +173,13 @@ struct PublicAPIKeyMnemonicValidator {
     }
 
     @Test("Reject mnemonic with invalid checksum")
-    func rejectMnemonicWithInvalidChecksum() {
+    func validateMnemonicRejectsInvalidChecksum() {
         let invalidPhrase = """
         abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon
         """
 
-        do {
+        #expect(throws: OpalCrypto.Key.Mnemonic.Error.invalidChecksum) {
             _ = try OpalCrypto.Key.Mnemonic(phrase: invalidPhrase, language: .english)
-            Issue.record("Expected invalid checksum error.")
-        } catch let error as OpalCrypto.Key.Mnemonic.Error {
-            #expect(error == .invalidChecksum)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 

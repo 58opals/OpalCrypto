@@ -42,13 +42,8 @@ struct PublicAPIKeyMaterialValidator {
         let truncatedPayload = Data([0x80] + Array(repeating: UInt8(0x01), count: 31))
         let serialized = Base58CheckCodec.encode(payload: truncatedPayload)
 
-        do {
+        #expect(throws: OpalCrypto.Key.WIF.Error.invalidPayloadLength(actual: 32)) {
             _ = try OpalCrypto.Key.WIF(serialized)
-            Issue.record("Expected invalid payload length error.")
-        } catch let error as OpalCrypto.Key.WIF.Error {
-            #expect(error == .invalidPayloadLength(actual: 32))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 

@@ -12,21 +12,21 @@ internal enum Base58CheckCodec {
 
     internal static func decode(_ string: String, minimumPayloadLength: Int = 1) throws -> Data {
         let minimumPayloadLength = max(0, minimumPayloadLength)
-        guard let decoded = Base58EncodingCodec.decode(string) else {
-            recordDecodeFailure(
-                .invalidBase58,
-                inputCharacterCount: string.count,
-                minimumPayloadLength: minimumPayloadLength
-            )
-            throw Error.invalidBase58
-        }
-        guard decoded.count >= 4, decoded.count - 4 >= minimumPayloadLength else {
-            let error = Error.invalidPayloadLength(actual: max(0, decoded.count - 4))
+        func recordFailure(_ error: Error) {
             recordDecodeFailure(
                 error,
                 inputCharacterCount: string.count,
                 minimumPayloadLength: minimumPayloadLength
             )
+        }
+
+        guard let decoded = Base58EncodingCodec.decode(string) else {
+            recordFailure(.invalidBase58)
+            throw Error.invalidBase58
+        }
+        guard decoded.count >= 4, decoded.count - 4 >= minimumPayloadLength else {
+            let error = Error.invalidPayloadLength(actual: max(0, decoded.count - 4))
+            recordFailure(error)
             throw error
         }
 
@@ -34,11 +34,7 @@ internal enum Base58CheckCodec {
         let checksum = decoded.suffix(4)
         let expectedChecksum = SecureHash256Model.hash(payload).prefix(4)
         guard Data(checksum).constantTimeEquals(expectedChecksum) else {
-            recordDecodeFailure(
-                .invalidChecksum,
-                inputCharacterCount: string.count,
-                minimumPayloadLength: minimumPayloadLength
-            )
+            recordFailure(.invalidChecksum)
             throw Error.invalidChecksum
         }
 
@@ -55,6 +51,7 @@ internal enum Base58CheckCodec {
             level: .opalCryptoDefault(for: OpalDiagnostics.Event.base58CheckDecodeFailed),
             fields: [
                 OpalDiagnostics.Field.operationField("base58check_decode"),
+                OpalDiagnostics.Field.formatField("base58check"),
                 OpalDiagnostics.Field.publicField("input_character_count", inputCharacterCount),
                 OpalDiagnostics.Field.publicField("minimum_payload_length", minimumPayloadLength)
             ] + OpalDiagnostics.Field.errorFields(error)
