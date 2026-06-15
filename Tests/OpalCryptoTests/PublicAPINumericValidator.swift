@@ -61,10 +61,76 @@ struct PublicAPINumericValidator {
         #expect(OpalCrypto.Numeric.BigUnsignedInteger.zero.shiftLeft(byBytes: oversizedByteCount).isZero)
     }
 
-    @Test("BigUnsignedInteger left shifts reject unrepresentable result lengths")
-    func bigUnsignedIntegerLeftShiftsRejectUnrepresentableResultLengths() {
-        let value = OpalCrypto.Numeric.BigUnsignedInteger(Data([0x01]))
+    @Test(
+        "BigUnsignedInteger left shifts preserve ordinary output and reject oversized output",
+        arguments: BigUnsignedIntegerLeftShiftCase.allCases
+    )
+    func bigUnsignedIntegerLeftShiftsPreserveOrdinaryOutputAndRejectOversizedOutput(
+        testCase: BigUnsignedIntegerLeftShiftCase
+    ) {
+        let value = OpalCrypto.Numeric.BigUnsignedInteger(Data(testCase.inputBytes))
+        let shiftedValue = value.shiftLeft(byBytes: testCase.shiftByteCount)
 
-        #expect(value.shiftLeft(byBytes: UInt(Int.max)).isZero)
+        if let expectedBytes = testCase.expectedBytes {
+            #expect(shiftedValue.serialize() == Data(expectedBytes))
+        } else {
+            #expect(shiftedValue.isZero)
+        }
+    }
+
+    enum BigUnsignedIntegerLeftShiftCase: CaseIterable, CustomStringConvertible, Sendable {
+        case identity
+        case ordinaryByteShift
+        case oversizedThreeByteResultLength
+        case oversizedSingleByteResultLength
+
+        var description: String {
+            switch self {
+            case .identity:
+                "identity"
+            case .ordinaryByteShift:
+                "ordinaryByteShift"
+            case .oversizedThreeByteResultLength:
+                "oversizedThreeByteResultLength"
+            case .oversizedSingleByteResultLength:
+                "oversizedSingleByteResultLength"
+            }
+        }
+
+        var inputBytes: [UInt8] {
+            switch self {
+            case .identity,
+                 .ordinaryByteShift,
+                 .oversizedThreeByteResultLength:
+                [0x01, 0x02, 0x03]
+            case .oversizedSingleByteResultLength:
+                [0x01]
+            }
+        }
+
+        var shiftByteCount: UInt {
+            switch self {
+            case .identity:
+                0
+            case .ordinaryByteShift:
+                2
+            case .oversizedThreeByteResultLength:
+                UInt(Int.max - 2)
+            case .oversizedSingleByteResultLength:
+                UInt(Int.max)
+            }
+        }
+
+        var expectedBytes: [UInt8]? {
+            switch self {
+            case .identity:
+                [0x01, 0x02, 0x03]
+            case .ordinaryByteShift:
+                [0x01, 0x02, 0x03, 0x00, 0x00]
+            case .oversizedThreeByteResultLength,
+                 .oversizedSingleByteResultLength:
+                nil
+            }
+        }
     }
 }

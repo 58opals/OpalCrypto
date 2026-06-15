@@ -597,6 +597,7 @@ struct DiagnosticsIntegrationValidator {
             expectPublicField("private_key_byte_count", in: record, equals: "32")
             #expect(field("output_key_count", in: record)?.value == "2")
             #expect(field("private_key", in: record) == nil)
+            #expect(diagnosticRecord(named: OpalDiagnostics.Event.publicKeyParseSucceeded) == nil)
         }
     }
 

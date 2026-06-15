@@ -51,6 +51,49 @@ struct PerformanceOptimizationBatchDerivationValidator {
         #expect(scalarBatchPublicKeys == singlePublicKeys)
     }
 
+    @Test("Direct parsed public-key batch derivation matches compressed and single-key derivation")
+    func directParsedPublicKeyBatchDerivationMatchesCompressedAndSingleKeyDerivation()
+        async throws {
+        let privateKeys = OpalCryptoTestSupport.makePrivateKeys(count: 256)
+        let parsedPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveParsedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                assumingValidPrivateKeys: false,
+                executionMode: .automatic
+            )
+        let parsedPublicKeyData = parsedPublicKeys.map(\.compressedPublicKeyData)
+        let compressedPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveCompressedPublicKeys(
+                fromPrivateKeys32: privateKeys,
+                executionMode: .automatic
+            )
+        let singlePublicKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.derivePublicKey(
+                from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+            ).rawRepresentation
+        }
+
+        #expect(parsedPublicKeyData == compressedPublicKeys)
+        #expect(parsedPublicKeyData == singlePublicKeys)
+    }
+
+    @Test("Public batch derivation direct parsed-key path matches single derivation at 256-key scale")
+    func publicBatchDerivationDirectParsedKeyPathMatchesSingleDerivationAt256KeyScale()
+        async throws {
+        let privateKeys = try OpalCryptoTestSupport.makePrivateKeys(count: 256).map {
+            try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+        }
+        let batchPublicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
+            from: privateKeys
+        )
+        let singlePublicKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
+        }
+
+        #expect(batchPublicKeys == singlePublicKeys)
+        #expect(batchPublicKeys.map(\.rawRepresentation) == singlePublicKeys.map(\.rawRepresentation))
+    }
+
     @Test("Global affine conversion after batch Jacobian multiplication matches single derivation at 256-key scale")
     func globalAffineConversionAfterBatchJacobianMultiplicationMatchesSingleDerivationAt256KeyScale()
         throws {

@@ -27,7 +27,7 @@ extension OpalCrypto.Numeric {
         public func shiftLeft(byBytes byteCount: UInt) -> BigUnsignedInteger {
             guard !rawValue.isZero else { return .zero }
             guard byteCount <= UInt(Int.max) else { return .zero }
-            guard byteCount <= UInt(Int.max - rawValue.serialize().count) else { return .zero }
+            guard byteCount <= UInt(Int.max - rawValue.serializedByteCount) else { return .zero }
             return BigUnsignedInteger(rawValue: rawValue.shiftLeft(byBytes: Int(byteCount)))
         }
 

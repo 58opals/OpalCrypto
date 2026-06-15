@@ -34,6 +34,23 @@ struct PerformanceSmokeValidator {
         #expect(batchPublicKeys == singlePublicKeys)
     }
 
+    @Test("Public batch derivation matches single derivation at 1024-key scale")
+    func publicBatchDerivationMatchesSingleDerivationAt1024KeyScale()
+        async throws {
+        let privateKeys = try OpalCryptoTestSupport.makePrivateKeys(count: 1024).map {
+            try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
+        }
+        let batchPublicKeys = try await OpalCrypto.Secp256k1.derivePublicKeys(
+            from: privateKeys
+        )
+        let singlePublicKeys = try privateKeys.map {
+            try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
+        }
+
+        #expect(batchPublicKeys == singlePublicKeys)
+        #expect(batchPublicKeys.map(\.rawRepresentation) == singlePublicKeys.map(\.rawRepresentation))
+    }
+
     @Test("Forced serial and forced parallel batch derivation return identical ordered results at 1024-key scale")
     func forcedSerialAndForcedParallelBatchDerivationReturnIdenticalOrderedResultsAt1024KeyScale()
         async throws {

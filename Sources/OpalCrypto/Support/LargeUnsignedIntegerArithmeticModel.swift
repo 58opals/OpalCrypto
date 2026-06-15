@@ -48,6 +48,20 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     internal var isZero: Bool {
         words.isEmpty
     }
+
+    internal var serializedByteCount: Int {
+        guard let mostSignificantWord = words.last else { return 0 }
+        switch mostSignificantWord {
+        case 0x0000_0000...0x0000_00ff:
+            return (words.count - 1) * 4 + 1
+        case 0x0000_0100...0x0000_ffff:
+            return (words.count - 1) * 4 + 2
+        case 0x0001_0000...0x00ff_ffff:
+            return (words.count - 1) * 4 + 3
+        default:
+            return words.count * 4
+        }
+    }
     
     internal func serialize() -> Data {
         guard !words.isEmpty else { return Data() }

@@ -115,16 +115,19 @@ extension OpalCrypto {
             ]
             do {
                 let publicKeys = try await StandardsForEfficientCryptography256k1CurveModel.Operation
-                    .deriveCompressedPublicKeys(fromPrivateKeys32: privateKeys.map(\.rawRepresentation))
-                let parsedPublicKeys = try publicKeys.map(PublicKey.init(validatingRawRepresentation:))
+                    .deriveParsedPublicKeys(
+                        fromPrivateKeys32: privateKeys.map(\.rawRepresentation),
+                        assumingValidPrivateKeys: true
+                    )
+                    .map(PublicKey.init(parsedPublicKeyModel:))
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                     event: OpalDiagnostics.Event.publicKeysDeriveSucceeded,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.publicKeysDeriveSucceeded),
                     fields: fields + [
-                        OpalDiagnostics.Field.publicField("output_key_count", parsedPublicKeys.count)
+                        OpalDiagnostics.Field.publicField("output_key_count", publicKeys.count)
                     ]
                 )
-                return parsedPublicKeys
+                return publicKeys
             } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
                 let mappedError = mapOperationError(error)
                 recordKeyOperationFailed(.publicKeysDeriveFailed, error: mappedError, fields: fields)
