@@ -4,12 +4,22 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Secp256k1 {
-    public struct PrivateKey: Sendable, Equatable {
+    /// A secp256k1 private key.
+    ///
+    /// `PrivateKey` is secret-bearing key material. Its raw representation can sign messages, derive public keys, and derive shared secrets, so keep it behind explicit secret-access or signing/authoring boundaries.
+    public struct PrivateKey: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
+        /// The raw 32-byte private key.
+        ///
+        /// This value is secret-bearing and must not be logged or included in diagnostics.
         public let rawRepresentation: Data
 
+        /// Creates a private key from raw secp256k1 key bytes.
+        ///
+        /// Diagnostics record only public-safe metadata such as byte count, curve name, and error code.
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("private_key_parse"),
+                OpalDiagnostics.Field.algorithmField("secp256k1"),
                 OpalDiagnostics.Field.formatField("raw"),
                 OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
@@ -33,10 +43,23 @@ extension OpalCrypto.Secp256k1 {
             )
         }
 
+        /// A redacted description that never includes private key bytes.
+        public var description: String {
+            "OpalCrypto.Secp256k1.PrivateKey(redacted, curve: secp256k1, byteCount: \(rawRepresentation.count))"
+        }
+
+        /// A redacted debug description that never includes private key bytes.
+        public var debugDescription: String {
+            description
+        }
+
         internal init(validatedRawRepresentation: Data) {
             self.rawRepresentation = Data(validatedRawRepresentation)
         }
 
+        /// Generates a new secp256k1 private key with secure randomness.
+        ///
+        /// The returned key is secret-bearing. Diagnostics record only public-safe metadata such as curve name and output byte count.
         public static func generate() throws -> PrivateKey {
             let fields = [
                 OpalDiagnostics.Field.operationField("private_key_generate"),

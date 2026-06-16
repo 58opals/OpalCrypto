@@ -4,19 +4,30 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Key {
+    /// A BIP-32 extended public key.
+    ///
+    /// `ExtendedPublic` contains public derivation material and cannot derive hardened children or private keys. It is not a substitute for `ExtendedPrivate`.
     public struct ExtendedPublic: Sendable, Equatable {
 
         internal let payload: ExtendedKeyPayloadModel
         internal let parsedPublicKeyModel: ParsedPublicKeyModel
 
+        /// The BIP-32 chain code for public child derivation.
         public var chainCode: ChainCode { try! ChainCode(rawRepresentation: payload.chainCode) }
+        /// The BIP-32 depth.
         public var depth: UInt8 { payload.depth }
+        /// The parent public-key fingerprint.
         public var parentFingerprint: Fingerprint { try! Fingerprint(rawRepresentation: payload.parentFingerprint) }
+        /// The BIP-32 child index.
         public var childIndex: UInt32 { payload.childIndex }
+        /// The secp256k1 public key contained by this extended public key.
         public var publicKey: OpalCrypto.Secp256k1.PublicKey {
             OpalCrypto.Secp256k1.PublicKey(parsedPublicKeyModel: parsedPublicKeyModel)
         }
 
+        /// Parses a BIP-32 xpub string.
+        ///
+        /// Diagnostics record only public-safe metadata such as input character count, component byte counts, key kind, and error code.
         public init(_ serialized: String) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("extended_public_parse"),
@@ -45,10 +56,14 @@ extension OpalCrypto.Key {
             )
         }
 
+        /// Serializes this extended public key to BIP-32 xpub text.
         public func serialize() -> String {
             payload.serialize()
         }
 
+        /// Derives a non-hardened child extended public key at the given BIP-32 indices.
+        ///
+        /// Hardened indices fail because hardened derivation requires private key material.
         public func derived(indices: [UInt32]) throws -> ExtendedPublic {
             var currentPayload = payload
             var currentParsedPublicKeyModel = parsedPublicKeyModel

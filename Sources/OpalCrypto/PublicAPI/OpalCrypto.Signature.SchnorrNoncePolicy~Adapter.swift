@@ -11,4 +11,13 @@ extension OpalCrypto.Signature.SchnorrNoncePolicy {
             return .systemRandom
         }
     }
+
+    var diagnosticsName: String {
+        switch self {
+        case .bip340Deterministic:
+            return "bip340_deterministic"
+        case .random:
+            return "random"
+        }
+    }
 }

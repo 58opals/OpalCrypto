@@ -149,54 +149,32 @@ extension OpalCrypto.Pedersen {
                         commitments.map(\.commitmentModel)
                     )
                 )
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCombineSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
-                    fields: fields + [
-                        OpalDiagnostics.Field.publicField("commitment_byte_count", commitment.point.rawRepresentation.count)
-                    ]
+                Self.recordCombineSucceeded(
+                    outputByteCount: commitment.point.rawRepresentation.count,
+                    fields: fields
                 )
                 return commitment
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCombineFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
-                    fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-                )
+                Self.recordCombineFailed(mappedError, fields: fields)
                 throw mappedError
             }
         }
 
-        public static func addPoints(_ points: [CommitmentPoint]) throws -> CommitmentPoint {
-            let fields = [
-                OpalDiagnostics.Field.operationField("combine_points"),
-                OpalDiagnostics.Field.publicField("point_count", points.count)
-            ]
-            do {
-                let point = try PedersenModel.Setup.addPoints(
-                    points.map(\.rawRepresentation)
-                )
-                let commitmentPoint = try CommitmentPoint(validatingRawRepresentation: point)
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                    event: OpalDiagnostics.Event.pedersenCombineSucceeded,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
-                    fields: fields + [
-                        OpalDiagnostics.Field.publicField("commitment_byte_count", commitmentPoint.rawRepresentation.count)
-                    ]
-                )
-                return commitmentPoint
-            } catch let error as PedersenModel.Error {
-                let mappedError = mapError(error)
-                recordCombineFailed(mappedError, fields: fields)
-                throw mappedError
-            } catch let error as Error {
-                recordCombineFailed(error, fields: fields)
-                throw error
-            }
+        static func recordCombineSucceeded(
+            outputByteCount: Int,
+            fields: [OpalDiagnostics.Field]
+        ) {
+            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
+                event: OpalDiagnostics.Event.pedersenCombineSucceeded,
+                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
+                fields: fields + [
+                    OpalDiagnostics.Field.publicField("commitment_byte_count", outputByteCount)
+                ]
+            )
         }
 
-        private static func recordCombineFailed(
+        static func recordCombineFailed(
             _ error: Swift.Error,
             fields: [OpalDiagnostics.Field]
         ) {
@@ -207,7 +185,7 @@ extension OpalCrypto.Pedersen {
             )
         }
 
-        private static func mapError(_ error: PedersenModel.Error) -> Error {
+        static func mapError(_ error: PedersenModel.Error) -> Error {
             switch error {
             case .invalidAlternateBasePointLength(let actual):
                 return .invalidAlternateBasePointLength(actual: actual)

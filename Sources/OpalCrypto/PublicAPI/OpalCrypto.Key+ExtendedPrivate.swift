@@ -4,19 +4,32 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Key {
-    public struct ExtendedPrivate: Sendable, Equatable {
+    /// A BIP-32 extended private key.
+    ///
+    /// `ExtendedPrivate` is secret-bearing key material. It can derive child private keys and serialize to xprv text, so keep it behind explicit secret-access or signing/authoring boundaries.
+    public struct ExtendedPrivate: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
 
         internal let payload: ExtendedKeyPayloadModel
         internal let parsedPrivateKeyModel: ParsedPrivateKeyModel
 
+        /// The BIP-32 chain code for this extended key.
         public var chainCode: ChainCode { try! ChainCode(rawRepresentation: payload.chainCode) }
+        /// The BIP-32 depth.
         public var depth: UInt8 { payload.depth }
+        /// The parent public-key fingerprint.
         public var parentFingerprint: Fingerprint { try! Fingerprint(rawRepresentation: payload.parentFingerprint) }
+        /// The BIP-32 child index.
         public var childIndex: UInt32 { payload.childIndex }
+        /// The secp256k1 private key contained by this extended private key.
+        ///
+        /// The returned private key is secret-bearing and should not be logged or stored outside an explicit secret boundary.
         public var privateKey: OpalCrypto.Secp256k1.PrivateKey {
             OpalCrypto.Secp256k1.PrivateKey(validatedRawRepresentation: payload.keyData)
         }
 
+        /// The corresponding extended public key.
+        ///
+        /// The returned value contains only public derivation material. Access to this property still requires handling the secret-bearing receiver.
         public var publicKey: ExtendedPublic {
             ExtendedPublic(
                 depth: payload.depth,
@@ -27,6 +40,19 @@ extension OpalCrypto.Key {
             )
         }
 
+        /// A redacted description that never includes xprv text, private key bytes, or chain code bytes.
+        public var description: String {
+            "OpalCrypto.Key.ExtendedPrivate(redacted, depth: \(depth), childIndex: \(childIndex))"
+        }
+
+        /// A redacted debug description that never includes xprv text, private key bytes, or chain code bytes.
+        public var debugDescription: String {
+            description
+        }
+
+        /// Parses a BIP-32 xprv string.
+        ///
+        /// `serialized` is secret-bearing input. Diagnostics record only public-safe metadata such as input character count, component byte counts, key kind, and error code.
         public init(_ serialized: String) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("extended_private_parse"),
@@ -44,6 +70,9 @@ extension OpalCrypto.Key {
             Self.recordParseSucceeded(fields: fields, payload: payload)
         }
 
+        /// Derives the root extended private key for seed material.
+        ///
+        /// `seed` and the returned extended private key are secret-bearing. Diagnostics record only public-safe byte counts and error codes.
         public static func root(seed: Seed) throws -> ExtendedPrivate {
             let fields = [
                 OpalDiagnostics.Field.operationField("extended_private_root"),
@@ -122,33 +151,12 @@ extension OpalCrypto.Key {
             )
         }
 
+        /// Serializes this extended private key to BIP-32 xprv text.
+        ///
+        /// The returned string is secret-bearing and can reconstruct the extended private key.
         public func serialize() -> String {
             payload.serialize()
         }
-
-        public func derived(indices: [UInt32]) throws -> ExtendedPrivate {
-            var currentPayload = payload
-            var currentParsedPrivateKeyModel = parsedPrivateKeyModel
-            for index in indices {
-                do {
-                    let childMaterial = try ExtendedKeyDerivationModel
-                        .derivePrivateChildMaterial(
-                        from: currentPayload,
-                        parsedPrivateKeyModel: currentParsedPrivateKeyModel,
-                        index: index
-                    )
-                    currentPayload = childMaterial.payload
-                    currentParsedPrivateKeyModel = childMaterial.parsedPrivateKeyModel
-                } catch let error as ExtendedKeyDerivationModel.Error {
-                    throw Self.mapDerivationError(error)
-                }
-            }
-            return ExtendedPrivate(
-                payload: currentPayload,
-                parsedPrivateKeyModel: currentParsedPrivateKeyModel
-            )
-        }
-
         internal init(payload: ExtendedKeyPayloadModel) throws {
             guard payload.kind == .privateKey else {
                 throw Error.invalidVersion(actual: ExtendedKeyPayloadModel.publicVersion)
@@ -206,16 +214,5 @@ extension OpalCrypto.Key {
             }
         }
 
-        private static func mapDerivationError(_ error: ExtendedKeyDerivationModel.Error) -> Error {
-            switch error {
-            case .depthOverflow:
-                return .depthOverflow
-            case .invalidSeed,
-                 .invalidKeyKind,
-                 .hardenedDerivationRequiresPrivateKey,
-                 .invalidDerivedKey:
-                return .invalidDerivedKey
-            }
-        }
     }
 }

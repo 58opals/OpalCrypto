@@ -6,30 +6,27 @@ import OpalCrypto
 
 @Suite("Public API key-derivation validation")
 struct PublicAPIKeyDerivationValidator {
-    @Test("Reject invalid PBKDF2 parameters through facade errors")
-    func rejectInvalidPBKDF2ParametersThroughFacadeErrors() {
-        let validSalt = try! OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
-        let invalidCases: [(Int, Int?, OpalCrypto.KeyDerivation.Salt, OpalCrypto.KeyDerivation.Error)] = [
-            (0, 32, validSalt, .invalidIterationCount(actual: 0)),
-            (-1, 32, validSalt, .invalidIterationCount(actual: -1)),
-            (16, 0, validSalt, .invalidDerivedKeyLength(actual: 0)),
-            (16, -1, validSalt, .invalidDerivedKeyLength(actual: -1))
-        ]
+    @Test(
+        "Reject invalid PBKDF2 parameters through facade errors",
+        arguments: PasswordBasedKeyDerivationInvalidParameterCase.allCases
+    )
+    func rejectInvalidPBKDF2ParametersThroughFacadeErrors(
+        testCase: PasswordBasedKeyDerivationInvalidParameterCase
+    ) throws {
+        let validSalt = try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
 
-        for invalidCase in invalidCases {
-            do {
-                _ = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
-                    password: Data("password".utf8),
-                    salt: invalidCase.2,
-                    iterationCount: invalidCase.0,
-                    derivedKeyLength: invalidCase.1
-                )
-                Issue.record("Expected invalid PBKDF2 parameter error.")
-            } catch let error as OpalCrypto.KeyDerivation.Error {
-                #expect(error == invalidCase.3)
-            } catch {
-                Issue.record("Unexpected error type: \(error)")
-            }
+        do {
+            _ = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
+                password: Data("password".utf8),
+                salt: validSalt,
+                iterationCount: testCase.iterationCount,
+                derivedKeyLength: testCase.derivedKeyLength
+            )
+            Issue.record("Expected invalid PBKDF2 parameter error.")
+        } catch let error as OpalCrypto.KeyDerivation.Error {
+            #expect(error == testCase.expectedError)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 

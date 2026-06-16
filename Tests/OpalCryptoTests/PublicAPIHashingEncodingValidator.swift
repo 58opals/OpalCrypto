@@ -89,13 +89,17 @@ struct PublicAPIHashingEncodingValidator {
         }
     }
 
-    @Test("Exercise Base32 byte-mode round-trips with leading zero payloads")
-    func exerciseBase32ByteModeRoundTripsWithLeadingZeroPayloads() throws {
-        for payload in [Data([0x00]), Data([0x00, 0x00, 0x01]), Data([0x00, 0x10, 0xFF, 0x00])] {
-            let encoded = try OpalCrypto.Encoding.encodeBase32Bytes(payload)
-            let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(encoded)
-            #expect(decoded == payload)
-        }
+    @Test(
+        "Exercise Base32 byte-mode round-trips with leading zero payloads",
+        arguments: Base32ByteModeRoundTripCase.allCases
+    )
+    func exerciseBase32ByteModeRoundTripsWithLeadingZeroPayloads(
+        testCase: Base32ByteModeRoundTripCase
+    ) throws {
+        let encoded = try OpalCrypto.Encoding.encodeBase32Bytes(testCase.payload)
+        let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(encoded)
+
+        #expect(decoded == testCase.payload)
     }
 
     @Test("Base58 encoding accepts sliced Data payloads")

@@ -2,7 +2,7 @@
 
 import Foundation
 
-// Keep unsplit for batch-derivation auditability.
+// Line-count exception: performance-critical batch-derivation kernel. Keeping parsing, serial/parallel dispatch, ordered chunk collection, and affine conversion in one file makes benchmark regressions and ordering invariants reviewable together. Revisit when batch derivation is reprofiled or the execution-mode contract changes.
 
 extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     internal static func deriveCompressedPublicKeys(

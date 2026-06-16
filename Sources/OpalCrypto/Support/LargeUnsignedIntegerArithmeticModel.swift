@@ -2,7 +2,7 @@
 
 import Foundation
 
-// Keep unsplit for arithmetic-kernel reviewability.
+// Line-count exception: arithmetic-kernel data contract. Keeping serialization, shifting, comparison, addition, multiplication, and division beside the private word storage avoids widening storage access across files and keeps numeric overflow behavior reviewable as one unit. Revisit when replacing this model with a fixed-width or external big-integer backend.
 
 internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     private var words: [UInt32]

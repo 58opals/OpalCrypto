@@ -13,8 +13,8 @@ extension ScalarModel {
         let minusBasisTwo = StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismMinusBasisTwo
         let lambda = ScalarModel(unchecked: StandardsForEfficientCryptography256k1CurveModel.Constant.endomorphismLambda)
         
-        let coefficientOneProduct = ScalarModel(unchecked: value.multiplyShiftRight384(by: coefficientOne))
-        let coefficientTwoProduct = ScalarModel(unchecked: value.multiplyShiftRight384(by: coefficientTwo))
+        let coefficientOneProduct = ScalarModel(unchecked: Self.multiplyShiftRight384(value, by: coefficientOne))
+        let coefficientTwoProduct = ScalarModel(unchecked: Self.multiplyShiftRight384(value, by: coefficientTwo))
         
         let minusBasisOneScalar = ScalarModel(unchecked: minusBasisOne)
         let minusBasisTwoScalar = ScalarModel(unchecked: minusBasisTwo)
@@ -36,11 +36,12 @@ private extension ScalarModel {
         let magnitude = isNegative ? scalar.negateModN() : scalar
         return SignedScalar128Model(magnitude: magnitude.value, isNegative: isNegative)
     }
-}
 
-private extension Unsigned256BitIntegerModel {
-    func multiplyShiftRight384(by other: Unsigned256BitIntegerModel) -> Unsigned256BitIntegerModel {
-        var product = multiplyFullWidth(by: other)
+    static func multiplyShiftRight384(
+        _ value: Unsigned256BitIntegerModel,
+        by other: Unsigned256BitIntegerModel
+    ) -> Unsigned256BitIntegerModel {
+        var product = value.multiplyFullWidth(by: other)
         let roundingBit: UInt64 = 1 << 63
         let (roundedLimb, carryFromRounding) = product.limbs[5].addingReportingOverflow(roundingBit)
         product.limbs[5] = roundedLimb

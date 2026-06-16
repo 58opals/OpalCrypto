@@ -11,4 +11,13 @@ extension OpalCrypto.Signature.ECDSAFormat {
             return .ecdsa(.distinguishedEncodingRules)
         }
     }
+
+    var diagnosticsName: String {
+        switch self {
+        case .raw:
+            return "raw"
+        case .der:
+            return "der"
+        }
+    }
 }

@@ -4,16 +4,40 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Key {
-    public struct Mnemonic: Sendable, Equatable {
+    /// A BIP-39 mnemonic phrase.
+    ///
+    /// `Mnemonic` is secret-bearing key material. Its words and phrase can recreate seed material and should only cross explicit secret-access or signing/authoring boundaries.
+    public struct Mnemonic: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
 
+        /// The normalized BIP-39 words.
+        ///
+        /// This array is secret-bearing in aggregate and should be handled with the same care as the full phrase.
         public let words: [Word]
+        /// The BIP-39 mnemonic length.
         public let length: Length
+        /// The resolved BIP-39 language.
         public let language: Word.Language
 
+        /// The normalized mnemonic phrase.
+        ///
+        /// The returned string is secret-bearing and can derive the same seed material as `words`.
         public var phrase: String {
             words.map(\.text).joined(separator: " ")
         }
 
+        /// A redacted description that never includes mnemonic words or the full phrase.
+        public var description: String {
+            "OpalCrypto.Key.Mnemonic(redacted, wordCount: \(words.count), language: \(language.rawValue))"
+        }
+
+        /// A redacted debug description that never includes mnemonic words or the full phrase.
+        public var debugDescription: String {
+            description
+        }
+
+        /// Creates a mnemonic from a BIP-39 phrase.
+        ///
+        /// `phrase` is secret-bearing input. Diagnostics record only public-safe metadata such as word count, language, and error code.
         public init(phrase: String, language: Word.Language? = nil) throws {
             let fields = Self.parseFields(
                 wordCount: phrase.split(whereSeparator: \.isWhitespace).count,
@@ -29,6 +53,9 @@ extension OpalCrypto.Key {
             recordParseSucceeded(fields: fields)
         }
 
+        /// Creates a mnemonic from normalized or normalizable BIP-39 words.
+        ///
+        /// The word sequence is secret-bearing in aggregate. Diagnostics record only public-safe metadata such as word count, language, and error code.
         public init(words: [Word], language: Word.Language? = nil) throws {
             let fields = Self.parseFields(wordCount: words.count, language: language)
             do {
@@ -69,6 +96,9 @@ extension OpalCrypto.Key {
             )
         }
 
+        /// Generates a new BIP-39 mnemonic using secure random entropy.
+        ///
+        /// The returned mnemonic is secret-bearing. Diagnostics record only public-safe metadata such as word count, language, and entropy byte count.
         public static func generate(
             length: Length,
             language: Word.Language
@@ -154,58 +184,6 @@ extension OpalCrypto.Key {
                 parsed: MnemonicCodecModel.makeMnemonic(entropy: entropy, language: language)
             )
         }
-
-        public func deriveSeed(passphrase: String = "") throws -> OpalCrypto.Key.Seed {
-            let fields = seedDeriveFields(passphrase: passphrase)
-            do {
-                let seed = try OpalCrypto.Key.Seed(
-                    rawRepresentation: MnemonicCodecModel.deriveSeed(
-                        phrase: phrase,
-                        passphrase: passphrase
-                    )
-                )
-                Self.recordSeedDeriveSucceeded(seed: seed, fields: fields)
-                return seed
-            } catch {
-                Self.recordSeedDeriveFailed(error, fields: fields)
-                throw error
-            }
-        }
-
-        private func seedDeriveFields(passphrase: String) -> [OpalDiagnostics.Field] {
-            [
-                OpalDiagnostics.Field.operationField("mnemonic_seed_derive"),
-                OpalDiagnostics.Field.formatField("bip39"),
-                OpalDiagnostics.Field.publicField("word_count", words.count),
-                OpalDiagnostics.Field.publicField("language", language.rawValue),
-                OpalDiagnostics.Field.publicField("passphrase_byte_count", passphrase.utf8.count)
-            ]
-        }
-
-        private static func recordSeedDeriveSucceeded(
-            seed: OpalCrypto.Key.Seed,
-            fields: [OpalDiagnostics.Field]
-        ) {
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                event: OpalDiagnostics.Event.mnemonicSeedDeriveSucceeded,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicSeedDeriveSucceeded),
-                fields: fields + [
-                    OpalDiagnostics.Field.outputLengthField(seed.rawRepresentation.count)
-                ]
-            )
-        }
-
-        private static func recordSeedDeriveFailed(
-            _ error: Swift.Error,
-            fields: [OpalDiagnostics.Field]
-        ) {
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
-                event: OpalDiagnostics.Event.mnemonicSeedDeriveFailed,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.mnemonicSeedDeriveFailed),
-                fields: fields + OpalDiagnostics.Field.errorFields(error)
-            )
-        }
-
         internal init(parsed: MnemonicCodecModel.ParsedMnemonic) {
             self.words = parsed.words.map(Word.init)
             self.length = parsed.length

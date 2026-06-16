@@ -4,11 +4,21 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Key {
-    public struct WIF: Sendable, Equatable {
+    /// A Wallet Import Format wrapper for a secp256k1 private key.
+    ///
+    /// `WIF` is secret-bearing key material. Serialized WIF text can reconstruct the private key and should only cross explicit secret-access or import/export boundaries.
+    public struct WIF: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
 
+        /// The private key encoded by this WIF value.
+        ///
+        /// This value is secret-bearing.
         public let privateKey: OpalCrypto.Secp256k1.PrivateKey
+        /// Whether the WIF encodes a compressed public-key preference.
         public let isCompressed: Bool
 
+        /// Creates a WIF wrapper for private key export.
+        ///
+        /// `privateKey` is secret-bearing. Diagnostics are emitted only by parsing and serialization operations, not by this wrapper initializer.
         public init(
             privateKey: OpalCrypto.Secp256k1.PrivateKey,
             isCompressed: Bool = true
@@ -17,6 +27,19 @@ extension OpalCrypto.Key {
             self.isCompressed = isCompressed
         }
 
+        /// A redacted description that never includes WIF text or private key bytes.
+        public var description: String {
+            "OpalCrypto.Key.WIF(redacted, isCompressed: \(isCompressed), privateKeyByteCount: \(privateKey.rawRepresentation.count))"
+        }
+
+        /// A redacted debug description that never includes WIF text or private key bytes.
+        public var debugDescription: String {
+            description
+        }
+
+        /// Parses serialized Wallet Import Format text.
+        ///
+        /// `serialized` is secret-bearing input. Diagnostics record only public-safe metadata such as input character count, compression flag, private key byte count, and error code.
         public init(_ serialized: String) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("wif_parse"),
@@ -47,6 +70,9 @@ extension OpalCrypto.Key {
             )
         }
 
+        /// Serializes this value to Wallet Import Format text.
+        ///
+        /// The returned string is secret-bearing and can reconstruct the private key.
         public func serialize() throws -> String {
             let fields = [
                 OpalDiagnostics.Field.operationField("wif_serialize"),
