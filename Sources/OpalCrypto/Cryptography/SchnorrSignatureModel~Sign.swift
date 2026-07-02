@@ -24,6 +24,36 @@ internal extension SchnorrSignatureModel {
         guard let publicKeyAffine = publicKeyPoint.convertToAffine() else {
             throw Error.invalidPrivateKeyValue
         }
+        return try sign(
+            digestData32Bytes: digestData32Bytes,
+            privateKeyScalar: privateKeyScalar,
+            publicKeyAffine: publicKeyAffine,
+            nonce: nonce
+        )
+    }
+
+    static func sign(
+        digestData32Bytes: Data,
+        parsedPrivateKeyModel: ParsedPrivateKeyModel,
+        nonce: NonceGenerationPolicy = .requestForComments6979BitcoinCashDefault
+    ) throws -> Signature {
+        guard digestData32Bytes.count == 32 else {
+            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
+        }
+        return try sign(
+            digestData32Bytes: digestData32Bytes,
+            privateKeyScalar: parsedPrivateKeyModel.scalar,
+            publicKeyAffine: parsedPrivateKeyModel.parsedPublicKeyModel.affinePoint,
+            nonce: nonce
+        )
+    }
+
+    private static func sign(
+        digestData32Bytes: Data,
+        privateKeyScalar: ScalarModel,
+        publicKeyAffine: AffinePointModel,
+        nonce: NonceGenerationPolicy
+    ) throws -> Signature {
         var makeNextNonce: () throws -> ScalarModel
         switch nonce {
         case .requestForComments6979BitcoinCashDefault:

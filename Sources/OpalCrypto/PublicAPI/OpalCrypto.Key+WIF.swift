@@ -27,6 +27,13 @@ extension OpalCrypto.Key {
             self.isCompressed = isCompressed
         }
 
+        /// Creates an opaque signing capability for the private key encoded by this WIF value.
+        ///
+        /// Prefer the returned `SigningKey` for signing workflows that do not need to export raw private-key bytes.
+        public func makeSigningKey() throws -> OpalCrypto.Secp256k1.SigningKey {
+            try privateKey.makeSigningKey()
+        }
+
         /// A redacted description that never includes WIF text or private key bytes.
         public var description: String {
             "OpalCrypto.Key.WIF(redacted, isCompressed: \(isCompressed), privateKeyByteCount: \(privateKey.rawRepresentation.count))"

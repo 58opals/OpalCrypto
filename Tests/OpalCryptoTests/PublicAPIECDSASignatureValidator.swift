@@ -55,6 +55,48 @@ struct PublicAPIECDSASignatureValidator {
         #expect(!(try signature.verify(message: digest.rawRepresentation, publicKey: publicKey)))
     }
 
+    @Test("SigningKey ECDSA message signing matches legacy deterministic output")
+    func signingKeyECDSAMessageSigningMatchesLegacyDeterministicOutput() throws {
+        let privateKey = try makePrivateKey(1)
+        let signingKey = try privateKey.makeSigningKey()
+        let message = Data("opal-ecdsa-signing-key-message".utf8)
+        let legacySignature = try OpalCrypto.Signature.ECDSA.sign(
+            message: message,
+            privateKey: privateKey,
+            format: .der
+        )
+        let signingKeySignature = try signingKey.signECDSA(
+            message: message,
+            format: .der
+        )
+
+        #expect(signingKeySignature.rawRepresentation == legacySignature.rawRepresentation)
+        #expect(try signingKeySignature.verify(message: message, publicKey: signingKey.publicKey))
+        #expect(try signingKeySignature.verify(message: message, verificationKey: signingKey.verificationKey))
+    }
+
+    @Test("SigningKey ECDSA digest signing matches legacy deterministic output")
+    func signingKeyECDSADigestSigningMatchesLegacyDeterministicOutput() throws {
+        let privateKey = try makePrivateKey(1)
+        let signingKey = try privateKey.makeSigningKey()
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: OpalCrypto.Hashing.sha256(Data("opal-ecdsa-signing-key-digest".utf8))
+        )
+        let legacySignature = try OpalCrypto.Signature.ECDSA.sign(
+            digest: digest,
+            privateKey: privateKey,
+            format: .raw
+        )
+        let signingKeySignature = try signingKey.signECDSA(
+            digest: digest,
+            format: .raw
+        )
+
+        #expect(signingKeySignature.rawRepresentation == legacySignature.rawRepresentation)
+        #expect(try signingKeySignature.verify(digest: digest, publicKey: signingKey.publicKey))
+        #expect(try signingKeySignature.verify(digest: digest, verificationKey: signingKey.verificationKey))
+    }
+
     @Test("Reject ECDSA verification for tampered message and wrong public key")
     func rejectEcdsaVerificationForTamperedMessageAndWrongPublicKey() throws {
         let privateKey = try makePrivateKey(1)

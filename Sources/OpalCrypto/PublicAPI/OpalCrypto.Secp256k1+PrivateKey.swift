@@ -57,6 +57,13 @@ extension OpalCrypto.Secp256k1 {
             self.rawRepresentation = Data(validatedRawRepresentation)
         }
 
+        /// Creates an opaque signing capability from this private key.
+        ///
+        /// Prefer retaining the returned `SigningKey` for signing workflows instead of repeatedly reading raw private-key bytes.
+        public func makeSigningKey() throws -> SigningKey {
+            try SigningKey(privateKey: self)
+        }
+
         /// Generates a new secp256k1 private key with secure randomness.
         ///
         /// The returned key is secret-bearing. Diagnostics record only public-safe metadata such as curve name and output byte count.

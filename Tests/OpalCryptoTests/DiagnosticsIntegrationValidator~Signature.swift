@@ -118,6 +118,38 @@ extension DiagnosticsIntegrationValidator {
         }
     }
 
+    @Test("SigningKey signing records public-safe private-key lengths")
+    func validateSigningKeySigningRecordsPublicSafePrivateKeyLengths() throws {
+        try withDiagnosticsCapture {
+            let signingKey = try OpalCryptoTestSupport.makeTypedPrivateKey(31).makeSigningKey()
+            let message = Data("opal-diagnostics-signing-key-message".utf8)
+            let digest = try OpalCrypto.Signature.Digest(
+                rawRepresentation: Data(repeating: 0x31, count: 32)
+            )
+
+            _ = try signingKey.signECDSA(
+                message: message,
+                format: .der
+            )
+            let ecdsaRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.ecdsaSignSucceeded))
+            #expect(field("operation", in: ecdsaRecord)?.value == "sign")
+            #expect(field("algorithm", in: ecdsaRecord)?.value == "ecdsa")
+            expectPublicField("private_key_byte_count", in: ecdsaRecord, equals: "32")
+            #expect(field("private_key", in: ecdsaRecord) == nil)
+            #expect(field("signing_key", in: ecdsaRecord) == nil)
+
+            OpalDiagnostics.clearRecentRecords()
+
+            _ = try signingKey.signSchnorr(digest: digest)
+            let schnorrRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.schnorrSignSucceeded))
+            #expect(field("operation", in: schnorrRecord)?.value == "sign")
+            #expect(field("algorithm", in: schnorrRecord)?.value == "schnorr")
+            expectPublicField("private_key_byte_count", in: schnorrRecord, equals: "32")
+            #expect(field("private_key", in: schnorrRecord) == nil)
+            #expect(field("signing_key", in: schnorrRecord) == nil)
+        }
+    }
+
     @Test("Malformed key parsing records redacted diagnostics")
     func validateMalformedKeyParsingRecordsRedactedDiagnostics() throws {
         try withDiagnosticsCapture {

@@ -22,6 +22,28 @@ struct PublicAPISchnorrSignatureValidator {
         #expect(try signature.verify(digest: digest, publicKey: publicKey))
     }
 
+    @Test("SigningKey Schnorr signing matches legacy deterministic output")
+    func signingKeySchnorrSigningMatchesLegacyDeterministicOutput() throws {
+        let privateKey = try makePrivateKey(2)
+        let signingKey = try privateKey.makeSigningKey()
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: Data(repeating: 0xCD, count: 32)
+        )
+        let legacySignature = try OpalCrypto.Signature.Schnorr.sign(
+            digest: digest,
+            privateKey: privateKey,
+            noncePolicy: .bip340Deterministic
+        )
+        let signingKeySignature = try signingKey.signSchnorr(
+            digest: digest,
+            noncePolicy: .bip340Deterministic
+        )
+
+        #expect(signingKeySignature.rawRepresentation == legacySignature.rawRepresentation)
+        #expect(try signingKeySignature.verify(digest: digest, publicKey: signingKey.publicKey))
+        #expect(try signingKeySignature.verify(digest: digest, verificationKey: signingKey.verificationKey))
+    }
+
     @Test("Reject public-key construction with invalid public key length through facade error")
     func rejectPublicKeyConstructionWithInvalidPublicKeyLengthThroughFacadeError() {
         do {

@@ -27,6 +27,13 @@ extension OpalCrypto.Key {
             OpalCrypto.Secp256k1.PrivateKey(validatedRawRepresentation: payload.keyData)
         }
 
+        /// An opaque signing capability for the contained secp256k1 private key.
+        ///
+        /// Prefer this value for signing workflows that do not need to export raw private-key bytes.
+        public var signingKey: OpalCrypto.Secp256k1.SigningKey {
+            OpalCrypto.Secp256k1.SigningKey(parsedPrivateKeyModel: parsedPrivateKeyModel)
+        }
+
         /// The corresponding extended public key.
         ///
         /// The returned value contains only public derivation material. Access to this property still requires handling the secret-bearing receiver.

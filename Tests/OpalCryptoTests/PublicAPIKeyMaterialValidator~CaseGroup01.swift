@@ -69,6 +69,37 @@ extension PublicAPIKeyMaterialValidator {
         #expect(derivedFromPublic.serialize() == grandchildPublicGrandchildString)
     }
 
+    @Test("Extended private signing key signs without extracting raw private key")
+    func extendedPrivateSigningKeySignsWithoutExtractingRawPrivateKey() throws {
+        let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(
+            seed: OpalCrypto.Key.Seed(rawRepresentation: Data(hexadecimal: seedHex))
+        )
+        let signingKey = rootKey.signingKey
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: OpalCrypto.Hashing.sha256(Data("opal-extended-signing-key".utf8))
+        )
+        let signature = try signingKey.signECDSA(
+            digest: digest,
+            format: .raw
+        )
+
+        #expect(signingKey.publicKey == rootKey.publicKey.publicKey)
+        #expect(signingKey.verificationKey.publicKey == rootKey.publicKey.publicKey)
+        #expect(try signature.verify(digest: digest, verificationKey: signingKey.verificationKey))
+    }
+
+    @Test("Wallet import format signing key signs without extracting raw private key at the call site")
+    func walletImportFormatSigningKeySignsWithoutExtractingRawPrivateKeyAtTheCallSite() throws {
+        let walletImportFormat = try OpalCrypto.Key.WIF(compressedWalletImportFormatString)
+        let signingKey = try walletImportFormat.makeSigningKey()
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: OpalCrypto.Hashing.sha256(Data("opal-wif-signing-key".utf8))
+        )
+        let signature = try signingKey.signSchnorr(digest: digest)
+
+        #expect(try signature.verify(digest: digest, verificationKey: signingKey.verificationKey))
+    }
+
     @Test("Reject hardened public derivation")
     func rejectHardenedPublicDerivation() throws {
         let publicKey = try OpalCrypto.Key.ExtendedPublic(hardenedChildPublicKeyString)

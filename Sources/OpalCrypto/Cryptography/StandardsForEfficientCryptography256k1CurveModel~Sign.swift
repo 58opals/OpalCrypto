@@ -22,6 +22,23 @@ internal extension StandardsForEfficientCryptography256k1CurveModel {
         } catch {
             throw Error.invalidPrivateKeyValue
         }
+        return try sign(
+            digestData32Bytes: digestData32Bytes,
+            privateKeyScalar: privateKeyScalar,
+            nonce: nonce,
+            enforceLowS: enforceLowS
+        )
+    }
+
+    static func sign(
+        digestData32Bytes: Data,
+        privateKeyScalar: ScalarModel,
+        nonce: NonceGenerationPolicy.EllipticCurveDigitalSignatureAlgorithmModel = .requestForComments6979SecureHashAlgorithm256,
+        enforceLowS: Bool = true
+    ) throws -> Signature {
+        guard digestData32Bytes.count == 32 else {
+            throw Error.invalidDigestLength(actual: digestData32Bytes.count)
+        }
         let digestScalar = try ScalarConversionModel.makeReducedScalarFromDigest(digestData32Bytes)
         let makeNextNonce: () throws -> ScalarModel
         switch nonce {

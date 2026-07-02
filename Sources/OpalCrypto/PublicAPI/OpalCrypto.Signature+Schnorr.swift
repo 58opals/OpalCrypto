@@ -34,14 +34,11 @@ extension OpalCrypto.Signature {
             privateKey: OpalCrypto.Secp256k1.PrivateKey,
             noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
         ) throws -> Schnorr {
-            let fields = [
-                OpalDiagnostics.Field.operationField("sign"),
-                OpalDiagnostics.Field.algorithmField("schnorr"),
-                OpalDiagnostics.Field.formatField("bip340"),
-                OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
-                OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
-                OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)
-            ]
+            let fields = signFields(
+                digest: digest,
+                privateKeyByteCount: privateKey.rawRepresentation.count,
+                noncePolicy: noncePolicy
+            )
             Self.recordSchnorr(
                 event: OpalDiagnostics.Event.schnorrSignBegin,
                 fields: fields
@@ -54,6 +51,45 @@ extension OpalCrypto.Signature {
                     nonceFunction: noncePolicy.internalNoncePolicy
                 )
                 let signature = try Schnorr(rawRepresentation: signatureData)
+                Self.recordSchnorr(
+                    event: OpalDiagnostics.Event.schnorrSignSucceeded,
+                    fields: fields + [
+                        OpalDiagnostics.Field.signatureLengthField(signature.rawRepresentation.count)
+                    ]
+                )
+                return signature
+            } catch {
+                let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+                Self.recordSchnorrFailed(
+                    event: OpalDiagnostics.Event.schnorrSignFailed,
+                    error: mappedError,
+                    fields: fields
+                )
+                throw mappedError
+            }
+        }
+
+        internal static func sign(
+            digest: Digest,
+            parsedPrivateKeyModel: ParsedPrivateKeyModel,
+            noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
+        ) throws -> Schnorr {
+            let fields = signFields(
+                digest: digest,
+                privateKeyByteCount: OpalCrypto.Secp256k1.SigningKey.privateKeyByteCount,
+                noncePolicy: noncePolicy
+            )
+            Self.recordSchnorr(
+                event: OpalDiagnostics.Event.schnorrSignBegin,
+                fields: fields
+            )
+            do {
+                let signatureModel = try SchnorrSignatureModel.sign(
+                    digestData32Bytes: digest.rawRepresentation,
+                    parsedPrivateKeyModel: parsedPrivateKeyModel,
+                    nonce: noncePolicy.internalNoncePolicy
+                )
+                let signature = Schnorr(signatureModel: signatureModel)
                 Self.recordSchnorr(
                     event: OpalDiagnostics.Event.schnorrSignSucceeded,
                     fields: fields + [
@@ -121,6 +157,21 @@ extension OpalCrypto.Signature {
                 )
                 throw mappedError
             }
+        }
+
+        private static func signFields(
+            digest: Digest,
+            privateKeyByteCount: Int,
+            noncePolicy: SchnorrNoncePolicy
+        ) -> [OpalDiagnostics.Field] {
+            [
+                OpalDiagnostics.Field.operationField("sign"),
+                OpalDiagnostics.Field.algorithmField("schnorr"),
+                OpalDiagnostics.Field.formatField("bip340"),
+                OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
+                OpalDiagnostics.Field.publicField("private_key_byte_count", privateKeyByteCount),
+                OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)
+            ]
         }
 
         private static func recordSchnorr(

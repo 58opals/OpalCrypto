@@ -28,6 +28,8 @@ Constrained cryptographic or protocol-shaped byte strings use facade-owned value
 - `KeyDerivation.Salt`, `KeyDerivation.DerivedKey`
 - `Encoding.FiveBitValues`
 
+Secret-bearing signing workflows should prefer `Secp256k1.SigningKey`. It is an opaque signing capability that can be imported from raw private-key bytes, `Secp256k1.PrivateKey`, `Key.WIF`, or `Key.ExtendedPrivate`, but it does not expose raw private-key bytes or serialization APIs.
+
 ## Common Calls
 
 ```swift
@@ -35,25 +37,26 @@ import Foundation
 import OpalCrypto
 
 let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
-let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+let signingKey = try privateKey.makeSigningKey()
+let publicKey = signingKey.publicKey
 
 let message = Data("opal-signature-message".utf8)
 let digest = try OpalCrypto.Signature.Digest(
     rawRepresentation: OpalCrypto.Hashing.sha256(message)
 )
-let ecdsa = try OpalCrypto.Signature.ECDSA.sign(
+let ecdsa = try signingKey.signECDSA(
     digest: digest,
-    privateKey: privateKey,
     format: .der
 )
 let ecdsaIsValid = try ecdsa.verify(digest: digest, publicKey: publicKey)
 
-let schnorr = try OpalCrypto.Signature.Schnorr.sign(
-    digest: digest,
-    privateKey: privateKey
-)
+let schnorr = try signingKey.signSchnorr(digest: digest)
 let schnorrIsValid = try schnorr.verify(digest: digest, publicKey: publicKey)
 ```
+
+## Secret Export Boundaries
+
+`Secp256k1.PrivateKey.rawRepresentation`, `Key.WIF.privateKey`, `Key.WIF.serialize()`, `Key.ExtendedPrivate.privateKey`, and `Key.ExtendedPrivate.serialize()` remain source-compatible legacy and import/export boundaries. Use them only when raw private-key bytes, WIF text, or xprv text must cross an explicit storage, backup, migration, or interoperability boundary. For signing, retain `Secp256k1.SigningKey` and call its signing methods instead of repeatedly reading raw private-key bytes.
 
 ## Encoding
 
