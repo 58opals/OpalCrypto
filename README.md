@@ -1,6 +1,6 @@
 # Opal Crypto
 
-Status: Developer Preview on develop.
+Status: v0.1.0 Developer Preview.
 
 Opal Crypto is the lowest-level BCH cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
@@ -20,11 +20,11 @@ Use Opal Crypto when you are building Swift BCH software and need stable cryptog
 
 ## Installation
 
-The current public facade surface is published from the `develop` branch.
+The current public facade surface is available from the `v0.1.0` release.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "develop")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", from: "0.1.0")
 ]
 ```
 
@@ -106,7 +106,7 @@ Current benchmark smoke command:
 swift run -c release OpalCryptoBenchmarks -- --suite smoke
 ```
 
-Correctness result: Passed on 2026-06-19 with 216 tests in 30 suites.
+Correctness result: Passed on 2026-07-05 with 222 tests in 30 suites.
 
 ## Further Context
 

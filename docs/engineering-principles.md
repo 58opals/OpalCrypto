@@ -16,7 +16,7 @@ Apple SDK frameworks are acceptable when they serve a clear package purpose and 
 
 Metal is an allowed exception to the Swift-only implementation preference when it is used as an Apple-native performance accelerator. A Metal path must remain optional, platform-gated, and benchmark-backed. The Swift CPU implementation remains the correctness source of truth and fallback.
 
-Use Metal first for public, batched, independent workloads such as batch public-key derivation or batch verification experiments. Avoid moving private-key signing, secret scalar handling, or other secret-bearing operations to GPU execution unless a separate security review establishes the memory, timing, and side-channel invariants.
+Use Metal first for public, batched, independent workloads such as batch verification experiments. Public-key derivation remains an important CPU benchmark, but private-key derivation carries private scalar inputs and requires separate review before any GPU execution. Avoid moving private-key signing, secret scalar handling, or other secret-bearing operations to GPU execution unless a separate security review establishes the memory, timing, and side-channel invariants.
 
 ## Performance Policy
 
