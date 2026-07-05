@@ -22,10 +22,9 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
             requireNonZero: true
         )
         let publicKeyAffine = try parsePublicKeyAffine(publicKey)
-        let sharedPoint = ScalarMultiplicationModel.mul(privateKeyScalar, publicKeyAffine)
-        guard let sharedAffine = sharedPoint.convertToAffine() else {
-            throw Error.invalidDerivedPublicKey
-        }
-        return SecureHashAlgorithm256Model.hash(sharedAffine.encodeCompressed33())
+        return try deriveSharedSecret(
+            privateKeyScalar: privateKeyScalar,
+            publicKeyAffine: publicKeyAffine
+        )
     }
 }

@@ -91,6 +91,40 @@ extension DiagnosticsIntegrationValidator {
         }
     }
 
+    @Test("Shared-secret batch derivation records public-safe key counts")
+    func validateSharedSecretBatchDerivationRecordsPublicSafeKeyCounts() async throws {
+        try await withDiagnosticsCapture {
+            let scanPrivateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(26)
+            let publicKeys = try [
+                OpalCryptoTestSupport.makeTypedPrivateKey(27),
+                OpalCryptoTestSupport.makeTypedPrivateKey(28)
+            ].map {
+                try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
+            }
+
+            OpalDiagnostics.clearRecentRecords()
+
+            _ = try await OpalCrypto.Secp256k1.deriveSharedSecrets(
+                privateKey: scanPrivateKey,
+                publicKeys: publicKeys
+            )
+
+            let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.sharedSecretsDeriveSucceeded))
+            #expect(record.category == OpalDiagnostics.Category.key)
+            #expect(field("operation", in: record)?.value == "shared_secret_batch_derive")
+            #expect(field("algorithm", in: record)?.value == "secp256k1")
+            #expect(field("public_key_count", in: record)?.value == "2")
+            expectPublicField("private_key_byte_count", in: record, equals: "32")
+            expectPublicField("public_key_byte_count", in: record, equals: "33")
+            #expect(field("output_secret_count", in: record)?.value == "2")
+            #expect(field("private_key", in: record) == nil)
+            #expect(field("public_key", in: record) == nil)
+            #expect(field("shared_secret", in: record) == nil)
+            #expect(diagnosticRecord(named: OpalDiagnostics.Event.sharedSecretParseSucceeded) == nil)
+            #expect(diagnosticRecord(named: OpalDiagnostics.Event.publicKeyParseSucceeded) == nil)
+        }
+    }
+
     @Test("Uncompressed verification-key parsing records normalized output length")
     func validateUncompressedVerificationKeyParsingRecordsNormalizedOutputLength() throws {
         try withDiagnosticsCapture {

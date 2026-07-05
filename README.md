@@ -56,7 +56,7 @@ For Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schn
 ## Key Capabilities
 
 - `Signature`: typed ECDSA and Schnorr signatures, 32-byte digests, verification keys, facade-owned formats, and nonce policies.
-- `Secp256k1`: typed private keys, public keys, scalars, shared secrets, tweak-add, and batch public-key derivation.
+- `Secp256k1`: typed private keys, public keys, scalars, shared secrets, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
 - `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
 - `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
 - `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives.
@@ -70,7 +70,7 @@ See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 ## Boundaries
 
 - In scope: facade-first BCH cryptography for keys, secp256k1, hashing, encoding, key derivation, and numeric primitives.
-- Out of scope: wallet or app-domain orchestration, network or protocol/runtime responsibilities, non-BCH features, non-Swift expansion, or reliance on internal implementation details as public API.
+- Out of scope: wallet or app-domain orchestration, address management, RPA scan policy, network or protocol/runtime responsibilities, non-BCH features, non-Swift expansion, or reliance on internal implementation details as public API. Higher-level packages such as Opal Base own wallet-facing reusable payment address behavior; Opal Crypto only supplies the cryptographic computation primitives they need.
 
 See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal prototype gate.
 

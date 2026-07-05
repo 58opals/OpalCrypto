@@ -89,4 +89,54 @@ struct PerformanceSmokeValidator {
 
         #expect(automaticPublicKeys1024 == forcedParallelPublicKeys1024)
     }
+
+    @Test("Forced serial and forced parallel shared-secret derivation return identical ordered results at 1024-key scale")
+    func forcedSerialAndForcedParallelSharedSecretDerivationReturnIdenticalOrderedResultsAt1024KeyScale()
+        async throws {
+        let scanPrivateKey = OpalCryptoTestSupport.makePrivateKey(8192)
+        let publicKeys = try makePublicKeyData(count: 1024)
+
+        let forcedSerialSharedSecrets = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveSharedSecrets(
+                privateKeyData32Bytes: scanPrivateKey,
+                publicKeys: publicKeys,
+                executionMode: .serial
+            )
+        let forcedParallelSharedSecrets = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveSharedSecrets(
+                privateKeyData32Bytes: scanPrivateKey,
+                publicKeys: publicKeys,
+                executionMode: .parallel
+            )
+
+        #expect(forcedSerialSharedSecrets == forcedParallelSharedSecrets)
+    }
+
+    @Test("Automatic shared-secret derivation matches forced parallel results at the 1024-key threshold")
+    func automaticSharedSecretDerivationMatchesForcedParallelResultsAtThe1024KeyThreshold()
+        async throws {
+        let scanPrivateKey = OpalCryptoTestSupport.makePrivateKey(8193)
+        let publicKeys = try makePublicKeyData(count: 1024)
+
+        let automaticSharedSecrets = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveSharedSecrets(
+                privateKeyData32Bytes: scanPrivateKey,
+                publicKeys: publicKeys,
+                executionMode: .automatic
+            )
+        let forcedParallelSharedSecrets = try await StandardsForEfficientCryptography256k1CurveModel
+            .Operation.deriveSharedSecrets(
+                privateKeyData32Bytes: scanPrivateKey,
+                publicKeys: publicKeys,
+                executionMode: .parallel
+            )
+
+        #expect(automaticSharedSecrets == forcedParallelSharedSecrets)
+    }
+
+    private func makePublicKeyData(count: Int) throws -> [Data] {
+        try OpalCryptoTestSupport.makeTypedPrivateKeys(count: count).map { privateKey in
+            try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey).rawRepresentation
+        }
+    }
 }

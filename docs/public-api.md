@@ -54,6 +54,12 @@ let schnorr = try signingKey.signSchnorr(digest: digest)
 let schnorrIsValid = try schnorr.verify(digest: digest, publicKey: publicKey)
 ```
 
+## Batch Shared Secrets
+
+Use `OpalCrypto.Secp256k1.deriveSharedSecrets(privateKey:publicKeys:)` when a higher-level package needs ordered secp256k1 ECDH-style computation across many candidate public keys. Each `SharedSecret` matches the single-key `deriveSharedSecret(privateKey:publicKey:)` representation: SHA-256 of the compressed shared EC point.
+
+This is intentionally not an RPA address-management API. Opal Base owns reusable payment address parsing, scan policy, output matching, address derivation, persistence, and indexer integration; Opal Crypto supplies the cryptographic batch primitive.
+
 ## Secret Export Boundaries
 
 `Secp256k1.PrivateKey.rawRepresentation`, `Key.WIF.privateKey`, `Key.WIF.serialize()`, `Key.ExtendedPrivate.privateKey`, and `Key.ExtendedPrivate.serialize()` remain source-compatible legacy and import/export boundaries. Use them only when raw private-key bytes, WIF text, or xprv text must cross an explicit storage, backup, migration, or interoperability boundary. For signing, retain `Secp256k1.SigningKey` and call its signing methods instead of repeatedly reading raw private-key bytes.

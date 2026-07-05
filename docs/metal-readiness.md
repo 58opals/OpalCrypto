@@ -41,6 +41,10 @@ Public-key derivation remains an important CPU benchmark, but its input includes
 
 Batch verification remains the cleaner future candidate because signatures, digests, and public keys are public-data inputs. A future accepted prototype must implement the secp256k1 verification core in Metal and compare the existing Swift verification loop against that Metal kernel without changing public library APIs.
 
+Receiver scanning for reusable payment addresses is a separate candidate class. It may be valuable as Apple Silicon acceleration for local bulk historical catch-up, but it is not eligible from the current Opal Crypto proxy benchmark alone. Opal Base must first provide an end-to-end benchmark that separates candidate loading, public-key construction, batch shared-secret derivation, matching, address or locking script derivation, wallet state, persistence, and indexer I/O. A receiver-scan Metal prototype is justified only if that benchmark shows Opal Crypto shared-secret derivation dominates at restore scale after ordinary CPU and pipeline tuning.
+
+Any receiver-scan Metal backend is secret-bearing because scan private-key scalar material participates in GPU work. Before production use, it needs a security and product review covering GPU buffer residency, command-buffer lifetime, memory clearing limits, debug capture exposure, device sharing, timing behavior, failure cleanup, and CPU fallback behavior.
+
 ## Prototype Scope
 
 The Stage 5 prototype should stay benchmark-target-only until it proves an end-to-end win:
@@ -76,3 +80,4 @@ Kernel-only timing is not sufficient evidence.
 - Do not commit benchmark baseline artifacts.
 - Do not make Metal the default path from a benchmark-only prototype.
 - Do not send secret-bearing private-key, signing, nonce, or scalar material to GPU without a separate review.
+- Do not encode reusable payment address scan policy, address management, transaction output matching, wallet state, persistence, or indexer integration in Opal Crypto.

@@ -45,6 +45,18 @@ Success bar: the Metal prototype must beat the improved Swift CPU path end-to-en
 
 See [metal-readiness.md](metal-readiness.md) for the current readiness decision, candidate selection, and prototype acceptance bar.
 
+### Stage 6: RPA-Shaped Benchmark Gate
+
+Before any receiver-scan Metal work, measure the real reusable payment address workload in Opal Base. The Opal Crypto benchmark target may keep a generic shared-secret and fingerprint proxy, but it must not encode scan-window policy, address derivation, transaction output matching, wallet state, persistence, or indexer behavior.
+
+Success bar: Opal Base reports an end-to-end local scan benchmark with stage timings and shows that Opal Crypto shared-secret derivation remains the dominant cost at bulk historical restore scale after ordinary CPU batching and pipeline improvements. If that bar is not met, continue CPU and pipeline tuning before starting a secret-bearing Metal path.
+
+### Stage 7: Apple Silicon Bulk Historical Scan Prototype
+
+If Stage 6 proves a persistent Opal Crypto bottleneck, prototype a platform-gated Metal backend for Apple Silicon bulk historical receiver scanning. Position the feature as optional local acceleration for historical catch-up, not as an Apple-only requirement: the Swift CPU implementation remains the correctness source of truth and portable fallback.
+
+Success bar: the prototype beats the improved CPU path end-to-end on the Opal Base RPA-shaped workload, preserves exact results against the CPU path, and passes a separate secret-handling review for GPU buffer residency, command-buffer lifetime, debug capture exposure, failure cleanup, and fallback behavior.
+
 ## Required Validation
 
 Each stage must run:
@@ -72,6 +84,7 @@ Metal starts only when all of the following are true:
 
 - The CPU implementation has two consecutive CPU-only stages below the 10% targeted improvement bar.
 - A specific public batched benchmark remains expensive after accepted CPU work.
+- For receiver scanning, an Opal Base reusable payment address benchmark shows that Opal Crypto shared-secret derivation dominates bulk historical restore cost.
 - The GPU candidate has a clear end-to-end acceptance target against the improved Swift CPU path.
 - The workload is public data or has passed a separate review for secret-handling risk.
 - The Swift CPU path remains the default fallback.

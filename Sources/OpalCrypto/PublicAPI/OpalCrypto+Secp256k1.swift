@@ -138,6 +138,48 @@ extension OpalCrypto {
             }
         }
 
+        /// Derives secp256k1 shared secrets for a scan key and ordered candidate public keys.
+        ///
+        /// Each result uses the same representation as `deriveSharedSecret(privateKey:publicKey:)`: SHA-256 of the compressed shared EC point. The returned array preserves `publicKeys` ordering.
+        public static func deriveSharedSecrets(
+            privateKey: PrivateKey,
+            publicKeys: [PublicKey]
+        ) async throws -> [SharedSecret] {
+            let fields = [
+                OpalDiagnostics.Field.operationField("shared_secret_batch_derive"),
+                OpalDiagnostics.Field.algorithmField("secp256k1"),
+                OpalDiagnostics.Field.publicField("public_key_count", publicKeys.count),
+                OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField(
+                    "public_key_byte_count",
+                    publicKeys.first?.rawRepresentation.count ?? 0
+                )
+            ]
+            do {
+                let sharedSecretData = try await StandardsForEfficientCryptography256k1CurveModel
+                    .Operation.deriveSharedSecrets(
+                        privateKeyData32Bytes: privateKey.rawRepresentation,
+                        parsedPublicKeyModels: publicKeys.map(\.parsedPublicKeyModel)
+                    )
+                let sharedSecrets = sharedSecretData.map(SharedSecret.init(validatedRawRepresentation:))
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
+                    event: OpalDiagnostics.Event.sharedSecretsDeriveSucceeded,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.sharedSecretsDeriveSucceeded),
+                    fields: fields + [
+                        OpalDiagnostics.Field.publicField("output_secret_count", sharedSecrets.count)
+                    ]
+                )
+                return sharedSecrets
+            } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
+                let mappedError = mapOperationError(error)
+                recordKeyOperationFailed(.sharedSecretsDeriveFailed, error: mappedError, fields: fields)
+                throw mappedError
+            } catch let error as Error {
+                recordKeyOperationFailed(.sharedSecretsDeriveFailed, error: error, fields: fields)
+                throw error
+            }
+        }
+
         private static func recordKeyOperationFailed(
             _ event: OpalDiagnostics.Event,
             error: Swift.Error,

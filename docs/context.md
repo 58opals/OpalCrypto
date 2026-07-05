@@ -16,8 +16,8 @@ The supported public contract is the `OpalCrypto` namespace. The package is inte
 
 ## Boundaries and Non-Goals
 
-- In scope: facade-owned BCH cryptography for keys, secp256k1 signing and verification, hashing, encoding, PBKDF2 key derivation, and numeric helpers.
-- Out of scope: wallet account orchestration, BCH application-state management, protocol/runtime behavior, network transport, non-BCH scope, non-Swift scope, and exposing internal implementation models as supported API.
+- In scope: facade-owned BCH cryptography for keys, secp256k1 signing and verification, batch shared-secret computation, hashing, encoding, PBKDF2 key derivation, and numeric helpers.
+- Out of scope: wallet account orchestration, BCH application-state management, reusable payment address policy, address management, protocol/runtime behavior, network transport, non-BCH scope, non-Swift scope, and exposing internal implementation models as supported API.
 - Downstream code should depend on the public facade surface rather than internal source layout, implementation folders, or internal model names.
 
 See [engineering-principles.md](engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [performance-roadmap.md](performance-roadmap.md) for staged CPU optimization and [metal-readiness.md](metal-readiness.md) for the current Metal prototype gate.

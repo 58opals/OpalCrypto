@@ -100,4 +100,44 @@ extension PublicAPISecp256k1Validator {
 
         #expect(batchPublicKeys == singlePublicKeys)
     }
+
+    @Test("Batch shared-secret derivation matches single derivation")
+    func batchSharedSecretDerivationMatchesSingleDerivation() async throws {
+        let scanPrivateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: makePrivateKey(40)
+        )
+        let publicKeys = try [41, 42, 43, 44].map { index in
+            try OpalCrypto.Secp256k1.derivePublicKey(
+                from: OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: makePrivateKey(index))
+            )
+        }
+
+        let batchSharedSecrets = try await OpalCrypto.Secp256k1.deriveSharedSecrets(
+            privateKey: scanPrivateKey,
+            publicKeys: publicKeys
+        )
+        let singleSharedSecrets = try publicKeys.map { publicKey in
+            try OpalCrypto.Secp256k1.deriveSharedSecret(
+                privateKey: scanPrivateKey,
+                publicKey: publicKey
+            )
+        }
+
+        #expect(batchSharedSecrets == singleSharedSecrets)
+        #expect(batchSharedSecrets.map(\.rawRepresentation) == singleSharedSecrets.map(\.rawRepresentation))
+    }
+
+    @Test("Batch shared-secret derivation accepts empty public-key input")
+    func batchSharedSecretDerivationAcceptsEmptyPublicKeyInput() async throws {
+        let scanPrivateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: makePrivateKey(45)
+        )
+
+        let sharedSecrets = try await OpalCrypto.Secp256k1.deriveSharedSecrets(
+            privateKey: scanPrivateKey,
+            publicKeys: []
+        )
+
+        #expect(sharedSecrets.isEmpty)
+    }
 }

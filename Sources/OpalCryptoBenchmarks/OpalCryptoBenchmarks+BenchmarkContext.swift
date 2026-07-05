@@ -9,10 +9,16 @@ extension OpalCryptoBenchmarks {
         let singlePrivateKey: OpalCrypto.Secp256k1.PrivateKey
         let batch64PrivateKeyData: [Data]
         let batch64PrivateKeys: [OpalCrypto.Secp256k1.PrivateKey]
+        let batch64PublicKeys: [OpalCrypto.Secp256k1.PublicKey]
+        let batch64PublicKeyData: [Data]
         let batch256PrivateKeyData: [Data]
         let batch256PrivateKeys: [OpalCrypto.Secp256k1.PrivateKey]
+        let batch256PublicKeys: [OpalCrypto.Secp256k1.PublicKey]
+        let batch256PublicKeyData: [Data]
         let batch1024PrivateKeyData: [Data]
         let batch1024PrivateKeys: [OpalCrypto.Secp256k1.PrivateKey]
+        let batch1024PublicKeys: [OpalCrypto.Secp256k1.PublicKey]
+        let batch1024PublicKeyData: [Data]
         let batch256JacobianPointBuffer: BatchJacobianPointBuffer
         let batch1024JacobianPointBuffer: BatchJacobianPointBuffer
         let ecdsaMessage: Data
@@ -44,14 +50,26 @@ extension OpalCryptoBenchmarks {
             let batch64PrivateKeys = try batch64PrivateKeyData.map {
                 try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
             }
+            let batch64PublicKeys = try batch64PrivateKeys.map {
+                try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
+            }
+            let batch64PublicKeyData = batch64PublicKeys.map(\.rawRepresentation)
             let batch256PrivateKeyData = (1...256).map(makePrivateKey(index:))
             let batch256PrivateKeys = try batch256PrivateKeyData.map {
                 try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
             }
+            let batch256PublicKeys = try batch256PrivateKeys.map {
+                try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
+            }
+            let batch256PublicKeyData = batch256PublicKeys.map(\.rawRepresentation)
             let batch1024PrivateKeyData = (1...1024).map(makePrivateKey(index:))
             let batch1024PrivateKeys = try batch1024PrivateKeyData.map {
                 try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: $0)
             }
+            let batch1024PublicKeys = try batch1024PrivateKeys.map {
+                try OpalCrypto.Secp256k1.derivePublicKey(from: $0)
+            }
+            let batch1024PublicKeyData = batch1024PublicKeys.map(\.rawRepresentation)
             let batch256JacobianPointBuffer = try PerformanceBenchmarkOperations
                 .makeBatchJacobianPointBuffer(from: batch256PrivateKeyData)
             let batch1024JacobianPointBuffer = try PerformanceBenchmarkOperations
@@ -108,10 +126,16 @@ extension OpalCryptoBenchmarks {
                 singlePrivateKey: singlePrivateKey,
                 batch64PrivateKeyData: batch64PrivateKeyData,
                 batch64PrivateKeys: batch64PrivateKeys,
+                batch64PublicKeys: batch64PublicKeys,
+                batch64PublicKeyData: batch64PublicKeyData,
                 batch256PrivateKeyData: batch256PrivateKeyData,
                 batch256PrivateKeys: batch256PrivateKeys,
+                batch256PublicKeys: batch256PublicKeys,
+                batch256PublicKeyData: batch256PublicKeyData,
                 batch1024PrivateKeyData: batch1024PrivateKeyData,
                 batch1024PrivateKeys: batch1024PrivateKeys,
+                batch1024PublicKeys: batch1024PublicKeys,
+                batch1024PublicKeyData: batch1024PublicKeyData,
                 batch256JacobianPointBuffer: batch256JacobianPointBuffer,
                 batch1024JacobianPointBuffer: batch1024JacobianPointBuffer,
                 ecdsaMessage: ecdsaMessage,

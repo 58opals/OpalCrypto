@@ -71,6 +71,7 @@ enum OpalCryptoBenchmarks {
 
     static func benchmarkCases() -> [BenchmarkCase] {
         publicKeyBenchmarks()
+            + sharedSecretBenchmarks()
             + signatureBenchmarks()
             + keyDerivationBenchmarks()
             + encodingBenchmarks()
