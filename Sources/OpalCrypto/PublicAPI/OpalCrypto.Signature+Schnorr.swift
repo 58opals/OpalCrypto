@@ -127,7 +127,10 @@ extension OpalCrypto.Signature {
                 OpalDiagnostics.Field.algorithmField("schnorr"),
                 OpalDiagnostics.Field.formatField("bip340"),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count),
-                OpalDiagnostics.Field.publicField("verification_key_byte_count", verificationKey.rawRepresentation.count),
+                OpalDiagnostics.Field.publicField(
+                    "verification_key_byte_count",
+                    verificationKey.verificationKeyModel.compressedPublicKeyData.count
+                ),
                 OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
             ]
             Self.recordSchnorr(
@@ -135,11 +138,10 @@ extension OpalCrypto.Signature {
                 fields: fields
             )
             do {
-                let result = try OpalCrypto.Signature.verifyValidated(
-                    signature: rawRepresentation,
-                    message: digest.rawRepresentation,
-                    verificationKey: verificationKey,
-                    format: .schnorr
+                let result = try SchnorrSignatureModel.verify(
+                    signature: signatureModel,
+                    digestData32Bytes: digest.rawRepresentation,
+                    verificationKeyModel: verificationKey.verificationKeyModel
                 )
                 Self.recordSchnorr(
                     event: result

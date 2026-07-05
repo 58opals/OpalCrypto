@@ -26,7 +26,7 @@ extension ScalarMultiplicationModel {
     @inlinable
     static func addWindowedDigit(
         _ digit: Int8,
-        using table: InlineArray<8, AffinePointModel>,
+        using table: InlineArray<16, AffinePointModel>,
         to point: JacobianPointModel
     ) -> JacobianPointModel {
         guard digit != 0 else {

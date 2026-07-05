@@ -16,6 +16,7 @@ extension OpalCryptoBenchmarks {
         let batch256JacobianPointBuffer: BatchJacobianPointBuffer
         let batch1024JacobianPointBuffer: BatchJacobianPointBuffer
         let ecdsaMessage: Data
+        let ecdsaDigest: OpalCrypto.Signature.Digest
         let schnorrDigest: OpalCrypto.Signature.Digest
         let compressedPublicKey: OpalCrypto.Secp256k1.PublicKey
         let verificationKey: OpalCrypto.Signature.VerificationKey
@@ -56,6 +57,9 @@ extension OpalCryptoBenchmarks {
             let batch1024JacobianPointBuffer = try PerformanceBenchmarkOperations
                 .makeBatchJacobianPointBuffer(from: batch1024PrivateKeyData)
             let ecdsaMessage = Data("opalcrypto-benchmark-ecdsa".utf8)
+            let ecdsaDigest = try OpalCrypto.Signature.Digest(
+                rawRepresentation: OpalCrypto.Hashing.sha256(ecdsaMessage)
+            )
             let schnorrDigest = try OpalCrypto.Signature.Digest(
                 rawRepresentation: OpalCrypto.Hashing.sha256(
                     Data("opalcrypto-benchmark-schnorr".utf8)
@@ -111,6 +115,7 @@ extension OpalCryptoBenchmarks {
                 batch256JacobianPointBuffer: batch256JacobianPointBuffer,
                 batch1024JacobianPointBuffer: batch1024JacobianPointBuffer,
                 ecdsaMessage: ecdsaMessage,
+                ecdsaDigest: ecdsaDigest,
                 schnorrDigest: schnorrDigest,
                 compressedPublicKey: compressedPublicKey,
                 verificationKey: verificationKey,

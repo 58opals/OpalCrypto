@@ -19,6 +19,11 @@ struct PerformanceOptimizationArithmeticValidator {
             fieldElement.isQuadraticResidue
                 == (fieldElement.pow(exponentBits: FieldPowModel.legendreExponentBits) == .one)
         )
+
+        #expect(
+            FieldElementModel.three.isQuadraticResidue
+                == (FieldElementModel.three.pow(exponentBits: FieldPowModel.legendreExponentBits) == .one)
+        )
     }
 
     @Test("Field residue predicate treats zero as a residue")
@@ -74,6 +79,7 @@ struct PerformanceOptimizationArithmeticValidator {
     ) throws {
         let scalar = try testCase.scalar()
         expectFixedDigitsMatchReference(scalar, width: 5)
+        expectFixedDigitsMatchReference(scalar, width: 6)
     }
 
     private func expectFixedDigitsMatchReference(

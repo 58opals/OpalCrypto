@@ -96,9 +96,9 @@ extension ScalarMultiplicationModel {
 
     static func multiplyWindowedDigits(
         primaryDigits: SignedScalar128Model.WindowedNonAdjacentForm,
-        primaryTable: InlineArray<8, AffinePointModel>,
+        primaryTable: InlineArray<16, AffinePointModel>,
         secondaryDigits: SignedScalar128Model.WindowedNonAdjacentForm,
-        secondaryTable: InlineArray<8, AffinePointModel>
+        secondaryTable: InlineArray<16, AffinePointModel>
     ) -> JacobianPointModel {
         let maximumDigitCount = max(primaryDigits.count, secondaryDigits.count)
         var result = JacobianPointModel.infinity

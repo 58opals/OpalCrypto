@@ -40,6 +40,15 @@ struct JacobianPointModel: Sendable, Equatable {
         return AffinePointModel(x: x, y: y)
     }
 
+    @inlinable
+    func convertXToAffine() -> FieldElementModel? {
+        guard !isInfinity else {
+            return nil
+        }
+        let zInverse = Z.invert()
+        return X.mul(zInverse.square())
+    }
+
     func negate() -> JacobianPointModel {
         guard !isInfinity else {
             return self

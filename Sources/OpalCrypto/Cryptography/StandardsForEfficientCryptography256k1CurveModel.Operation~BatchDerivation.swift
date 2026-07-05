@@ -115,7 +115,8 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
 
 private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     static let minimumAutomaticParallelKeyCount = 256
-    static let minimumKeysPerTask = 256
+    static let minimumKeysPerTask = 128
+    static let minimumAutomaticParallelTaskCount = 4
 
     static func derivePublicKeys<PublicKey: Sendable>(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
@@ -153,6 +154,9 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         case .automatic:
             guard totalCount >= minimumAutomaticParallelKeyCount else {
                 return 1
+            }
+            if totalCount == minimumAutomaticParallelKeyCount {
+                return min(processorCount, minimumAutomaticParallelTaskCount)
             }
             return parallelBatchDerivationTaskCount(
                 totalCount: totalCount,

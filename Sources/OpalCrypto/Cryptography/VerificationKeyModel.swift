@@ -5,8 +5,8 @@ import Foundation
 struct VerificationKeyModel: Sendable, Equatable {
 
     let parsedPublicKeyModel: ParsedPublicKeyModel
-    let oddMultiplesAffine: InlineArray<8, AffinePointModel>
-    let endomorphismOddMultiplesAffine: InlineArray<8, AffinePointModel>
+    let oddMultiplesAffine: InlineArray<16, AffinePointModel>
+    let endomorphismOddMultiplesAffine: InlineArray<16, AffinePointModel>
 
     var compressedPublicKeyData: Data {
         parsedPublicKeyModel.compressedPublicKeyData

@@ -28,11 +28,11 @@ extension OpalCrypto.Signature.ECDSA {
             fields: fields
         )
         do {
-            let result = try OpalCrypto.Signature.verifyValidated(
-                signature: rawRepresentation,
-                message: message,
-                verificationKey: verificationKey,
-                format: format.internalFormat
+            let digestData32Bytes = SecureHashAlgorithm256Model.hash(message)
+            let result = try StandardsForEfficientCryptography256k1CurveModel.verify(
+                signature: signatureModel,
+                digestData32Bytes: digestData32Bytes,
+                verificationKeyModel: verificationKey.verificationKeyModel
             )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
                 event: result
@@ -45,7 +45,15 @@ extension OpalCrypto.Signature.ECDSA {
             )
             return result
         } catch {
-            let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
+            if OpalCrypto.Signature.isInvalidVerificationSignatureError(error) {
+                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
+                    event: OpalDiagnostics.Event.ecdsaVerifyFailed,
+                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyFailed),
+                    fields: fields + [OpalDiagnostics.Field.resultField(false)]
+                )
+                return false
+            }
+            let mappedError = OpalCrypto.Signature.mapCryptographyError(error)
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
                 event: OpalDiagnostics.Event.ecdsaVerifyFailed,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyFailed),
@@ -125,7 +133,10 @@ extension OpalCrypto.Signature.ECDSA {
             OpalDiagnostics.Field.algorithmField("ecdsa"),
             OpalDiagnostics.Field.formatField(format.diagnosticsName),
             payloadLengthField,
-            OpalDiagnostics.Field.publicField("verification_key_byte_count", verificationKey.rawRepresentation.count),
+            OpalDiagnostics.Field.publicField(
+                "verification_key_byte_count",
+                verificationKey.verificationKeyModel.compressedPublicKeyData.count
+            ),
             OpalDiagnostics.Field.signatureLengthField(rawRepresentation.count)
         ]
     }

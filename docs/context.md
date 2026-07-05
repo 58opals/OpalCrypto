@@ -20,6 +20,8 @@ The supported public contract is the `OpalCrypto` namespace. The package is inte
 - Out of scope: wallet account orchestration, BCH application-state management, protocol/runtime behavior, network transport, non-BCH scope, non-Swift scope, and exposing internal implementation models as supported API.
 - Downstream code should depend on the public facade surface rather than internal source layout, implementation folders, or internal model names.
 
+See [engineering-principles.md](engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [performance-roadmap.md](performance-roadmap.md) for staged CPU optimization and [metal-readiness.md](metal-readiness.md) for the current Metal prototype gate.
+
 ## Package Surfaces
 
 - `OpalCrypto`: library target and the only supported downstream integration contract.

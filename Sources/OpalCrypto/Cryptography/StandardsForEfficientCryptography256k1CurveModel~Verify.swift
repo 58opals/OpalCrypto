@@ -41,10 +41,10 @@ internal extension StandardsForEfficientCryptography256k1CurveModel {
             verificationKeyScalar: u2,
             verificationKeyModel: verificationKeyModel
         )
-        guard let candidateAffine = candidatePoint.convertToAffine() else {
+        guard let candidateX = candidatePoint.convertXToAffine() else {
             return false
         }
-        guard let candidateScalar = try? ScalarConversionModel.makeScalarFromFieldElement(candidateAffine.x) else {
+        guard let candidateScalar = try? ScalarConversionModel.makeScalarFromFieldElement(candidateX) else {
             return false
         }
         return candidateScalar == signatureRScalar
