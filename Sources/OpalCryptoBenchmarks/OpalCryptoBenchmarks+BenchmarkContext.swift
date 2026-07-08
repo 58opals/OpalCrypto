@@ -28,6 +28,7 @@ extension OpalCryptoBenchmarks {
         let verificationKey: OpalCrypto.Signature.VerificationKey
         let ecdsaSignature: OpalCrypto.Signature.ECDSA
         let schnorrSignature: OpalCrypto.Signature.Schnorr
+        let metalSchnorrVerificationInput: MetalSchnorrVerificationBenchmarkInput
         let mnemonic: OpalCrypto.Key.Mnemonic
         let mnemonicPhrase: String
         let basePayload: Data
@@ -99,6 +100,12 @@ extension OpalCryptoBenchmarks {
                 privateKey: singlePrivateKey,
                 noncePolicy: .bip340Deterministic
             )
+            let metalSchnorrVerificationInput = try PerformanceBenchmarkOperations
+                .makeMetalSchnorrVerificationInput(
+                    signature: schnorrSignature,
+                    digest: schnorrDigest,
+                    verificationKey: verificationKey
+                )
             let mnemonic = try OpalCrypto.Key.Mnemonic(
                 phrase: """
                 abandon abandon abandon abandon abandon abandon
@@ -145,6 +152,7 @@ extension OpalCryptoBenchmarks {
                 verificationKey: verificationKey,
                 ecdsaSignature: ecdsaSignature,
                 schnorrSignature: schnorrSignature,
+                metalSchnorrVerificationInput: metalSchnorrVerificationInput,
                 mnemonic: mnemonic,
                 mnemonicPhrase: mnemonic.phrase,
                 basePayload: basePayload,

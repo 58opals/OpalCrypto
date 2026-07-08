@@ -33,6 +33,35 @@ Run 2 compared with the CPU baselines:
 
 Decision: no-go for Metal acceleration in this slice. The probe does not perform GPU secp256k1 verification and does not demonstrate a 10% end-to-end win across two release runs. Keep Swift CPU as the default and only fallback path.
 
+## Stage 5 Real-Core Starting Point
+
+A follow-up benchmark-only prototype adds a public-data Schnorr verification core that performs secp256k1 field arithmetic, signed WNAF point multiplication, point addition, and the Schnorr candidate X/Jacobi checks in Metal. CPU-side benchmark support prepares the already-public signature/challenge WNAF digits and cached-key affine tables, then the Metal runtime validates every GPU result against the Swift CPU reference result.
+
+This is a GPU-core milestone, not an accepted end-to-end acceleration path. On the first naive release-mode run, `Metal Schnorr verify core (cached key, 256)` measured about 483904 us per 256-record batch. After switching to CPU-prepared WNAF digits, affine tables, and nibble exponentiation for the residue check, the same 256-record core measured about 147992 us, versus about 67473 us for `Batch Schnorr verify (cached key, 256)`. At 1024 records, `Metal Schnorr verify core (cached key, 1024)` measured about 162419 us, versus about 280380 us for `Batch Schnorr verify (cached key, 1024)`.
+
+Decision: keep the real-core Metal path benchmark-only. The 1024-record core result is the first useful GPU throughput signal, but acceptance still requires an end-to-end benchmark that includes CPU-side challenge preparation, WNAF/table preparation or caching policy, buffer setup, command scheduling, synchronization, readback, and CPU-side result validation across repeated release runs.
+
+## Stage 5 End-to-End Batch Result
+
+The next prototype step adds distinct Schnorr signatures and digests with a cached verification key, plus deliberate digest-mismatch negative records every 16th item. The Metal path now prepares per-record challenges and WNAF digits on CPU, reuses cached affine table words for the key, dispatches the Metal Schnorr core, reads back every result, and validates each result against the expected valid/invalid bit. Signing and fixture generation stay outside the measured operation. A follow-up width check moved the benchmark-only Metal WNAF path from width 6 to width 7, increasing cached odd multiples from 16 to 32 per component to reduce point additions.
+
+Captured on July 8, 2026 in release mode:
+
+| Workload | 1024 median | 4096 median | 8192 median |
+| --- | ---: | ---: | ---: |
+| Metal Schnorr prep (cached key) | 8.837 ms | 36.064 ms | 72.166 ms |
+| Metal Schnorr end-to-end (cached key) | 464.752 ms | 561.923 ms | 594.464 ms |
+| CPU Batch Schnorr distinct (cached key) | 291.627 ms | 1166.481 ms | 2324.008 ms |
+| CPU / Metal end-to-end ratio | 0.63x | 2.08x | 3.91x |
+
+Decision: still benchmark-only, but no longer a no-go on throughput. The end-to-end path loses at 1024 records because fixed Metal core and dispatch cost dominates, then wins at 4096 and 8192 records. This is not enough for acceptance because it is a single release-mode run and the speedup is still far below the original 450x target. A manual square-specialization experiment regressed end-to-end timing, while width 7 produced a modest repeatable win; the next engineering question is whether the Metal core can reduce its fixed cost and per-record field arithmetic cost enough to make medium batches profitable and large batches materially faster.
+
+## Current Closeout
+
+The Stage 5 Metal work should pause as a benchmark-only research artifact unless a product workload needs thousands of public Schnorr verifications in one batch. The current prototype proves that Apple Silicon Metal can beat the Swift CPU verifier for large public batches, but the best measured speedup is about 3.91x at 8192 records and the path still loses at 1024 records. That is not close to the original 450x target and does not justify production integration without a concrete large-batch caller.
+
+Future work should be evidence-gated. Use Metal counters or Instruments before changing the kernel further, and only continue if profiling points to a specific bottleneck such as field multiplication occupancy, residue exponentiation, memory pressure from per-record digits, or command scheduling overhead. Keep the CPU verifier as the accepted path and keep this Metal code benchmark-target-only.
+
 ## Candidate Selection
 
 Under the current no-secret-bearing-GPU boundary, the first Metal prototype candidate should be public batch verification, not private-key public-key derivation.
