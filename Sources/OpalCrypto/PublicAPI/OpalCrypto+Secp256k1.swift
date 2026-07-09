@@ -114,12 +114,15 @@ extension OpalCrypto {
                 )
             ]
             do {
-                let publicKeys = try await StandardsForEfficientCryptography256k1CurveModel.Operation
+                let parsedPublicKeys = try await StandardsForEfficientCryptography256k1CurveModel.Operation
                     .deriveParsedPublicKeys(
-                        fromPrivateKeys32: privateKeys.map(\.rawRepresentation),
-                        assumingValidPrivateKeys: true
+                        fromValidatedPrivateKeys: privateKeys
                     )
-                    .map(PublicKey.init(parsedPublicKeyModel:))
+                var publicKeys: [PublicKey] = .init()
+                publicKeys.reserveCapacity(parsedPublicKeys.count)
+                for parsedPublicKey in parsedPublicKeys {
+                    publicKeys.append(PublicKey(parsedPublicKeyModel: parsedPublicKey))
+                }
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                     event: OpalDiagnostics.Event.publicKeysDeriveSucceeded,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.publicKeysDeriveSucceeded),
@@ -158,10 +161,14 @@ extension OpalCrypto {
             do {
                 let sharedSecretData = try await StandardsForEfficientCryptography256k1CurveModel
                     .Operation.deriveSharedSecrets(
-                        privateKeyData32Bytes: privateKey.rawRepresentation,
-                        parsedPublicKeyModels: publicKeys.map(\.parsedPublicKeyModel)
+                        privateKey: privateKey,
+                        publicKeys: publicKeys
                     )
-                let sharedSecrets = sharedSecretData.map(SharedSecret.init(validatedRawRepresentation:))
+                var sharedSecrets: [SharedSecret] = .init()
+                sharedSecrets.reserveCapacity(sharedSecretData.count)
+                for sharedSecretDatum in sharedSecretData {
+                    sharedSecrets.append(SharedSecret(validatedRawRepresentation: sharedSecretDatum))
+                }
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                     event: OpalDiagnostics.Event.sharedSecretsDeriveSucceeded,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.sharedSecretsDeriveSucceeded),

@@ -47,6 +47,26 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         )
     }
 
+    static func deriveSharedSecrets(
+        privateKey: OpalCrypto.Secp256k1.PrivateKey,
+        publicKeys: [OpalCrypto.Secp256k1.PublicKey],
+        executionMode: SharedSecretBatchDerivationExecutionMode = .automatic
+    ) async throws -> [Data] {
+        guard !publicKeys.isEmpty else { return .init() }
+        let privateKeyScalar = try parsePrivateKeyScalarUnchecked(
+            privateKey.rawRepresentation,
+            requireNonZero: true
+        )
+        let scalarPlan = SharedSecretScalarMultiplicationPlan(
+            privateKeyScalar: privateKeyScalar
+        )
+        return try await deriveSharedSecrets(
+            scalarPlan: scalarPlan,
+            publicKeys: publicKeys,
+            executionMode: executionMode
+        )
+    }
+
     static func deriveSharedSecret(
         privateKeyScalar: ScalarModel,
         publicKeyAffine: AffinePointModel
@@ -101,6 +121,31 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         return try await deriveSharedSecretsInParallel(
             scalarPlan: scalarPlan,
             parsedPublicKeyModels: parsedPublicKeyModels,
+            chunkSize: chunkSize
+        )
+    }
+
+    static func deriveSharedSecrets(
+        scalarPlan: SharedSecretScalarMultiplicationPlan,
+        publicKeys: [OpalCrypto.Secp256k1.PublicKey],
+        executionMode: SharedSecretBatchDerivationExecutionMode
+    ) async throws -> [Data] {
+        let taskCount = sharedSecretBatchTaskCount(
+            totalCount: publicKeys.count,
+            executionMode: executionMode
+        )
+        guard taskCount >= 2 else {
+            return try deriveSharedSecrets(
+                scalarPlan: scalarPlan,
+                publicKeys: publicKeys,
+                startIndex: 0,
+                endIndex: publicKeys.count
+            )
+        }
+        let chunkSize = (publicKeys.count + taskCount - 1) / taskCount
+        return try await deriveSharedSecretsInParallel(
+            scalarPlan: scalarPlan,
+            publicKeys: publicKeys,
             chunkSize: chunkSize
         )
     }
@@ -183,6 +228,47 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         }
     }
 
+    static func deriveSharedSecretsInParallel(
+        scalarPlan: SharedSecretScalarMultiplicationPlan,
+        publicKeys: [OpalCrypto.Secp256k1.PublicKey],
+        chunkSize: Int
+    ) async throws -> [Data] {
+        let totalCount = publicKeys.count
+        let chunkCount = (totalCount + chunkSize - 1) / chunkSize
+        return try await withThrowingTaskGroup(of: (Int, [Data]).self) { group in
+            for chunkIndex in 0..<chunkCount {
+                let startIndex = chunkIndex * chunkSize
+                let endIndex = min(startIndex + chunkSize, totalCount)
+
+                group.addTask {
+                    let sharedSecrets = try deriveSharedSecrets(
+                        scalarPlan: scalarPlan,
+                        publicKeys: publicKeys,
+                        startIndex: startIndex,
+                        endIndex: endIndex
+                    )
+                    return (chunkIndex, sharedSecrets)
+                }
+            }
+
+            var chunkResults = Array<[Data]?>(repeating: nil, count: chunkCount)
+
+            for try await (chunkIndex, sharedSecrets) in group {
+                chunkResults[chunkIndex] = sharedSecrets
+            }
+
+            var sharedSecrets: [Data] = .init()
+            sharedSecrets.reserveCapacity(totalCount)
+            for chunkResult in chunkResults {
+                guard let chunkResult else {
+                    throw Error.invalidDerivedPublicKey
+                }
+                sharedSecrets.append(contentsOf: chunkResult)
+            }
+            return sharedSecrets
+        }
+    }
+
     static func deriveSharedSecrets(
         scalarPlan: SharedSecretScalarMultiplicationPlan,
         parsedPublicKeyModels: [ParsedPublicKeyModel],
@@ -194,6 +280,28 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         for index in startIndex..<endIndex {
             let verificationKeyModel = VerificationKeyModel(
                 parsedPublicKeyModel: parsedPublicKeyModels[index]
+            )
+            sharedSecrets.append(
+                try deriveSharedSecret(
+                    scalarPlan: scalarPlan,
+                    verificationKeyModel: verificationKeyModel
+                )
+            )
+        }
+        return sharedSecrets
+    }
+
+    static func deriveSharedSecrets(
+        scalarPlan: SharedSecretScalarMultiplicationPlan,
+        publicKeys: [OpalCrypto.Secp256k1.PublicKey],
+        startIndex: Int,
+        endIndex: Int
+    ) throws -> [Data] {
+        var sharedSecrets: [Data] = .init()
+        sharedSecrets.reserveCapacity(endIndex - startIndex)
+        for index in startIndex..<endIndex {
+            let verificationKeyModel = VerificationKeyModel(
+                parsedPublicKeyModel: publicKeys[index].parsedPublicKeyModel
             )
             sharedSecrets.append(
                 try deriveSharedSecret(

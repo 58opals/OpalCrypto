@@ -60,6 +60,20 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     }
 
     internal static func deriveParsedPublicKeys(
+        fromValidatedPrivateKeys privateKeys: [OpalCrypto.Secp256k1.PrivateKey],
+        executionMode: CompressedPublicKeyBatchDerivationExecutionMode = .automatic
+    ) async throws -> [ParsedPublicKeyModel] {
+        guard !privateKeys.isEmpty else { return .init() }
+        let privateKeyScalars = try parsePrivateKeyScalars(
+            fromValidatedPrivateKeys: privateKeys
+        )
+        return try await deriveParsedPublicKeys(
+            fromPrivateKeyScalars: privateKeyScalars,
+            executionMode: executionMode
+        )
+    }
+
+    internal static func deriveParsedPublicKeys(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
         executionMode: CompressedPublicKeyBatchDerivationExecutionMode
     ) async throws -> [ParsedPublicKeyModel] {
@@ -85,6 +99,24 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
                 try parsePrivateKeyScalar(privateKey32, requireNonZero: true)
             }
             privateKeyScalars.append(privateKeyScalar)
+        }
+
+        return privateKeyScalars
+    }
+
+    internal static func parsePrivateKeyScalars(
+        fromValidatedPrivateKeys privateKeys: [OpalCrypto.Secp256k1.PrivateKey]
+    ) throws -> [ScalarModel] {
+        var privateKeyScalars: [ScalarModel] = .init()
+        privateKeyScalars.reserveCapacity(privateKeys.count)
+
+        for privateKey in privateKeys {
+            privateKeyScalars.append(
+                try parsePrivateKeyScalarUnchecked(
+                    privateKey.rawRepresentation,
+                    requireNonZero: true
+                )
+            )
         }
 
         return privateKeyScalars
