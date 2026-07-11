@@ -15,12 +15,20 @@ internal enum WalletImportFormatCodec {
             throw Error.invalidPrivateKey
         }
 
-        var payload = Data([mainnetVersion])
-        payload.append(privateKey)
-        if isCompressed {
-            payload.append(0x01)
-        }
-        return Base58CheckCodec.encode(payload: payload)
+        return makeEncodedText(
+            privateKeyData32Bytes: privateKey,
+            isCompressed: isCompressed
+        )
+    }
+
+    internal static func encode(
+        privateKey: OpalCrypto.Secp256k1.PrivateKey,
+        isCompressed: Bool
+    ) -> String {
+        makeEncodedText(
+            privateKeyData32Bytes: privateKey.rawRepresentation,
+            isCompressed: isCompressed
+        )
     }
 
     internal static func decode(_ string: String) throws -> (privateKey: Data, isCompressed: Bool) {
@@ -69,5 +77,17 @@ internal enum WalletImportFormatCodec {
         default:
             throw Error.invalidPayloadLength(actual: payload.count)
         }
+    }
+
+    private static func makeEncodedText(
+        privateKeyData32Bytes: Data,
+        isCompressed: Bool
+    ) -> String {
+        var payload = Data([mainnetVersion])
+        payload.append(privateKeyData32Bytes)
+        if isCompressed {
+            payload.append(0x01)
+        }
+        return Base58CheckCodec.encode(payload: payload)
     }
 }

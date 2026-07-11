@@ -17,9 +17,9 @@ struct SecretMaterialDescriptionValidator {
         let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
             rawRepresentation: Data([0x03]) + Data(repeating: 0xA5, count: 31)
         )
-        let signingKey = try privateKey.makeSigningKey()
+        let signingKey = privateKey.makeSigningKey()
         let walletImportFormat = OpalCrypto.Key.WIF(privateKey: privateKey)
-        let walletImportFormatText = try walletImportFormat.serialize()
+        let walletImportFormatText = walletImportFormat.serialize()
         let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let sharedSecret = try OpalCrypto.Secp256k1.deriveSharedSecret(
             privateKey: privateKey,

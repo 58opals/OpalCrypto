@@ -10,7 +10,7 @@ extension DiagnosticsIntegrationValidator {
     func validateWIFParsingDoesNotEmitNestedPrivateKeyParseDiagnostics() throws {
         try withDiagnosticsCapture {
             let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(17)
-            let serialized = try OpalCrypto.Key.WIF(privateKey: privateKey).serialize()
+            let serialized = OpalCrypto.Key.WIF(privateKey: privateKey).serialize()
 
             OpalDiagnostics.clearRecentRecords()
 
@@ -32,7 +32,7 @@ extension DiagnosticsIntegrationValidator {
         try withDiagnosticsCapture {
             let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(19)
 
-            _ = try OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: false).serialize()
+            _ = OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: false).serialize()
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.wifSerializeSucceeded))
             #expect(record.category == OpalDiagnostics.Category.key)

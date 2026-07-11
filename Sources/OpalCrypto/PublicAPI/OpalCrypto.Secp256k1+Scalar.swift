@@ -3,6 +3,7 @@
 import Foundation
 
 extension OpalCrypto.Secp256k1 {
+    /// A secp256k1 scalar in the range `0..<n`.
     public struct Scalar: Sendable, Equatable {
         internal let scalarModel: ScalarModel
 
@@ -10,6 +11,7 @@ extension OpalCrypto.Secp256k1 {
             scalarModel.data32Bytes
         }
 
+        /// Parses an exactly 32-byte big-endian scalar representation.
         public init(rawRepresentation: Data) throws {
             do {
                 scalarModel = try ScalarModel(data32: rawRepresentation, requireNonZero: false)

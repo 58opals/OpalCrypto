@@ -34,6 +34,8 @@ extension OpalDiagnostics.Field {
 
     static func encodingErrorCode(for error: Swift.Error) -> OpalDiagnostics.ErrorCode? {
         switch error {
+        case OpalCrypto.Encoding.Base58DecodingError.invalidText:
+            OpalDiagnostics.ErrorCode.invalidBase58
         case OpalCrypto.Encoding.Error.invalidFiveBitValue:
             OpalDiagnostics.ErrorCode.invalidFiveBitValue
         case OpalCrypto.Encoding.Error.invalidCharacterFound:

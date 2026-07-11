@@ -34,7 +34,6 @@ actor MetalSchnorrBatchVerificationClient {
     var varyingKeyTableBuffer: (any MTLBuffer)?
     var cachedKeyTableIdentifier: Data?
     var cachedSharedGeneratorTableWords: [UInt32]?
-    var threadgroupWidth = 0
     #endif
 
     var hasPassedSelfTest = false
@@ -42,6 +41,7 @@ actor MetalSchnorrBatchVerificationClient {
     var isExecuting = false
     var executionWaiters: [UInt64: CheckedContinuation<Bool, Never>] = [:]
     var executionWaiterOrder: [UInt64] = []
+    var executionWaiterOrderHead = 0
     var nextExecutionWaiterIdentifier: UInt64 = 0
 
     init() {}

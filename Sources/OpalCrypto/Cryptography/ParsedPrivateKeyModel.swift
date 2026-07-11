@@ -38,11 +38,18 @@ struct ParsedPrivateKeyModel: Sendable, Equatable {
     }
 
     init(trustedScalar: ScalarModel) throws {
-        let publicPoint = ScalarMultiplicationModel.mulG(trustedScalar)
-        guard let publicAffine = publicPoint.convertToAffine() else {
+        guard !trustedScalar.isZero else {
             throw Error.invalidPrivateKey
         }
-        self.scalar = trustedScalar
+        self.init(validatedPrivateKeyScalar: trustedScalar)
+    }
+
+    init(validatedPrivateKeyScalar: ScalarModel) {
+        let publicPoint = ScalarMultiplicationModel.mulG(validatedPrivateKeyScalar)
+        guard let publicAffine = publicPoint.convertToAffine() else {
+            preconditionFailure("A validated nonzero private-key scalar must produce an affine public key.")
+        }
+        self.scalar = validatedPrivateKeyScalar
         self.parsedPublicKeyModel = ParsedPublicKeyModel(affinePoint: publicAffine)
     }
 }

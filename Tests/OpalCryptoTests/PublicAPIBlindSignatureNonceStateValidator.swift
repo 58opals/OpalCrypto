@@ -6,17 +6,17 @@ import Testing
 
 @Suite("Public API blind signature nonce-state validation")
 struct PublicAPIBlindSignatureNonceStateValidator {
-    @Test("Blind signer rejects nonce reuse")
-    func blindSignerRejectsNonceReuse() async throws {
+    @Test("Blind signOnce rejects nonce reuse")
+    func rejectBlindSignerNonceReuseThroughSignOnce() async throws {
         let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(7)
         let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let signer = try OpalCrypto.BlindSignature.Signer()
         let request = try makeRequest(publicKey: publicKey, signer: signer, digestByte: 0x7D)
 
-        _ = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
+        _ = try await signer.signOnce(privateKey: privateKey, requestScalar: request.scalar)
 
         do {
-            _ = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
+            _ = try await signer.signOnce(privateKey: privateKey, requestScalar: request.scalar)
             Issue.record("Expected nonce reuse rejection.")
         } catch let error as OpalCrypto.BlindSignature.Error {
             #expect(error == .nonceAlreadyUsed)

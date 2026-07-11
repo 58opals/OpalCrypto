@@ -4,6 +4,7 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Signature {
+    /// A 64-byte Bitcoin Cash Schnorr signature.
     public struct Schnorr: Sendable, Equatable {
         internal let signatureModel: SchnorrSignatureModel.Signature
 
@@ -11,6 +12,9 @@ extension OpalCrypto.Signature {
             signatureModel.raw64ByteSignatureData
         }
 
+        /// Validates a 64-byte Bitcoin Cash Schnorr signature.
+        ///
+        /// - Throws: ``OpalCrypto/Signature/Error/invalidSignatureLength(expected:actual:)`` for a non-64-byte representation, or ``OpalCrypto/Signature/Error/invalidSignature`` for invalid scalar components.
         public init(rawRepresentation: Data) throws {
             do {
                 signatureModel = try SchnorrSignatureModel.Signature(
@@ -29,6 +33,9 @@ extension OpalCrypto.Signature {
             self.signatureModel = signatureModel
         }
 
+        /// Signs a 32-byte digest with Bitcoin Cash Schnorr signing.
+        ///
+        /// The default nonce policy is deterministic BIP-340 derivation. The digest is not hashed again.
         public static func sign(
             digest: Digest,
             privateKey: OpalCrypto.Secp256k1.PrivateKey,
@@ -108,6 +115,7 @@ extension OpalCrypto.Signature {
             }
         }
 
+        /// Verifies this signature against an already computed 32-byte digest and public key.
         public func verify(
             digest: Digest,
             publicKey: OpalCrypto.Secp256k1.PublicKey
@@ -118,6 +126,7 @@ extension OpalCrypto.Signature {
             )
         }
 
+        /// Verifies this signature against an already computed 32-byte digest and prepared verification key.
         public func verify(
             digest: Digest,
             verificationKey: VerificationKey

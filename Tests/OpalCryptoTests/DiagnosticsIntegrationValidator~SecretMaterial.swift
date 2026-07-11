@@ -19,7 +19,7 @@ extension DiagnosticsIntegrationValidator {
             let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
                 rawRepresentation: Data([0x03]) + Data(repeating: 0xA5, count: 31)
             )
-            let walletImportFormatText = try OpalCrypto.Key.WIF(privateKey: privateKey).serialize()
+            let walletImportFormatText = OpalCrypto.Key.WIF(privateKey: privateKey).serialize()
             _ = try OpalCrypto.Key.WIF(walletImportFormatText)
             let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
             let sharedSecret = try OpalCrypto.Secp256k1.deriveSharedSecret(

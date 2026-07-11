@@ -1,66 +1,9 @@
-// OpalCryptoBenchmarks~MetalVerificationProbe.swift
-
-import Foundation
+// MetalVerificationProbeRuntime.swift
 
 #if canImport(Metal)
 import Metal
-#endif
 
-extension OpalCryptoBenchmarks {
-    enum MetalVerificationProbeError: Error, CustomStringConvertible {
-        case unavailable
-        case invalidResult(index: Int)
-        case commandBufferFailed(String)
-
-        var description: String {
-            switch self {
-            case .unavailable:
-                "Metal is not available on this platform."
-            case .invalidResult(let index):
-                "Metal verification probe produced an invalid result at index \(index)."
-            case .commandBufferFailed(let message):
-                "Metal verification probe command buffer failed: \(message)"
-            }
-        }
-    }
-
-    struct MetalVerificationProbeRecord {
-        var expected: UInt32
-        var tag: UInt32
-    }
-
-    enum MetalVerificationProbe {
-        static func run(expectedResults: [Bool], seed: UInt32) throws -> Int {
-            #if canImport(Metal)
-            try MetalVerificationProbeRuntime.shared.run(
-                records: makeRecords(expectedResults: expectedResults, seed: seed)
-            )
-            #else
-            throw MetalVerificationProbeError.unavailable
-            #endif
-        }
-
-        private static func makeRecords(
-            expectedResults: [Bool],
-            seed: UInt32
-        ) -> [MetalVerificationProbeRecord] {
-            var records: [MetalVerificationProbeRecord] = .init()
-            records.reserveCapacity(expectedResults.count)
-            for (index, expectedResult) in expectedResults.enumerated() {
-                records.append(
-                    MetalVerificationProbeRecord(
-                        expected: expectedResult ? 1 : 0,
-                        tag: seed &+ UInt32(index)
-                    )
-                )
-            }
-            return records
-        }
-    }
-}
-
-#if canImport(Metal)
-private final class MetalVerificationProbeRuntime: @unchecked Sendable {
+final class MetalVerificationProbeRuntime: @unchecked Sendable {
     static let shared = try! MetalVerificationProbeRuntime()
 
     private let device: MTLDevice
@@ -141,6 +84,9 @@ private final class MetalVerificationProbeRuntime: @unchecked Sendable {
             throw OpalCryptoBenchmarks.MetalVerificationProbeError.commandBufferFailed(message)
         }
 
+        // SAFETY: outputBuffer owns records.count initialized UInt32 slots for
+        // the duration of this synchronous readback, and every index below is
+        // bounded by records.indices.
         let output = outputBuffer.contents().bindMemory(
             to: UInt32.self,
             capacity: records.count

@@ -13,6 +13,10 @@ extension RIPEMD160Model {
 // MARK: - RIPEMD-160 Hashing
 extension RIPEMD160Model {
     mutating func update(data: Data) {
+        // SAFETY: The temporary allocation owns 16 initialized UInt32 words for
+        // this closure. Each raw projection spans exactly those 64 bytes, and
+        // every copied block is exactly 64 bytes. Supported Apple targets are
+        // little-endian, matching RIPEMD-160's message-word representation.
         withUnsafeTemporaryAllocation(of: UInt32.self, capacity: 16) { words in
             words.initialize(repeating: 0)
             var currentPosition = data.startIndex
@@ -51,6 +55,12 @@ extension RIPEMD160Model {
     }
 
     mutating func finalize() -> Data {
+        // SAFETY: The 16-word buffer is initialized before any raw projection,
+        // remains alive through compression, and has exactly 64 writable bytes.
+        // messageBuffer is at most one block, unwritten padding stays zero, and
+        // result.withUnsafeBytes is copied into Data before its array expires.
+        // Supported Apple targets are little-endian, matching RIPEMD-160's
+        // message-word and digest-byte representation.
         withUnsafeTemporaryAllocation(of: UInt32.self, capacity: 16) { words in
             words.initialize(repeating: 0)
             messageBuffer.append(0x80)

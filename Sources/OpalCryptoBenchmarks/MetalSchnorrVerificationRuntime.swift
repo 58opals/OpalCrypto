@@ -1,5 +1,12 @@
 // MetalSchnorrVerificationRuntime.swift
 
+// Line-count exception (performance-critical Metal kernel): Host-side ABI,
+// buffer layout, and embedded shader source stay adjacent so changes can be
+// reviewed against the same benchmark and validation contract. Evidence:
+// docs/metal-readiness.md and docs/benchmarks.md. Owner: Opal Crypto
+// maintainers. Revisit when the Metal record ABI or shader source moves into
+// OpalCryptoMetal.
+
 import Foundation
 import OpalCrypto
 

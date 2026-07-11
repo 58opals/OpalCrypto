@@ -3,6 +3,7 @@
 import Foundation
 
 extension OpalCrypto.Pedersen {
+    /// A Pedersen commitment together with the nonce needed to open it.
     public struct Commitment: Sendable, Equatable {
         internal let commitmentModel: PedersenModel.Commitment
 
@@ -18,6 +19,7 @@ extension OpalCrypto.Pedersen {
             self.commitmentModel = commitmentModel
         }
 
+        /// Returns whether two commitments contain the same setup, nonce, and point.
         public static func == (
             lhs: Commitment,
             rhs: Commitment

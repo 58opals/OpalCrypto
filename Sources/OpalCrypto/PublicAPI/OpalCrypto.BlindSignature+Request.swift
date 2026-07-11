@@ -4,13 +4,16 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.BlindSignature {
+    /// A blind Schnorr signature request and the state needed to finalize it.
     public struct Request: Sendable {
         internal let requestState: BlindSignatureModel.RequestState
 
+        /// The request scalar to send to the one-time signer.
         public var scalar: OpalCrypto.Secp256k1.Scalar {
             OpalCrypto.Secp256k1.Scalar(scalarModel: requestState.requestScalar)
         }
 
+        /// Creates a blind-signature request for a 32-byte message digest.
         public init(
             signerPublicKey: OpalCrypto.Secp256k1.PublicKey,
             noncePoint: OpalCrypto.Secp256k1.PublicKey,
@@ -51,9 +54,34 @@ extension OpalCrypto.BlindSignature {
             )
         }
 
+        /// Finalizes and verifies the blind Schnorr signature.
+        ///
+        /// - Throws: ``OpalCrypto/BlindSignature/Error/verificationFailed`` when
+        ///   the response cannot produce a valid signature for this request.
+        public func finalize(
+            responseScalar: OpalCrypto.Secp256k1.Scalar
+        ) throws -> OpalCrypto.Signature.Schnorr {
+            try finalize(responseScalar: responseScalar, verify: true)
+        }
+
+        /// Finalizes without verifying the resulting blind Schnorr signature.
+        ///
+        /// Use this only when verification is deliberately performed elsewhere.
+        /// Structural signature validation still applies.
+        public func finalizeWithoutVerification(
+            responseScalar: OpalCrypto.Secp256k1.Scalar
+        ) throws -> OpalCrypto.Signature.Schnorr {
+            try finalize(responseScalar: responseScalar, verify: false)
+        }
+
+        /// Finalizes with an explicitly selected verification policy.
+        ///
+        /// Prefer ``finalize(responseScalar:)`` or
+        /// ``finalizeWithoutVerification(responseScalar:)`` so the security
+        /// policy remains visible in the operation name.
         public func finalize(
             responseScalar: OpalCrypto.Secp256k1.Scalar,
-            verify: Bool = true
+            verify: Bool
         ) throws -> OpalCrypto.Signature.Schnorr {
             let fields = [
                 OpalDiagnostics.Field.operationField("unblind"),

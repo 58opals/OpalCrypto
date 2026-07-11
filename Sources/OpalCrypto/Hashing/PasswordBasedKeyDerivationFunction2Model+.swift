@@ -18,6 +18,9 @@ extension PasswordBasedKeyDerivationFunction2Model {
         if iterationCount > 1 {
             for _ in 2...iterationCount {
                 let authenticationCode = HMAC<SHA512>.authenticationCode(for: currentBlock, using: symmetricKey)
+                // SAFETY: HMAC<SHA512>.MAC exposes exactly sha512BlockSize
+                // initialized bytes for this closure. UInt8 has byte alignment,
+                // indices stay within that fixed digest, and no view escapes.
                 authenticationCode.withUnsafeBytes { buffer in
                     let bytes = buffer.bindMemory(to: UInt8.self)
                     for index in 0..<sha512BlockSize {

@@ -4,12 +4,16 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Signature {
+    /// An ECDSA signature and its serialized format.
     public struct ECDSA: Sendable, Equatable {
         internal let signatureModel: StandardsForEfficientCryptography256k1CurveModel.Signature
 
         public let format: ECDSAFormat
         public let rawRepresentation: Data
 
+        /// Validates a raw 64-byte or canonical DER-encoded ECDSA signature.
+        ///
+        /// - Throws: ``OpalCrypto/Signature/Error`` when the representation does not match `format` or contains invalid signature scalars.
         public init(
             rawRepresentation: Data,
             format: ECDSAFormat
@@ -47,10 +51,12 @@ extension OpalCrypto.Signature {
             }
         }
 
+        /// Returns this signature encoded in `format` without changing its scalar values.
         public func encoded(as format: ECDSAFormat) throws -> ECDSA {
             try ECDSA(signatureModel: signatureModel, format: format)
         }
 
+        /// Returns the equivalent low-S signature in the current serialized format.
         public func normalizedLowS() throws -> ECDSA {
             try ECDSA(
                 signatureModel: signatureModel.normalizeLowS(),

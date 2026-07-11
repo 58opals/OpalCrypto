@@ -25,6 +25,9 @@ extension NonceGeneratorModel {
                 
                 if counter != 0 {
                     var counterBigEndian = counter.bigEndian
+                    // SAFETY: raw borrows the initialized UInt32 only for this
+                    // closure, UInt8 has byte alignment, and append copies all
+                    // four bytes before the stack value's lifetime ends.
                     withUnsafeBytes(of: &counterBigEndian) { raw in
                         input.append(contentsOf: raw.bindMemory(to: UInt8.self))
                     }

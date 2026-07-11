@@ -107,6 +107,9 @@ extension ScalarModel {
     func iterateBigEndianBytes(_ body: (UInt8) -> Void) {
         for limbIndex in stride(from: 3, through: 0, by: -1) {
             var limb = value.limbs[limbIndex].bigEndian
+            // SAFETY: bytes borrows the initialized UInt64 only for this
+            // nonescaping closure, and each byte is consumed synchronously
+            // before the stack value's lifetime ends.
             withUnsafeBytes(of: &limb) { bytes in
                 for byte in bytes {
                     body(byte)

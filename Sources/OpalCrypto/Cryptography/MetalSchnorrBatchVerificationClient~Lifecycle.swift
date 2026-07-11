@@ -47,16 +47,20 @@ extension MetalSchnorrBatchVerificationClient {
     }
 
     func releaseExecution() {
-        while !executionWaiterOrder.isEmpty {
-            let identifier = executionWaiterOrder.removeFirst()
+        while executionWaiterOrderHead < executionWaiterOrder.count {
+            let identifier = executionWaiterOrder[executionWaiterOrderHead]
+            executionWaiterOrderHead += 1
             guard let continuation = executionWaiters.removeValue(
                 forKey: identifier
             ) else {
                 continue
             }
+            compactExecutionWaiterOrderIfNeeded()
             continuation.resume(returning: true)
             return
         }
+        executionWaiterOrder.removeAll(keepingCapacity: true)
+        executionWaiterOrderHead = 0
         isExecuting = false
     }
 
@@ -66,8 +70,18 @@ extension MetalSchnorrBatchVerificationClient {
         ) else {
             return
         }
-        executionWaiterOrder.removeAll { $0 == identifier }
         continuation.resume(returning: false)
+    }
+
+    private func compactExecutionWaiterOrderIfNeeded() {
+        if executionWaiterOrderHead == executionWaiterOrder.count {
+            executionWaiterOrder.removeAll(keepingCapacity: true)
+            executionWaiterOrderHead = 0
+        } else if executionWaiterOrderHead >= 64,
+                  executionWaiterOrderHead * 2 >= executionWaiterOrder.count {
+            executionWaiterOrder.removeFirst(executionWaiterOrderHead)
+            executionWaiterOrderHead = 0
+        }
     }
 
     func initializeRuntimeIfNeeded() throws {
@@ -122,9 +136,6 @@ extension MetalSchnorrBatchVerificationClient {
         self.cachedKeyPipeline = cachedKeyPipeline
         self.varyingKeyPipeline = varyingKeyPipeline
         self.countBuffer = countBuffer
-        threadgroupWidth = Self.resolveThreadgroupWidth(
-            pipeline: cachedKeyPipeline
-        )
         #else
         throw MetalSchnorrBatchVerificationError.unavailable
         #endif

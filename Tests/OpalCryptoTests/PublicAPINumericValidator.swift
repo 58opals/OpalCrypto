@@ -6,6 +6,23 @@ import OpalCrypto
 
 @Suite("Public API numeric validation")
 struct PublicAPINumericValidator {
+    @Test("Expose explicit big-endian numeric representations")
+    func exposeExplicitBigEndianNumericRepresentations() throws {
+        let bigInteger = OpalCrypto.Numeric.BigUnsignedInteger(
+            bigEndianRepresentation: Data([0x00, 0x01, 0x02])
+        )
+        let fixedWidthBytes = Data(repeating: 0, count: 30) + Data([0x01, 0x02])
+        let fixedWidthInteger = try OpalCrypto.Numeric.UInt256(
+            bigEndianRepresentation: fixedWidthBytes
+        )
+
+        #expect(bigInteger.bigEndianRepresentation == Data([0x01, 0x02]))
+        #expect(bigInteger.serialize() == bigInteger.bigEndianRepresentation)
+        #expect(OpalCrypto.Numeric.BigUnsignedInteger.zero.bigEndianRepresentation.isEmpty)
+        #expect(fixedWidthInteger.bigEndianRepresentation == fixedWidthBytes)
+        #expect(fixedWidthInteger.bytes32 == fixedWidthInteger.bigEndianRepresentation)
+    }
+
     @Test("Reject BigUnsignedInteger division by zero")
     func rejectBigUnsignedIntegerDivisionByZero() {
         var value = OpalCrypto.Numeric.BigUnsignedInteger(256)
@@ -29,6 +46,33 @@ struct PublicAPINumericValidator {
 
         #expect(value.serialize() == Data([0xFF, 0xFF, 0xFF, 0xFF]))
         #expect(remainder == 1)
+    }
+
+    @Test("Division preserves quotient and remainder identity across word boundaries")
+    func preserveDivisionIdentityAcrossWordBoundaries() throws {
+        let inputs: [(bytes: [UInt8], divisor: UInt64)] = [
+            ([], 58),
+            ([0x01], 1),
+            ([0x01], UInt64.max),
+            ([0xFF, 0xFF, 0xFF, 0xFF], 58),
+            ([0x01, 0x00, 0x00, 0x00, 0x00], UInt64(UInt32.max)),
+            ([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], UInt64.max),
+            ([0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x10],
+             0x0000_0001_0000_0001),
+            (Array(repeating: 0xFF, count: 64), 32)
+        ]
+
+        for input in inputs {
+            let original = OpalCrypto.Numeric.BigUnsignedInteger(Data(input.bytes))
+            var quotient = original
+            let remainder = try quotient.divide(by: input.divisor)
+            var reconstructed = quotient
+            reconstructed.multiply(by: input.divisor)
+            reconstructed.add(remainder)
+
+            #expect(remainder < input.divisor)
+            #expect(reconstructed == original)
+        }
     }
 
     @Test("Add a wide UInt64 into BigUnsignedInteger without trapping intermediate overflow")
@@ -59,6 +103,25 @@ struct PublicAPINumericValidator {
         #expect(value.shiftRight(byBytes: oversizedByteCount).isZero)
         #expect(value.shiftLeft(byBytes: oversizedByteCount).isZero)
         #expect(OpalCrypto.Numeric.BigUnsignedInteger.zero.shiftLeft(byBytes: oversizedByteCount).isZero)
+    }
+
+    @Test("Throw when a nonzero BigUnsignedInteger left shift cannot be represented")
+    func throwWhenBigUnsignedIntegerLeftShiftCannotBeRepresented() throws {
+        let oversizedByteCount = UInt(Int.max) + 1
+        let value = OpalCrypto.Numeric.BigUnsignedInteger(1)
+
+        #expect(
+            throws: OpalCrypto.Numeric.BigUnsignedInteger.LeftShiftError.exceedsRepresentableSize(
+                byteCount: oversizedByteCount
+            )
+        ) {
+            _ = try value.shiftedLeft(byBytes: oversizedByteCount)
+        }
+        #expect(
+            try OpalCrypto.Numeric.BigUnsignedInteger.zero
+                .shiftedLeft(byBytes: oversizedByteCount)
+                .isZero
+        )
     }
 
     @Test(

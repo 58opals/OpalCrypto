@@ -4,9 +4,14 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Communication {
+    /// An authenticated communication ciphertext envelope.
     public struct Ciphertext: Sendable, Equatable {
+        /// The complete serialized ciphertext envelope.
         public let rawRepresentation: Data
 
+        /// Validates and imports a serialized ciphertext envelope.
+        ///
+        /// - Throws: ``OpalCrypto/Communication/Error/invalidCiphertext`` when the envelope is shorter than the authenticated format requires.
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("ciphertext_parse"),

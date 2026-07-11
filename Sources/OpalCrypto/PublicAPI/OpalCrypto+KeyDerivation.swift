@@ -6,11 +6,45 @@ import OpalDiagnostics
 extension OpalCrypto {
     public enum KeyDerivation {
 
+        /// Derives a key with PBKDF2 using HMAC-SHA-512.
+        ///
+        /// This source-compatible entry point uses the same algorithm as
+        /// ``derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:)``.
+        /// Prefer that explicitly named operation in new code.
+        ///
+        /// - Parameter derivedKeyLength: The requested byte count, or `nil` for
+        ///   the default 64-byte output.
         public static func derivePBKDF2Key(
             password: Data,
             salt: Salt,
             iterationCount: Int,
-            derivedKeyLength: Int?
+            derivedKeyLength: Int? = nil
+        ) throws -> DerivedKey {
+            try derivePBKDF2SHA512Key(
+                password: password,
+                salt: salt,
+                iterationCount: iterationCount,
+                derivedKeyLength: derivedKeyLength
+            )
+        }
+
+        /// Derives a key with PBKDF2 using HMAC-SHA-512.
+        ///
+        /// - Parameters:
+        ///   - password: Secret password bytes. Diagnostics record only the byte
+        ///     count and never the password material.
+        ///   - salt: A nonempty salt value.
+        ///   - iterationCount: A positive number of pseudorandom-function rounds.
+        ///   - derivedKeyLength: The requested byte count. The default is 64 bytes.
+        /// - Returns: A key containing exactly `derivedKeyLength` bytes, or 64
+        ///   bytes when the argument is omitted.
+        /// - Throws: ``OpalCrypto/KeyDerivation/Error`` when the salt, iteration
+        ///   count, or requested length is invalid.
+        public static func derivePBKDF2SHA512Key(
+            password: Data,
+            salt: Salt,
+            iterationCount: Int,
+            derivedKeyLength: Int? = nil
         ) throws -> DerivedKey {
             let resolvedDerivedKeyLength = derivedKeyLength
                 ?? PasswordBasedKeyDerivationFunction2Model.defaultDerivedKeyLength

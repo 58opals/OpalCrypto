@@ -11,14 +11,10 @@ extension OpalCrypto.Secp256k1 {
         internal let parsedPrivateKeyModel: ParsedPrivateKeyModel
 
         /// Creates a signing capability from an existing private-key value.
-        public init(privateKey: PrivateKey) throws {
-            do {
-                self.parsedPrivateKeyModel = try ParsedPrivateKeyModel(
-                    privateKeyData32Bytes: privateKey.rawRepresentation
-                )
-            } catch let error as ParsedPrivateKeyModel.Error {
-                throw Self.mapParsedPrivateKeyError(error)
-            }
+        public init(privateKey: PrivateKey) {
+            self.parsedPrivateKeyModel = ParsedPrivateKeyModel(
+                validatedPrivateKeyScalar: privateKey.scalarModel
+            )
         }
 
         /// Imports raw secp256k1 private-key bytes as an opaque signing capability.
@@ -67,8 +63,24 @@ extension OpalCrypto.Secp256k1 {
             )
         }
 
-        /// Signs a message with deterministic ECDSA by default.
+        /// Hashes `message` once with SHA-256, then signs that digest with ECDSA.
+        ///
+        /// Prefer ``signECDSASHA256(message:format:noncePolicy:)`` in new code
+        /// when the hashing contract should be explicit at the call site.
         public func signECDSA(
+            message: Data,
+            format: OpalCrypto.Signature.ECDSAFormat = .der,
+            noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy = .rfc6979
+        ) throws -> OpalCrypto.Signature.ECDSA {
+            try signECDSASHA256(
+                message: message,
+                format: format,
+                noncePolicy: noncePolicy
+            )
+        }
+
+        /// Hashes `message` once with SHA-256, then signs that digest with ECDSA.
+        public func signECDSASHA256(
             message: Data,
             format: OpalCrypto.Signature.ECDSAFormat = .der,
             noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy = .rfc6979

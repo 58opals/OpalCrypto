@@ -26,27 +26,34 @@ internal struct Base32EncodingCodec {
     internal static func encode(_ data: Data, interpretedAsFiveBitValues: Bool) throws -> String {
         switch interpretedAsFiveBitValues {
         case true:
-            var result = String()
-            result.reserveCapacity(data.count)
             for value in data {
                 guard value < UInt8(characters.count) else {
                     throw Error.invalidFiveBitValue(actual: value)
                 }
-                result.append(characters[Int(value)])
             }
-            return result
+            return encodeValidatedFiveBitValues(data)
         case false:
-            let leadingZeroByteCount = data.prefix(while: { $0 == 0 }).count
-            var value = LargeUnsignedIntegerArithmeticModel(data)
-            var charactersResult: [Character] = .init()
-            charactersResult.reserveCapacity(Swift.max(1, data.count * 2))
-            while !value.isZero {
-                let remainder = value.divide(by: UInt64(baseNumber))
-                charactersResult.append(characters[Int(remainder)])
-            }
-            let leadingZeroPrefix = String(repeating: String(zeroCharacter), count: leadingZeroByteCount)
-            return leadingZeroPrefix + String(charactersResult.reversed())
+            return encodeBytes(data)
         }
+    }
+
+    internal static func encodeBytes(_ data: Data) -> String {
+        let leadingZeroByteCount = data.prefix(while: { $0 == 0 }).count
+        var value = LargeUnsignedIntegerArithmeticModel(data)
+        var charactersResult: [Character] = .init()
+        charactersResult.reserveCapacity(Swift.max(1, data.count * 2))
+        while !value.isZero {
+            let remainder = value.divide(by: UInt64(baseNumber))
+            charactersResult.append(characters[Int(remainder)])
+        }
+        let leadingZeroPrefix = String(repeating: String(zeroCharacter), count: leadingZeroByteCount)
+        return leadingZeroPrefix + String(charactersResult.reversed())
+    }
+
+    internal static func encodeFiveBitValues(
+        _ values: OpalCrypto.Encoding.FiveBitValues
+    ) -> String {
+        encodeValidatedFiveBitValues(values.rawRepresentation)
     }
 
     internal static func decode(_ string: String, interpretedAsFiveBitValues: Bool) throws -> Data {
@@ -91,6 +98,15 @@ internal struct Base32EncodingCodec {
             throw Error.invalidCharacterFound
         }
         return Int(index)
+    }
+
+    private static func encodeValidatedFiveBitValues(_ data: Data) -> String {
+        var result = String()
+        result.reserveCapacity(data.count)
+        for value in data {
+            result.append(characters[Int(value)])
+        }
+        return result
     }
 
     private static func hasMixedCaseLetters(_ string: String) -> Bool {

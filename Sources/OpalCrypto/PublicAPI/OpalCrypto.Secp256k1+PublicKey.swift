@@ -4,6 +4,7 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Secp256k1 {
+    /// A validated secp256k1 public key with canonical compressed output.
     public struct PublicKey: Sendable, Equatable {
         internal let parsedPublicKeyModel: ParsedPublicKeyModel
 
@@ -19,6 +20,10 @@ extension OpalCrypto.Secp256k1 {
             parsedPublicKeyModel.affinePoint.encodeUncompressed65()
         }
 
+        /// Parses a compressed or uncompressed SEC1 public key.
+        ///
+        /// `rawRepresentation` and `compressedRepresentation` always return the
+        /// canonical 33-byte compressed encoding after import.
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("public_key_parse"),

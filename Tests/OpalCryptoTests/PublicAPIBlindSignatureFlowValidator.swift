@@ -17,10 +17,14 @@ struct PublicAPIBlindSignatureFlowValidator {
             noncePoint: signer.noncePoint,
             messageDigest: digest
         )
-        let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
+        let response = try await signer.signOnce(privateKey: privateKey, requestScalar: request.scalar)
         let signature = try request.finalize(responseScalar: response)
+        let unverifiedSignature = try request.finalizeWithoutVerification(responseScalar: response)
+        let legacyUnverifiedSignature = try request.finalize(responseScalar: response, verify: false)
 
         #expect(try signature.verify(digest: digest, publicKey: publicKey))
+        #expect(unverifiedSignature == signature)
+        #expect(legacyUnverifiedSignature == signature)
     }
 
     @Test("Blind signature finalization rejects tampered responses")
@@ -85,7 +89,7 @@ struct PublicAPIBlindSignatureFlowValidator {
         )
 
         do {
-            _ = try request.finalize(responseScalar: cancelingResponse, verify: false)
+            _ = try request.finalizeWithoutVerification(responseScalar: cancelingResponse)
             Issue.record("Expected zero signature-scalar rejection.")
         } catch let error as OpalCrypto.BlindSignature.Error {
             #expect(error == .verificationFailed)

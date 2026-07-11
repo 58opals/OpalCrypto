@@ -4,6 +4,7 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Signature {
+    /// A prepared secp256k1 public key for repeated signature verification.
     public struct VerificationKey: Sendable, Equatable {
 
         internal let verificationKeyModel: VerificationKeyModel
@@ -16,12 +17,16 @@ extension OpalCrypto.Signature {
             OpalCrypto.Secp256k1.PublicKey(verificationKeyModel: verificationKeyModel)
         }
 
+        /// Prepares an already validated public key for repeated verification.
         public init(publicKey: OpalCrypto.Secp256k1.PublicKey) {
             verificationKeyModel = VerificationKeyModel(
                 parsedPublicKeyModel: publicKey.parsedPublicKeyModel
             )
         }
 
+        /// Validates SEC1 public-key bytes and prepares them for repeated verification.
+        ///
+        /// Both compressed 33-byte and uncompressed 65-byte SEC1 inputs are accepted. ``rawRepresentation`` returns the canonical compressed 33-byte form.
         public init(rawRepresentation: Data) throws {
             let fields = Self.parseFields(rawRepresentation: rawRepresentation)
             do {
@@ -85,6 +90,7 @@ extension OpalCrypto.Signature {
             self.verificationKeyModel = verificationKeyModel
         }
 
+        /// Returns whether both values represent the same secp256k1 public point.
         public static func == (
             lhs: VerificationKey,
             rhs: VerificationKey

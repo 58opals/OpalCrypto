@@ -5,6 +5,7 @@ import OpalDiagnostics
 
 extension OpalCrypto {
     public enum Hashing {
+        /// Returns the 32-byte SHA-256 digest of `data`.
         public static func sha256(_ data: Data) -> Data {
             let digest = SecureHashAlgorithm256Model.hash(data)
             recordHashingSucceeded(
@@ -16,6 +17,7 @@ extension OpalCrypto {
             return digest
         }
 
+        /// Returns SHA-256(SHA-256(`data`)) as 32 bytes.
         public static func hash256(_ data: Data) -> Data {
             let digest = SecureHash256Model.hash(data)
             recordHashingSucceeded(
@@ -27,6 +29,7 @@ extension OpalCrypto {
             return digest
         }
 
+        /// Returns RIPEMD-160(SHA-256(`data`)) as 20 bytes.
         public static func hash160(_ data: Data) -> Data {
             let digest = SecureHash160Model.hash(data)
             recordHashingSucceeded(
@@ -38,6 +41,7 @@ extension OpalCrypto {
             return digest
         }
 
+        /// Returns the 64-byte HMAC-SHA-512 authentication code for `data`.
         public static func hmacSHA512(data: Data, key: Data) -> Data {
             let digest = HashBasedMessageAuthenticationCodeSecureHashAlgorithm512Model
                 .hash(data, key: key)
@@ -52,6 +56,7 @@ extension OpalCrypto {
             return digest
         }
 
+        /// Returns the 32-byte HMAC-SHA-256 authentication code for `data`.
         public static func hmacSHA256(data: Data, key: Data) -> Data {
             let digest = HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
                 .hash(data, key: key)

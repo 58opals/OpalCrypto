@@ -23,7 +23,7 @@ extension OpalCryptoBenchmarks {
 
             for index in 0..<Self.maximumCount {
                 let privateKey = try Self.makePrivateKey(index: index)
-                let signingKey = try privateKey.makeSigningKey()
+                let signingKey = privateKey.makeSigningKey()
                 let digest = try OpalCrypto.Signature.Digest(
                     rawRepresentation: OpalCrypto.Hashing.sha256(
                         Data("opalcrypto-metal-schnorr-varying-\(index)".utf8)

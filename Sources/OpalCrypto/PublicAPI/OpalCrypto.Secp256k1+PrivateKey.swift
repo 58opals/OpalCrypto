@@ -8,6 +8,8 @@ extension OpalCrypto.Secp256k1 {
     ///
     /// `PrivateKey` is secret-bearing key material. Its raw representation can sign messages, derive public keys, and derive shared secrets, so keep it behind explicit secret-access or signing/authoring boundaries.
     public struct PrivateKey: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
+        internal let scalarModel: ScalarModel
+
         /// The raw 32-byte private key.
         ///
         /// This value is secret-bearing and must not be logged or included in diagnostics.
@@ -17,6 +19,7 @@ extension OpalCrypto.Secp256k1 {
         ///
         /// Diagnostics record only public-safe metadata such as byte count, curve name, and error code.
         public init(rawRepresentation: Data) throws {
+            let normalizedRawRepresentation = Data(rawRepresentation)
             let fields = [
                 OpalDiagnostics.Field.operationField("private_key_parse"),
                 OpalDiagnostics.Field.algorithmField("secp256k1"),
@@ -24,8 +27,13 @@ extension OpalCrypto.Secp256k1 {
                 OpalDiagnostics.Field.inputLengthField(rawRepresentation.count)
             ]
             do {
-                try OpalCrypto.Secp256k1.validatePrivateKey(rawRepresentation)
-            } catch let error as Error {
+                self.scalarModel = try StandardsForEfficientCryptography256k1CurveModel.Operation
+                    .parsePrivateKeyScalar(
+                        normalizedRawRepresentation,
+                        requireNonZero: true
+                    )
+            } catch let operationError as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
+                let error = OpalCrypto.Secp256k1.mapOperationError(operationError)
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                     event: OpalDiagnostics.Event.privateKeyParseFailed,
                     level: .opalCryptoDefault(for: OpalDiagnostics.Event.privateKeyParseFailed),
@@ -33,7 +41,7 @@ extension OpalCrypto.Secp256k1 {
                 )
                 throw error
             }
-            self.rawRepresentation = Data(rawRepresentation)
+            self.rawRepresentation = normalizedRawRepresentation
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.key).record(
                 event: OpalDiagnostics.Event.privateKeyParseSucceeded,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.privateKeyParseSucceeded),
@@ -54,14 +62,29 @@ extension OpalCrypto.Secp256k1 {
         }
 
         internal init(validatedRawRepresentation: Data) {
-            self.rawRepresentation = Data(validatedRawRepresentation)
+            let normalizedRawRepresentation = Data(validatedRawRepresentation)
+            guard let scalarModel = try? StandardsForEfficientCryptography256k1CurveModel.Operation
+                .parsePrivateKeyScalar(
+                    normalizedRawRepresentation,
+                    requireNonZero: true
+                ) else {
+                preconditionFailure("A validated private-key representation must contain a nonzero scalar.")
+            }
+            self.rawRepresentation = normalizedRawRepresentation
+            self.scalarModel = scalarModel
+        }
+
+        internal init(validatedScalarModel: ScalarModel) {
+            precondition(!validatedScalarModel.isZero)
+            self.rawRepresentation = validatedScalarModel.data32Bytes
+            self.scalarModel = validatedScalarModel
         }
 
         /// Creates an opaque signing capability from this private key.
         ///
         /// Prefer retaining the returned `SigningKey` for signing workflows instead of repeatedly reading raw private-key bytes.
-        public func makeSigningKey() throws -> SigningKey {
-            try SigningKey(privateKey: self)
+        public func makeSigningKey() -> SigningKey {
+            SigningKey(privateKey: self)
         }
 
         /// Generates a new secp256k1 private key with secure randomness.

@@ -11,6 +11,11 @@ extension JacobianPointModel {
         assert(points.allSatisfy { !$0.isInfinity })
 
         if points.count <= temporaryAllocationThreshold {
+            // SAFETY: Both buffers have points.count elements. The forward pass
+            // initializes every prefix product before the reverse pass reads it,
+            // and the reverse pass assigns every result index exactly once before
+            // initializedCount exposes the array. Neither buffer escapes its
+            // allocation closure.
             return Array(unsafeUninitializedCapacity: points.count) { buffer, initializedCount in
                 withUnsafeTemporaryAllocation(
                     of: FieldElementModel.self,
@@ -53,6 +58,9 @@ extension JacobianPointModel {
         }
 
         var inverseAccumulator = productAccumulator.invert()
+        // SAFETY: The result buffer has points.count elements, and the reverse
+        // loop initializes each valid index exactly once before initializedCount
+        // exposes the array. The pointer remains scoped to this closure.
         return Array(unsafeUninitializedCapacity: points.count) { buffer, initializedCount in
             for index in points.indices.reversed() {
                 let point = points[index]
@@ -85,6 +93,9 @@ extension JacobianPointModel {
         guard !pointIndices.isEmpty else { return results }
 
         if pointIndices.count <= temporaryAllocationThreshold {
+            // SAFETY: prefixProducts has pointIndices.count elements. The
+            // forward pass initializes every position before the reverse pass
+            // reads it, and the temporary pointer cannot escape this closure.
             return withUnsafeTemporaryAllocation(of: FieldElementModel.self, capacity: pointIndices.count) { prefixProducts in
                 var productAccumulator = FieldElementModel.one
                 for (position, index) in pointIndices.enumerated() {

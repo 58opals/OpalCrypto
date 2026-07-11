@@ -5,6 +5,7 @@ import OpalDiagnostics
 
 extension OpalCrypto {
     public enum Signature {
+        /// Derives and prepares the verification key corresponding to `privateKey`.
         public static func deriveVerificationKey(
             from privateKey: OpalCrypto.Secp256k1.PrivateKey
         ) throws -> VerificationKey {

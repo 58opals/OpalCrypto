@@ -34,7 +34,7 @@ struct PublicAPIHashingEncodingValidator {
         let base32FiveBitValues = try OpalCrypto.Encoding.FiveBitValues(
             rawRepresentation: base32FiveBitInput
         )
-        let base32Encoded = try OpalCrypto.Encoding.encodeBase32Values(base32FiveBitValues)
+        let base32Encoded = OpalCrypto.Encoding.encodeBase32(values: base32FiveBitValues)
         let base32Decoded = try OpalCrypto.Encoding.decodeBase32Values(base32Encoded)
         #expect(base32Decoded.rawRepresentation == base32FiveBitInput)
         #expect(

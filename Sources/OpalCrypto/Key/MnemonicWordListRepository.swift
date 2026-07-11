@@ -70,9 +70,3 @@ internal enum MnemonicWordListRepository {
         return WordListData(words: words, indexLookup: indexLookup)
     }
 }
-
-internal extension OpalCrypto.Key.Mnemonic.Word.Language {
-    var resourceName: String {
-        rawValue
-    }
-}

@@ -14,6 +14,9 @@ extension ExtendedKeyDerivationModel {
         if isHardened(index) {
             var digestInput = Data(count: 37)
             digestInput.withUnsafeMutableBytes { rawBuffer in
+                // SAFETY: Data(count: 37) guarantees nonempty, contiguous,
+                // writable storage for this closure. UInt8 requires byte
+                // alignment, and the 1 + 32 + 4 byte writes exactly fill it.
                 let destination = rawBuffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 destination[0] = 0x00
                 parentPrivateKeyData32Bytes.copyBytes(
@@ -39,6 +42,9 @@ extension ExtendedKeyDerivationModel {
 
         var digestInput = Data(count: 37)
         digestInput.withUnsafeMutableBytes { rawBuffer in
+            // SAFETY: Data(count: 37) guarantees nonempty, contiguous, writable
+            // storage for this closure. UInt8 requires byte alignment, and the
+            // 33-byte key plus 4-byte index exactly fill the allocation.
             let destination = rawBuffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
             parentCompressedPublicKeyData.copyBytes(to: destination, count: 33)
             writeUInt32BigEndian(index, to: destination.advanced(by: 33))

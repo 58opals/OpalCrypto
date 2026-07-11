@@ -5,6 +5,10 @@ import OpalDiagnostics
 
 
 extension OpalCrypto.Communication {
+    /// Decrypts an authenticated ciphertext with its recipient private key.
+    ///
+    /// - Returns: The original message and the derived symmetric key, which can decrypt other envelopes created with that key.
+    /// - Throws: ``OpalCrypto/Communication/Error/invalidCiphertext`` for an invalid envelope or authentication failure, and mapped key or cryptographic errors.
     public static func decrypt(
         _ ciphertext: Ciphertext,
         privateKey: OpalCrypto.Secp256k1.PrivateKey
@@ -47,6 +51,10 @@ extension OpalCrypto.Communication {
         }
     }
 
+    /// Decrypts an authenticated ciphertext with a previously derived symmetric key.
+    ///
+    /// - Returns: The original unpadded message.
+    /// - Throws: ``OpalCrypto/Communication/Error/invalidCiphertext`` for an invalid envelope or authentication failure, and mapped key or cryptographic errors.
     public static func decrypt(
         _ ciphertext: Ciphertext,
         symmetricKey: SymmetricKey

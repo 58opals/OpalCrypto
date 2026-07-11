@@ -4,6 +4,9 @@ import Foundation
 
 extension RIPEMD160Model {
     mutating func compress(_ X: UnsafePointer<UInt32>) {
+        // SAFETY: All callers pass the base address of a live 16-word temporary
+        // allocation and keep it alive for this synchronous call, so accesses
+        // X[0] through X[15] are initialized, aligned, and in bounds.
         var (a1, b1, c1, d1, e1) = hashState
         var (a2, b2, c2, d2, e2) = hashState
 

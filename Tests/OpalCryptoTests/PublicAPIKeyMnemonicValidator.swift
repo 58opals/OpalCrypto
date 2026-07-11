@@ -16,6 +16,11 @@ struct PublicAPIKeyMnemonicValidator {
         #expect(englishWords[0] == .init("abandon"))
         #expect(englishWords.contains(.init("about")))
         #expect(englishWords.index(of: .init("about")) == 3)
+        #expect(englishWords.firstIndex(of: .init("about")) == 3)
+        #expect(englishWords.index(englishWords.startIndex, offsetBy: 3) == 3)
+        #expect(Array(englishWords.prefix(4)) == [
+            .init("abandon"), .init("ability"), .init("able"), .init("about")
+        ])
         #expect(koreanWords[0] == .init("가격"))
         #expect(koreanWords.contains(.init("가능")))
     }

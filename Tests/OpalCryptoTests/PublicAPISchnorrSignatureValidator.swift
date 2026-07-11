@@ -25,7 +25,7 @@ struct PublicAPISchnorrSignatureValidator {
     @Test("SigningKey Schnorr signing matches legacy deterministic output")
     func signingKeySchnorrSigningMatchesLegacyDeterministicOutput() throws {
         let privateKey = try makePrivateKey(2)
-        let signingKey = try privateKey.makeSigningKey()
+        let signingKey = privateKey.makeSigningKey()
         let digest = try OpalCrypto.Signature.Digest(
             rawRepresentation: Data(repeating: 0xCD, count: 32)
         )

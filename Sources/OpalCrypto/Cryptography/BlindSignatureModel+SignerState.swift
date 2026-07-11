@@ -32,7 +32,7 @@ extension BlindSignatureModel {
                 throw Error.invalidRequestLength(actual: requestScalarData32Bytes.count)
             }
 
-            guard let nonceScalar else {
+            guard nonceScalar != nil else {
                 throw Error.nonceAlreadyUsed
             }
 
@@ -56,11 +56,24 @@ extension BlindSignatureModel {
                 throw Error.invalidRequestScalar
             }
 
+            return try sign(
+                privateKeyScalar: privateKeyScalar,
+                requestScalar: requestScalar
+            ).data32Bytes
+        }
+
+        mutating func sign(
+            privateKeyScalar: ScalarModel,
+            requestScalar: ScalarModel
+        ) throws -> ScalarModel {
+            guard let nonceScalar else {
+                throw Error.nonceAlreadyUsed
+            }
+
             self.nonceScalar = nil
-            let responseScalar = nonceScalar.addModN(
+            return nonceScalar.addModN(
                 requestScalar.mulModN(privateKeyScalar)
             )
-            return responseScalar.data32Bytes
         }
     }
 }

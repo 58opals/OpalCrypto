@@ -1,0 +1,125 @@
+// PublicAPIECDSASignatureValidator~Construction.swift
+
+import Foundation
+import Testing
+import OpalCrypto
+
+extension PublicAPIECDSASignatureValidator {
+    @Test("Reject ECDSA raw construction with invalid signature length through facade error")
+    func rejectEcdsaRawConstructionWithInvalidSignatureLengthThroughFacadeError() {
+        do {
+            _ = try OpalCrypto.Signature.ECDSA(
+                rawRepresentation: Data(repeating: 0x01, count: 63),
+                format: .raw
+            )
+            Issue.record("Expected invalid signature length error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidSignatureLength(expected: 64, actual: 63))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("ECDSA raw construction rejects invalid signature scalars")
+    func rejectEcdsaRawConstructionWithInvalidSignatureScalars() {
+        do {
+            _ = try OpalCrypto.Signature.ECDSA(
+                rawRepresentation: Data(repeating: 0x00, count: 64),
+                format: .raw
+            )
+            Issue.record("Expected invalid signature error.")
+        } catch let error as OpalCrypto.Signature.Error {
+            #expect(error == .invalidSignature)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("ECDSA signature values normalize sliced raw input")
+    func normalizeECDSASignatureValuesFromSlicedRawInput() throws {
+        let rawSignature = Data(repeating: 0x00, count: 31) + Data([0x01])
+            + Data(repeating: 0x00, count: 31) + Data([0x02])
+        let slicedRawSignature = (Data([0xFF]) + rawSignature + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let rawSignatureValue = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: slicedRawSignature,
+            format: .raw
+        )
+        let derSignature = try rawSignatureValue.encoded(as: .der).rawRepresentation
+        let slicedDERSignature = (Data([0xFF]) + derSignature + Data([0xEE]))
+            .dropFirst()
+            .dropLast()
+        let derSignatureValue = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: slicedDERSignature,
+            format: .der
+        )
+
+        #expect(rawSignatureValue.rawRepresentation == rawSignature)
+        #expect(rawSignatureValue.rawRepresentation.startIndex == 0)
+        #expect(rawSignatureValue.rawRepresentation[0] == 0x00)
+        #expect(derSignatureValue.rawRepresentation == derSignature)
+        #expect(derSignatureValue.rawRepresentation.startIndex == 0)
+        #expect(try derSignatureValue.encoded(as: .raw).rawRepresentation == rawSignature)
+    }
+
+    @Test("ECDSA DER construction accepts sliced Data payloads")
+    func ecdsaDerConstructionAcceptsSlicedDataPayloads() throws {
+        let rawSignature = Data(repeating: 0x00, count: 31) + Data([0x01])
+            + Data(repeating: 0x00, count: 31) + Data([0x02])
+        let derSignature = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: rawSignature,
+            format: .raw
+        ).encoded(as: .der).rawRepresentation
+        let slicedDerSignature = (Data([0xFF]) + derSignature).dropFirst()
+
+        let reparsedSignature = try OpalCrypto.Signature.ECDSA(
+            rawRepresentation: slicedDerSignature,
+            format: .der
+        )
+
+        #expect(try reparsedSignature.encoded(as: .raw).rawRepresentation == rawSignature)
+    }
+
+    @Test("Reject private-key construction with invalid private key length through facade error")
+    func rejectPrivateKeyConstructionWithInvalidPrivateKeyLengthThroughFacadeError() {
+        do {
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x01, count: 31)
+            )
+            Issue.record("Expected invalid private key length error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject private-key construction with invalid private key value through facade error")
+    func rejectPrivateKeyConstructionWithInvalidPrivateKeyValueThroughFacadeError() {
+        do {
+            _ = try OpalCrypto.Secp256k1.PrivateKey(
+                rawRepresentation: Data(repeating: 0x00, count: 32)
+            )
+            Issue.record("Expected invalid private key error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPrivateKey)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Reject ECDSA verify with malformed SEC1 public key through facade error")
+    func rejectEcdsaVerifyWithMalformedSec1PublicKeyThroughFacadeError() {
+        let malformedPublicKey = Data([0x02] + Array(repeating: 0x00, count: 32))
+
+        do {
+            _ = try OpalCrypto.Secp256k1.PublicKey(rawRepresentation: malformedPublicKey)
+            Issue.record("Expected invalid public key error.")
+        } catch let error as OpalCrypto.Secp256k1.Error {
+            #expect(error == .invalidPublicKey)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+}

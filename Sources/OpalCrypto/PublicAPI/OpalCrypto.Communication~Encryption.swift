@@ -5,6 +5,11 @@ import OpalDiagnostics
 
 
 extension OpalCrypto.Communication {
+    /// Encrypts a message for a recipient and returns its authenticated ciphertext envelope.
+    ///
+    /// The plaintext contains a four-byte message-length prefix followed by the message and zero padding. When `paddedPlaintextLength` is omitted, the plaintext expands to the smallest multiple of 16 that can contain the prefix and message. An explicit length must be at least `message.count + 4` and a multiple of 16.
+    ///
+    /// - Throws: ``OpalCrypto/Communication/Error/messageTooLong(maximum:actual:)`` when the message cannot fit in the 32-bit length prefix, or padding and cryptographic errors reported by ``OpalCrypto/Communication/Error``.
     public static func encrypt(
         message: Data,
         recipientPublicKey: OpalCrypto.Secp256k1.PublicKey,

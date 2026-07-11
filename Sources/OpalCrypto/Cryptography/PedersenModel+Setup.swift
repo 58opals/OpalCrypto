@@ -8,6 +8,7 @@ extension PedersenModel {
         let alternatePlusGenerator: AffinePointModel
 
         init(alternateBasePoint: Data) throws {
+            let alternateBasePointModel: ParsedPublicKeyModel
             do {
                 alternateBasePointModel = try ParsedPublicKeyModel(publicKeyData: alternateBasePoint)
             } catch ParsedPublicKeyModel.Error.invalidPublicKeyLength(let actual) {
@@ -17,6 +18,12 @@ extension PedersenModel {
             } catch {
                 throw Error.invalidAlternateBasePoint
             }
+
+            try self.init(alternateBasePointModel: alternateBasePointModel)
+        }
+
+        init(alternateBasePointModel: ParsedPublicKeyModel) throws {
+            self.alternateBasePointModel = alternateBasePointModel
 
             guard alternateBasePointModel.affinePoint != ScalarMultiplicationModel.generator else {
                 throw Error.insecureAlternateBasePoint
@@ -34,10 +41,10 @@ extension PedersenModel {
             amount: Int64,
             nonceData32Bytes: Data? = nil
         ) throws -> Commitment {
-            let nonceScalar: ScalarModel
+            let parsedNonceScalar: ScalarModel?
             if let nonceData32Bytes {
                 do {
-                    nonceScalar = try ScalarModel(
+                    parsedNonceScalar = try ScalarModel(
                         data32: nonceData32Bytes,
                         requireNonZero: false
                     )
@@ -48,18 +55,31 @@ extension PedersenModel {
                     throw Error.invalidNonce
                 }
             } else {
+                parsedNonceScalar = nil
+            }
+            return try commit(amount: amount, nonceScalar: parsedNonceScalar)
+        }
+
+        func commit(
+            amount: Int64,
+            nonceScalar: ScalarModel?
+        ) throws -> Commitment {
+            let resolvedNonceScalar: ScalarModel
+            if let nonceScalar {
+                resolvedNonceScalar = nonceScalar
+            } else {
                 do {
-                    nonceScalar = try NonceGeneratorModel.makeSystemRandomScalar()
+                    resolvedNonceScalar = try NonceGeneratorModel.makeSystemRandomScalar()
                 } catch {
                     throw Error.cryptographyFailure
                 }
             }
 
             let amountScalar = Self.makeAmountScalar(amount)
-            let amountMinusNonce = amountScalar.subModN(nonceScalar)
+            let amountMinusNonce = amountScalar.subModN(resolvedNonceScalar)
 
             let offsetPoint = ScalarMultiplicationModel.mul(
-                nonceScalar,
+                resolvedNonceScalar,
                 alternatePlusGenerator
             )
             let resultPoint = amountMinusNonce.isZero
@@ -75,7 +95,7 @@ extension PedersenModel {
             }
             return Commitment(
                 setupIdentifier: alternateBasePointModel.compressedPublicKeyData,
-                nonceScalar: nonceScalar,
+                nonceScalar: resolvedNonceScalar,
                 affinePoint: affinePoint
             )
         }
@@ -91,6 +111,18 @@ extension PedersenModel {
             )
             let actualCommitment = try parseCommitmentPoint(commitmentPoint)
             return actualCommitment == expectedCommitment.uncompressedPointData
+        }
+
+        func verify(
+            commitmentAffinePoint: AffinePointModel,
+            amount: Int64,
+            nonceScalar: ScalarModel
+        ) throws -> Bool {
+            let expectedCommitment = try commit(
+                amount: amount,
+                nonceScalar: nonceScalar
+            )
+            return commitmentAffinePoint == expectedCommitment.affinePoint
         }
 
         func combine(_ commitments: [Commitment]) throws -> Commitment {
@@ -109,10 +141,15 @@ extension PedersenModel {
                 nonceScalar = nonceScalar.addModN(commitment.nonceScalar)
             }
 
-            let uncompressedPointData = try Self.addPoints(
-                commitments.map(\.uncompressedPointData)
-            )
-            let affinePoint = try Self.parseCommitmentPointAffine(uncompressedPointData)
+            var accumulator = JacobianPointModel(affine: firstCommitment.affinePoint)
+            for commitment in commitments.dropFirst() {
+                accumulator = accumulator.add(
+                    JacobianPointModel(affine: commitment.affinePoint)
+                )
+            }
+            guard let affinePoint = accumulator.convertToAffine() else {
+                throw Error.invalidCommitment
+            }
             return Commitment(
                 setupIdentifier: firstCommitment.setupIdentifier,
                 nonceScalar: nonceScalar,
@@ -121,22 +158,31 @@ extension PedersenModel {
         }
 
         static func addPoints(_ points: [Data]) throws -> Data {
-            guard let firstPoint = points.first else {
+            guard !points.isEmpty else {
                 throw Error.emptyCommitmentList
             }
+            var affinePoints: [AffinePointModel] = .init()
+            affinePoints.reserveCapacity(points.count)
+            for point in points {
+                affinePoints.append(try parseCommitmentPointAffine(point))
+            }
+            return try addAffinePoints(affinePoints).encodeUncompressed65()
+        }
 
-            var accumulator = JacobianPointModel(
-                affine: try parseCommitmentPointAffine(firstPoint)
-            )
-            for point in points.dropFirst() {
-                accumulator = accumulator.add(
-                    JacobianPointModel(affine: try parseCommitmentPointAffine(point))
-                )
+        static func addAffinePoints(
+            _ affinePoints: [AffinePointModel]
+        ) throws -> AffinePointModel {
+            guard let firstPoint = affinePoints.first else {
+                throw Error.emptyCommitmentList
+            }
+            var accumulator = JacobianPointModel(affine: firstPoint)
+            for point in affinePoints.dropFirst() {
+                accumulator = accumulator.add(JacobianPointModel(affine: point))
             }
             guard let affinePoint = accumulator.convertToAffine() else {
                 throw Error.invalidCommitment
             }
-            return affinePoint.encodeUncompressed65()
+            return affinePoint
         }
 
         private func parseCommitmentPoint(_ point: Data) throws -> Data {

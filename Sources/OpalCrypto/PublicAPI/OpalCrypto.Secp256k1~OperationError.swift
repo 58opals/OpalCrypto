@@ -1,19 +1,6 @@
-// OpalCrypto.Secp256k1~Validation.swift
-
-import Foundation
+// OpalCrypto.Secp256k1~OperationError.swift
 
 extension OpalCrypto.Secp256k1 {
-    static func validatePrivateKey(_ privateKey: Data) throws {
-        do {
-            _ = try StandardsForEfficientCryptography256k1CurveModel.Operation.parsePrivateKeyScalar(
-                privateKey,
-                requireNonZero: true
-            )
-        } catch let error as StandardsForEfficientCryptography256k1CurveModel.Operation.Error {
-            throw mapOperationError(error)
-        }
-    }
-
     static func mapOperationError(
         _ error: StandardsForEfficientCryptography256k1CurveModel.Operation.Error
     ) -> Error {

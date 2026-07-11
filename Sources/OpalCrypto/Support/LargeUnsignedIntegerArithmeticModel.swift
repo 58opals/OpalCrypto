@@ -2,7 +2,12 @@
 
 import Foundation
 
-// Line-count exception: arithmetic-kernel data contract. Keeping serialization, shifting, comparison, addition, multiplication, and division beside the private word storage avoids widening storage access across files and keeps numeric overflow behavior reviewable as one unit. Revisit when replacing this model with a fixed-width or external big-integer backend.
+// Line-count exception (performance-critical math kernel): Serialization,
+// shifting, comparison, multiplication, and division stay beside the private
+// word storage so allocation and overflow invariants remain reviewable as one
+// unit. Evidence: docs/performance-roadmap.md and the Numeric/Base58/Base32
+// validators. Owner: Opal Crypto maintainers. Revisit when profiling supports a
+// fixed-width or external big-integer backend.
 
 internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     private var words: [UInt32]
@@ -249,7 +254,6 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
     internal mutating func divide(by divisor: UInt64) -> UInt64 {
         guard divisor > 0, !words.isEmpty else { return 0 }
         var remainder: UInt64 = 0
-        var quotientWords = Array(repeating: UInt32(0), count: words.count)
         for index in words.indices.reversed() {
             // Each base-2^32 long-division step can exceed UInt64 when the prior
             // remainder already uses more than 32 bits, so split the 96-bit
@@ -259,9 +263,9 @@ internal struct LargeUnsignedIntegerArithmeticModel: Comparable, Sendable {
             let division = divisor.dividingFullWidth((high: high, low: low))
             let quotient = division.quotient
             remainder = division.remainder
-            quotientWords[index] = UInt32(quotient)
+            words[index] = UInt32(quotient)
         }
-        self = LargeUnsignedIntegerArithmeticModel(words: quotientWords)
+        normalize()
         return remainder
     }
     

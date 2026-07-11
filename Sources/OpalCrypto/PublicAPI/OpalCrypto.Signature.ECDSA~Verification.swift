@@ -4,17 +4,46 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Signature.ECDSA {
+    /// Hashes `message` once with SHA-256, then verifies this ECDSA signature.
+    ///
+    /// Prefer ``verifySHA256(message:publicKey:)`` in new code when the hashing
+    /// contract should be explicit at the call site.
     public func verify(
         message: Data,
         publicKey: OpalCrypto.Secp256k1.PublicKey
     ) throws -> Bool {
-        try verify(
+        try verifySHA256(
+            message: message,
+            publicKey: publicKey
+        )
+    }
+
+    /// Hashes `message` once with SHA-256, then verifies this ECDSA signature.
+    public func verifySHA256(
+        message: Data,
+        publicKey: OpalCrypto.Secp256k1.PublicKey
+    ) throws -> Bool {
+        try verifySHA256(
             message: message,
             verificationKey: OpalCrypto.Signature.VerificationKey(publicKey: publicKey)
         )
     }
 
+    /// Hashes `message` once with SHA-256, then verifies this ECDSA signature
+    /// using a prepared verification key.
+    ///
+    /// Prefer ``verifySHA256(message:verificationKey:)`` in new code when the
+    /// hashing contract should be explicit at the call site.
     public func verify(
+        message: Data,
+        verificationKey: OpalCrypto.Signature.VerificationKey
+    ) throws -> Bool {
+        try verifySHA256(message: message, verificationKey: verificationKey)
+    }
+
+    /// Hashes `message` once with SHA-256, then verifies this ECDSA signature
+    /// using a prepared verification key.
+    public func verifySHA256(
         message: Data,
         verificationKey: OpalCrypto.Signature.VerificationKey
     ) throws -> Bool {
@@ -63,6 +92,7 @@ extension OpalCrypto.Signature.ECDSA {
         }
     }
 
+    /// Verifies this ECDSA signature against an already computed 32-byte digest.
     public func verify(
         digest: OpalCrypto.Signature.Digest,
         publicKey: OpalCrypto.Secp256k1.PublicKey
@@ -73,6 +103,8 @@ extension OpalCrypto.Signature.ECDSA {
         )
     }
 
+    /// Verifies this ECDSA signature against an already computed 32-byte digest
+    /// using a prepared verification key.
     public func verify(
         digest: OpalCrypto.Signature.Digest,
         verificationKey: OpalCrypto.Signature.VerificationKey

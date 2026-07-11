@@ -6,6 +6,25 @@ import OpalCrypto
 
 @Suite("Public API key-derivation validation")
 struct PublicAPIKeyDerivationValidator {
+    @Test("PBKDF2 HMAC-SHA-512 uses a 64-byte default and matches the source-compatible operation")
+    func derivePBKDF2SHA512UsingDefaultLength() throws {
+        let password = Data("password".utf8)
+        let salt = try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
+        let explicitKey = try OpalCrypto.KeyDerivation.derivePBKDF2SHA512Key(
+            password: password,
+            salt: salt,
+            iterationCount: 16
+        )
+        let sourceCompatibleKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
+            password: password,
+            salt: salt,
+            iterationCount: 16
+        )
+
+        #expect(explicitKey.rawRepresentation.count == 64)
+        #expect(explicitKey == sourceCompatibleKey)
+    }
+
     @Test(
         "Reject invalid PBKDF2 parameters through facade errors",
         arguments: PasswordBasedKeyDerivationInvalidParameterCase.allCases

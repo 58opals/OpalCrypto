@@ -11,6 +11,7 @@
 - `OpalCrypto.Pedersen`
 - `OpalCrypto.BlindSignature`
 - `OpalCrypto.Communication`
+- `OpalCrypto.Numeric`
 
 The split files in `Sources/OpalCrypto/PublicAPI` are the source of truth. This page is a compact integration guide for the breaking typed-byte facade.
 
@@ -24,11 +25,16 @@ Constrained cryptographic or protocol-shaped byte strings use facade-owned value
 - `Signature.Digest`, `Signature.ECDSA`, `Signature.Schnorr`, `Signature.VerificationKey`
 - `Communication.Ciphertext`, `Communication.SymmetricKey`
 - `Pedersen.Nonce`, `Pedersen.CommitmentPoint`, `Pedersen.Commitment`
-- `Key.Seed`, `Key.WIF`, `Key.ExtendedPrivate`, `Key.ExtendedPublic`
+- `Key.Seed`, `Key.WIF`, `Key.ChainCode`, `Key.Fingerprint`, `Key.ExtendedPrivate`, `Key.ExtendedPublic`
 - `KeyDerivation.Salt`, `KeyDerivation.DerivedKey`
 - `Encoding.FiveBitValues`
+- `Numeric.UInt256`, `Numeric.UInt512`, `Numeric.BigUnsignedInteger`
+
+`Secp256k1.PublicKey` and `Signature.VerificationKey` accept compressed or uncompressed SEC1 input, while `rawRepresentation` is always the canonical compressed 33-byte form. `Pedersen.CommitmentPoint` accepts either SEC1 form, but its `rawRepresentation` is the canonical uncompressed 65-byte form; use `compressedRepresentation` when a compressed point is required.
 
 Secret-bearing signing workflows should prefer `Secp256k1.SigningKey`. It is an opaque signing capability that can be imported from raw private-key bytes, `Secp256k1.PrivateKey`, `Key.WIF`, or `Key.ExtendedPrivate`, but it does not expose raw private-key bytes or serialization APIs.
+
+Use `SigningKey.signECDSASHA256(message:)` when the operation should hash arbitrary message bytes once with SHA-256. Use `SigningKey.signECDSA(digest:)` for an already computed 32-byte digest; the source-compatible `signECDSA(message:)` operation also hashes once with SHA-256.
 
 ## Common Calls
 
@@ -37,7 +43,7 @@ import Foundation
 import OpalCrypto
 
 let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
-let signingKey = try privateKey.makeSigningKey()
+let signingKey = privateKey.makeSigningKey()
 let publicKey = signingKey.publicKey
 
 let message = Data("opal-signature-message".utf8)
@@ -53,6 +59,24 @@ let ecdsaIsValid = try ecdsa.verify(digest: digest, publicKey: publicKey)
 let schnorr = try signingKey.signSchnorr(digest: digest)
 let schnorrIsValid = try schnorr.verify(digest: digest, publicKey: publicKey)
 ```
+
+When the message itself is the input, the explicitly named ECDSA operations hash it once with SHA-256:
+
+```swift
+let ecdsa = try OpalCrypto.Signature.ECDSA.signSHA256(
+    message: message,
+    privateKey: privateKey
+)
+let ecdsaIsValid = try ecdsa.verifySHA256(message: message, publicKey: publicKey)
+```
+
+Use the `digest:` overloads for an already computed 32-byte digest; they do not hash it again.
+
+## Blind Signatures
+
+`BlindSignature.Signer` owns exactly one nonce. Call `signOnce(privateKey:requestScalar:)` to make nonce consumption explicit. Every alias of the actor shares that state, and any signing attempt after the first successful response throws `BlindSignature.Error.nonceAlreadyUsed`.
+
+`BlindSignature.Request.finalize(responseScalar:)` verifies the completed signature. When verification is deliberately handled elsewhere, call the explicitly named `finalizeWithoutVerification(responseScalar:)`; structural signature validation still applies.
 
 ## Schnorr Verification Batches
 
@@ -107,19 +131,41 @@ This is intentionally not an RPA address-management API. Opal Base owns reusable
 
 `Secp256k1.PrivateKey.rawRepresentation`, `Key.WIF.privateKey`, `Key.WIF.serialize()`, `Key.ExtendedPrivate.privateKey`, and `Key.ExtendedPrivate.serialize()` remain source-compatible legacy and import/export boundaries. Use them only when raw private-key bytes, WIF text, or xprv text must cross an explicit storage, backup, migration, or interoperability boundary. For signing, retain `Secp256k1.SigningKey` and call its signing methods instead of repeatedly reading raw private-key bytes.
 
+Conversions from validated `PrivateKey` or `WIF` values to `SigningKey` are nonthrowing. WIF serialization is also nonthrowing because a `WIF` already contains a validated private key; parsing serialized WIF text remains a throwing import boundary.
+
+## Mnemonic Word Lists
+
+`Key.Mnemonic.WordList` is a `RandomAccessCollection` of normalized words. Use collection indices and `firstIndex(of:)`; the source-compatible `words`, `contains(_:)`, and `index(of:)` conveniences remain available.
+
+## Communication Padding
+
+`Communication.encrypt(message:recipientPublicKey:paddedPlaintextLength:)` prefixes the message with its four-byte length. With no explicit padding length, the plaintext expands to the smallest multiple of 16 that contains the prefix and message. An explicit `paddedPlaintextLength` must be at least `message.count + 4` and a multiple of 16; otherwise encryption throws a facade-owned padding error.
+
 ## Encoding
 
 Base32 byte mode and Bech32-style five-bit value mode are separate APIs:
 
 ```swift
-let byteText = try OpalCrypto.Encoding.encodeBase32Bytes(Data([0x00, 0x10]))
+let byteText = OpalCrypto.Encoding.encodeBase32(bytes: Data([0x00, 0x10]))
 let bytes = try OpalCrypto.Encoding.decodeBase32Bytes(byteText)
 
 let values = try OpalCrypto.Encoding.FiveBitValues(rawRepresentation: Data([0, 1, 31]))
-let valueText = try OpalCrypto.Encoding.encodeBase32Values(values)
+let valueText = OpalCrypto.Encoding.encodeBase32(values: values)
 let decodedValues = try OpalCrypto.Encoding.decodeBase32Values(valueText)
 let checksum = OpalCrypto.Encoding.computePolymodChecksum(values)
 ```
+
+Base58 decoding has explicit failure shapes: `decodeBase58IfValid(_:)` returns `nil`, while `decodeBase58Validating(_:)` throws `Encoding.Base58DecodingError.invalidText`.
+
+## Key Derivation
+
+`KeyDerivation.derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:)` uses PBKDF2 with HMAC-SHA-512. Omitting `derivedKeyLength` produces 64 bytes. Salt values must be nonempty, iteration counts must be positive, and oversized output requests throw facade-owned `KeyDerivation.Error` values.
+
+## Arbitrary-Precision Shifts
+
+`Numeric.BigUnsignedInteger.shiftedLeft(byBytes:)` reports a nonzero result that would exceed the in-memory representation as `Numeric.BigUnsignedInteger.LeftShiftError.exceedsRepresentableSize(byteCount:)`. The source-compatible `shiftLeft(byBytes:)` operation retains its legacy zero sentinel for that case.
+
+`Numeric.BigUnsignedInteger.init(bigEndianRepresentation:)` accepts a variable-width unsigned big-endian value, normalizes leading zeroes, and treats empty data as zero. Its `bigEndianRepresentation` is minimal and represents zero as empty data. `Numeric.UInt256.init(bigEndianRepresentation:)` instead requires exactly 32 bytes, and its representation always remains fixed-width.
 
 ## Error Boundary
 

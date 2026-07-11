@@ -25,6 +25,9 @@ internal struct Unsigned512BitIntegerModel: Sendable {
         }
         var temporaryLimbs: InlineArray<8, UInt64> = .init(repeating: 0)
         data64Bytes.withUnsafeBytes { rawBuffer in
+            // SAFETY: The length guard provides eight complete eight-byte
+            // words. loadUnaligned removes alignment requirements, offsets
+            // 0...56 stay in bounds, and the borrowed storage does not escape.
             for index in 0..<8 {
                 let word = rawBuffer.loadUnaligned(fromByteOffset: index * 8, as: UInt64.self)
                 temporaryLimbs[7 - index] = UInt64(bigEndian: word)
@@ -42,6 +45,9 @@ internal struct Unsigned512BitIntegerModel: Sendable {
     internal var data64Bytes: Data {
         var data = Data(count: 64)
         data.withUnsafeMutableBytes { buffer in
+            // SAFETY: Data owns exactly 64 writable bytes for this closure.
+            // Eight raw eight-byte stores at offsets 0...56 stay within that
+            // storage and initialize the complete allocation without escaping.
             for index in 0..<8 {
                 let limb = limbs[7 - index].bigEndian
                 buffer.storeBytes(of: limb, toByteOffset: index * 8, as: UInt64.self)

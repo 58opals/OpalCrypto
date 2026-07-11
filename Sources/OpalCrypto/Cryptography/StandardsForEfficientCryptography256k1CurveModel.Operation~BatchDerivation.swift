@@ -2,7 +2,12 @@
 
 import Foundation
 
-// Line-count exception: performance-critical batch-derivation kernel. Keeping parsing, serial/parallel dispatch, ordered chunk collection, and affine conversion in one file makes benchmark regressions and ordering invariants reviewable together. Revisit when batch derivation is reprofiled or the execution-mode contract changes.
+// Line-count exception (performance-critical math kernel): Parsing,
+// serial/parallel dispatch, ordered chunk collection, and affine conversion stay
+// together so cancellation, ordering, and benchmark invariants are reviewed as
+// one operation. Evidence: docs/performance-roadmap.md and
+// PerformanceOptimizationBatchDerivationValidator. Owner: Opal Crypto
+// maintainers. Revisit when profiling changes the execution-mode thresholds.
 
 extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     internal static func deriveCompressedPublicKeys(
@@ -22,6 +27,7 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         executionMode: CompressedPublicKeyBatchDerivationExecutionMode
     ) async throws -> [Data] {
         guard !privateKeys32.isEmpty else { return .init() }
+        try Task.checkCancellation()
         let privateKeyScalars = try parsePrivateKeyScalars(
             fromPrivateKeys32: privateKeys32,
             assumingValidPrivateKeys: assumingValidPrivateKeys
@@ -49,6 +55,7 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         executionMode: CompressedPublicKeyBatchDerivationExecutionMode = .automatic
     ) async throws -> [ParsedPublicKeyModel] {
         guard !privateKeys32.isEmpty else { return .init() }
+        try Task.checkCancellation()
         let privateKeyScalars = try parsePrivateKeyScalars(
             fromPrivateKeys32: privateKeys32,
             assumingValidPrivateKeys: assumingValidPrivateKeys
@@ -64,6 +71,7 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         executionMode: CompressedPublicKeyBatchDerivationExecutionMode = .automatic
     ) async throws -> [ParsedPublicKeyModel] {
         guard !privateKeys.isEmpty else { return .init() }
+        try Task.checkCancellation()
         let privateKeyScalars = try parsePrivateKeyScalars(
             fromValidatedPrivateKeys: privateKeys
         )
@@ -92,7 +100,10 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         var privateKeyScalars: [ScalarModel] = .init()
         privateKeyScalars.reserveCapacity(privateKeys32.count)
 
-        for privateKey32 in privateKeys32 {
+        for (index, privateKey32) in privateKeys32.enumerated() {
+            if index.isMultiple(of: batchDerivationParsingCancellationCheckInterval) {
+                try Task.checkCancellation()
+            }
             let privateKeyScalar = if assumingValidPrivateKeys {
                 try parsePrivateKeyScalarUnchecked(privateKey32, requireNonZero: true)
             } else {
@@ -110,13 +121,11 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         var privateKeyScalars: [ScalarModel] = .init()
         privateKeyScalars.reserveCapacity(privateKeys.count)
 
-        for privateKey in privateKeys {
-            privateKeyScalars.append(
-                try parsePrivateKeyScalarUnchecked(
-                    privateKey.rawRepresentation,
-                    requireNonZero: true
-                )
-            )
+        for (index, privateKey) in privateKeys.enumerated() {
+            if index.isMultiple(of: batchDerivationParsingCancellationCheckInterval) {
+                try Task.checkCancellation()
+            }
+            privateKeyScalars.append(privateKey.scalarModel)
         }
 
         return privateKeyScalars
@@ -125,11 +134,12 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     internal static func derivePublicKeyJacobianPoints(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel]
     ) -> [JacobianPointModel] {
-        derivePublicKeyJacobianPoints(
-            fromPrivateKeyScalars: privateKeyScalars,
-            startIndex: 0,
-            endIndex: privateKeyScalars.count
-        )
+        var jacobianPoints: [JacobianPointModel] = .init()
+        jacobianPoints.reserveCapacity(privateKeyScalars.count)
+        for privateKeyScalar in privateKeyScalars {
+            jacobianPoints.append(ScalarMultiplicationModel.mulG(privateKeyScalar))
+        }
+        return jacobianPoints
     }
 
     internal static func encodeCompressedPublicKeys(
@@ -149,6 +159,8 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
     static let minimumAutomaticParallelKeyCount = 256
     static let minimumKeysPerTask = 128
     static let minimumAutomaticParallelTaskCount = 4
+    static let batchDerivationCancellationCheckInterval = 8
+    static let batchDerivationParsingCancellationCheckInterval = 32
 
     static func derivePublicKeys<PublicKey: Sendable>(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
@@ -156,16 +168,21 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         makePublicKeys: @Sendable @escaping ([JacobianPointModel]) throws -> [PublicKey]
     ) async throws -> [PublicKey] {
         guard !privateKeyScalars.isEmpty else { return .init() }
+        try Task.checkCancellation()
         let taskCount = batchDerivationTaskCount(
             totalCount: privateKeyScalars.count,
             executionMode: executionMode
         )
         guard taskCount >= 2 else {
-            return try makePublicKeys(
-                derivePublicKeyJacobianPoints(
-                    fromPrivateKeyScalars: privateKeyScalars
-                )
+            let jacobianPoints = try derivePublicKeyJacobianPointsCheckingCancellation(
+                fromPrivateKeyScalars: privateKeyScalars,
+                startIndex: 0,
+                endIndex: privateKeyScalars.count
             )
+            try Task.checkCancellation()
+            let publicKeys = try makePublicKeys(jacobianPoints)
+            try Task.checkCancellation()
+            return publicKeys
         }
         let chunkSize = (privateKeyScalars.count + taskCount - 1) / taskCount
         return try await derivePublicKeysInParallel(
@@ -217,22 +234,28 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         chunkSize: Int,
         makePublicKeys: @Sendable @escaping ([JacobianPointModel]) throws -> [PublicKey]
     ) async throws -> [PublicKey] {
+        try Task.checkCancellation()
         let totalCount = privateKeyScalars.count
         let chunkCount = (totalCount + chunkSize - 1) / chunkSize
         return try await withThrowingTaskGroup(of: (Int, [PublicKey]).self) { group in
             for chunkIndex in 0..<chunkCount {
+                try Task.checkCancellation()
                 let startIndex = chunkIndex * chunkSize
                 let endIndex = min(startIndex + chunkSize, totalCount)
 
                 group.addTask {
-                    let jacobianPoints = derivePublicKeyJacobianPoints(
+                    try Task.checkCancellation()
+                    let jacobianPoints = try derivePublicKeyJacobianPointsCheckingCancellation(
                         fromPrivateKeyScalars: privateKeyScalars,
                         startIndex: startIndex,
                         endIndex: endIndex
                     )
+                    try Task.checkCancellation()
+                    let publicKeys = try makePublicKeys(jacobianPoints)
+                    try Task.checkCancellation()
                     return (
                         chunkIndex,
-                        try makePublicKeys(jacobianPoints)
+                        publicKeys
                     )
                 }
             }
@@ -240,9 +263,11 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
             var chunkResults = Array<[PublicKey]?>(repeating: nil, count: chunkCount)
 
             for try await (chunkIndex, publicKeys) in group {
+                try Task.checkCancellation()
                 chunkResults[chunkIndex] = publicKeys
             }
 
+            try Task.checkCancellation()
             var publicKeys: [PublicKey] = .init()
             publicKeys.reserveCapacity(totalCount)
             for chunkResult in chunkResults {
@@ -251,22 +276,27 @@ private extension StandardsForEfficientCryptography256k1CurveModel.Operation {
                 }
                 publicKeys.append(contentsOf: chunkResult)
             }
+            try Task.checkCancellation()
             return publicKeys
         }
     }
 
-    static func derivePublicKeyJacobianPoints(
+    static func derivePublicKeyJacobianPointsCheckingCancellation(
         fromPrivateKeyScalars privateKeyScalars: [ScalarModel],
         startIndex: Int,
         endIndex: Int
-    ) -> [JacobianPointModel] {
+    ) throws -> [JacobianPointModel] {
         var jacobianPoints: [JacobianPointModel] = .init()
         jacobianPoints.reserveCapacity(endIndex - startIndex)
 
         for index in startIndex..<endIndex {
+            if (index - startIndex).isMultiple(of: batchDerivationCancellationCheckInterval) {
+                try Task.checkCancellation()
+            }
             jacobianPoints.append(ScalarMultiplicationModel.mulG(privateKeyScalars[index]))
         }
 
+        try Task.checkCancellation()
         return jacobianPoints
     }
 

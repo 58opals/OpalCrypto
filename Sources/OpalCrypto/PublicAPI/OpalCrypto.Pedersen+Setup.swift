@@ -4,9 +4,13 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
+    /// A Pedersen commitment setup bound to an alternate secp256k1 base point.
     public struct Setup: Sendable, Equatable {
         internal let setupModel: PedersenModel.Setup
 
+        /// Creates a setup from a validated public key.
+        ///
+        /// - Throws: ``OpalCrypto/Pedersen/Error/insecureAlternateBasePoint`` when the alternate point equals the standard generator or produces an invalid combined point.
         public init(alternateBasePoint: OpalCrypto.Secp256k1.PublicKey) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("setup"),
@@ -14,7 +18,7 @@ extension OpalCrypto.Pedersen {
             ]
             do {
                 setupModel = try PedersenModel.Setup(
-                    alternateBasePoint: alternateBasePoint.rawRepresentation
+                    alternateBasePointModel: alternateBasePoint.parsedPublicKeyModel
                 )
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
@@ -32,6 +36,7 @@ extension OpalCrypto.Pedersen {
             )
         }
 
+        /// Creates a commitment for `amount`, generating a secure nonce when one is not supplied.
         public func commit(
             amount: Int64,
             nonce: Nonce? = nil
@@ -41,7 +46,7 @@ extension OpalCrypto.Pedersen {
                 let commitment = Commitment(
                     commitmentModel: try setupModel.commit(
                         amount: amount,
-                        nonceData32Bytes: nonce?.rawRepresentation
+                        nonceScalar: nonce?.scalarModel
                     )
                 )
                 Self.recordCommitSucceeded(
@@ -56,49 +61,7 @@ extension OpalCrypto.Pedersen {
             }
         }
 
-        private static func commitFields(nonce: Nonce?) -> [OpalDiagnostics.Field] {
-            var fields = [
-                OpalDiagnostics.Field.operationField("commit"),
-                OpalDiagnostics.Field.publicField("has_provided_nonce", nonce != nil)
-            ]
-            if let nonce {
-                fields.append(
-                    OpalDiagnostics.Field.publicField(
-                        "nonce_byte_count",
-                        nonce.rawRepresentation.count
-                    )
-                )
-            }
-            return fields
-        }
-
-        private static func recordCommitSucceeded(
-            commitment: Commitment,
-            fields: [OpalDiagnostics.Field]
-        ) {
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                event: OpalDiagnostics.Event.pedersenCommitSucceeded,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitSucceeded),
-                fields: fields + [
-                    OpalDiagnostics.Field.publicField(
-                        "commitment_byte_count",
-                        commitment.point.rawRepresentation.count
-                    )
-                ]
-            )
-        }
-
-        private static func recordCommitFailed(
-            _ error: Swift.Error,
-            fields: [OpalDiagnostics.Field]
-        ) {
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                event: OpalDiagnostics.Event.pedersenCommitFailed,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCommitFailed),
-                fields: fields + OpalDiagnostics.Field.errorFields(error)
-            )
-        }
-
+        /// Returns whether `commitment` opens to `amount` with `nonce` under this setup.
         public func verify(
             commitment: CommitmentPoint,
             amount: Int64,
@@ -111,9 +74,9 @@ extension OpalCrypto.Pedersen {
             ]
             do {
                 let result = try setupModel.verify(
-                    commitmentPoint: commitment.rawRepresentation,
+                    commitmentAffinePoint: commitment.affinePoint,
                     amount: amount,
-                    nonceData32Bytes: nonce.rawRepresentation
+                    nonceScalar: nonce.scalarModel
                 )
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
                     event: result
@@ -136,6 +99,9 @@ extension OpalCrypto.Pedersen {
             }
         }
 
+        /// Combines commitments created by this setup while preserving their summed nonce.
+        ///
+        /// - Throws: ``OpalCrypto/Pedersen/Error/emptyCommitmentList`` for an empty input or ``OpalCrypto/Pedersen/Error/mismatchedSetup`` when inputs belong to another setup.
         public func combine(
             _ commitments: [Commitment]
         ) throws -> Commitment {
@@ -161,55 +127,5 @@ extension OpalCrypto.Pedersen {
             }
         }
 
-        static func recordCombineSucceeded(
-            outputByteCount: Int,
-            fields: [OpalDiagnostics.Field]
-        ) {
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                event: OpalDiagnostics.Event.pedersenCombineSucceeded,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineSucceeded),
-                fields: fields + [
-                    OpalDiagnostics.Field.publicField("commitment_byte_count", outputByteCount)
-                ]
-            )
-        }
-
-        static func recordCombineFailed(
-            _ error: Swift.Error,
-            fields: [OpalDiagnostics.Field]
-        ) {
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(
-                event: OpalDiagnostics.Event.pedersenCombineFailed,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pedersenCombineFailed),
-                fields: fields + OpalDiagnostics.Field.errorFields(error)
-            )
-        }
-
-        static func mapError(_ error: PedersenModel.Error) -> Error {
-            switch error {
-            case .invalidAlternateBasePointLength(let actual):
-                return .invalidAlternateBasePointLength(actual: actual)
-            case .invalidAlternateBasePointPrefix(let actual):
-                return .invalidAlternateBasePointPrefix(actual: actual)
-            case .invalidAlternateBasePoint:
-                return .invalidAlternateBasePoint
-            case .insecureAlternateBasePoint:
-                return .insecureAlternateBasePoint
-            case .invalidNonceLength(let actual):
-                return .invalidNonceLength(expected: 32, actual: actual)
-            case .invalidNonce:
-                return .invalidNonce
-            case .invalidCommitmentLength(let actual):
-                return .invalidCommitmentLength(actual: actual)
-            case .invalidCommitment:
-                return .invalidCommitment
-            case .emptyCommitmentList:
-                return .emptyCommitmentList
-            case .mismatchedSetup:
-                return .mismatchedSetup
-            case .cryptographyFailure:
-                return .cryptographyFailure
-            }
-        }
     }
 }

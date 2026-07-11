@@ -40,18 +40,18 @@ let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
 let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
 let message = Data("opal-ecdsa-message".utf8)
 
-let signature = try OpalCrypto.Signature.ECDSA.sign(
+let signature = try OpalCrypto.Signature.ECDSA.signSHA256(
     message: message,
     privateKey: privateKey,
     format: .der
 )
-let isValid = try signature.verify(
+let isValid = try signature.verifySHA256(
     message: message,
     publicKey: publicKey
 )
 ```
 
-For Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schnorr.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`. Hashing remains the caller's responsibility.
+The explicit ECDSA message operations hash once with SHA-256. To supply a precomputed 32-byte digest without hashing it again, use `ECDSA.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`. For Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schnorr.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`; hashing remains the caller's responsibility.
 
 ## Key Capabilities
 
@@ -60,10 +60,10 @@ For Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schn
 - `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
 - `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
 - `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives.
-- `KeyDerivation`: PBKDF2 key derivation.
+- `KeyDerivation`: PBKDF2-HMAC-SHA-512 key derivation with a 64-byte default output.
 - `Numeric`: `UInt256`, `UInt512`, and `BigUnsignedInteger` facade wrappers.
 
-The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use `encodeBase32Bytes`/`decodeBase32Bytes` for byte-mode radix conversion and `Encoding.FiveBitValues` with `encodeBase32Values`/`decodeBase32Values` for five-bit symbol mode.
+The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use nonthrowing `encodeBase32(bytes:)` with `decodeBase32Bytes(_:)` for byte-mode radix conversion, and `Encoding.FiveBitValues` with nonthrowing `encodeBase32(values:)` and `decodeBase32Values(_:)` for five-bit symbol mode. Base58 decoding offers `decodeBase58IfValid(_:)` for optional failure and `decodeBase58Validating(_:)` for an explicit error.
 
 See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 

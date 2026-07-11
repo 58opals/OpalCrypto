@@ -6,6 +6,9 @@ extension OpalCrypto.Numeric {
     public struct UInt512: Sendable, Equatable {
         internal let rawValue: Unsigned512BitIntegerModel
 
+        /// Creates a value from exactly 64 big-endian bytes.
+        ///
+        /// - Throws: ``OpalCrypto/Numeric/Error/invalidDataLength(expected:actual:)`` when the representation is not 64 bytes.
         public init(data64Bytes: Data) throws {
             do {
                 self.rawValue = try Unsigned512BitIntegerModel(data64Bytes: data64Bytes)

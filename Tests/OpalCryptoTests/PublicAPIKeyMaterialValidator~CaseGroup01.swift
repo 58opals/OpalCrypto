@@ -10,11 +10,11 @@ extension PublicAPIKeyMaterialValidator {
         let privateKey = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: Data(privateKeyBytes))
 
         let compressedWalletImportFormat = OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: true)
-        #expect(try compressedWalletImportFormat.serialize() == compressedWalletImportFormatString)
+        #expect(compressedWalletImportFormat.serialize() == compressedWalletImportFormatString)
         #expect(try OpalCrypto.Key.WIF(compressedWalletImportFormatString) == compressedWalletImportFormat)
 
         let uncompressedWalletImportFormat = OpalCrypto.Key.WIF(privateKey: privateKey, isCompressed: false)
-        #expect(try uncompressedWalletImportFormat.serialize() == uncompressedWalletImportFormatString)
+        #expect(uncompressedWalletImportFormat.serialize() == uncompressedWalletImportFormatString)
         #expect(try OpalCrypto.Key.WIF(uncompressedWalletImportFormatString) == uncompressedWalletImportFormat)
 
         do {
@@ -91,7 +91,7 @@ extension PublicAPIKeyMaterialValidator {
     @Test("Wallet import format signing key signs without extracting raw private key at the call site")
     func walletImportFormatSigningKeySignsWithoutExtractingRawPrivateKeyAtTheCallSite() throws {
         let walletImportFormat = try OpalCrypto.Key.WIF(compressedWalletImportFormatString)
-        let signingKey = try walletImportFormat.makeSigningKey()
+        let signingKey = walletImportFormat.makeSigningKey()
         let digest = try OpalCrypto.Signature.Digest(
             rawRepresentation: OpalCrypto.Hashing.sha256(Data("opal-wif-signing-key".utf8))
         )

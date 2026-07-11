@@ -4,6 +4,7 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
+    /// A validated secp256k1 point used as a Pedersen commitment.
     public struct CommitmentPoint: Sendable, Equatable {
         internal let affinePoint: AffinePointModel
 
@@ -19,6 +20,7 @@ extension OpalCrypto.Pedersen {
             affinePoint.encodeUncompressed65()
         }
 
+        /// Parses a compressed or uncompressed SEC1 commitment point.
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("commitment_parse"),

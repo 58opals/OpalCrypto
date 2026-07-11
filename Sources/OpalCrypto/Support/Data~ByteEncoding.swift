@@ -20,6 +20,9 @@ extension Data {
 
     internal mutating func appendUInt64BigEndian(_ value: UInt64) {
         var bigEndianValue = value.bigEndian
+        // SAFETY: rawBuffer borrows the initialized UInt64 only for this
+        // closure, and Data.append copies all eight bytes before the stack
+        // value's lifetime ends.
         Swift.withUnsafeBytes(of: &bigEndianValue) { rawBuffer in
             append(contentsOf: rawBuffer)
         }

@@ -1,5 +1,12 @@
 // PerformanceBenchmarkOperations~MetalVerification.swift
 
+// Line-count exception (performance-critical Metal preparation kernel): Input
+// validation, packed-digit planes, affine-table layout, and serial/parallel
+// assembly stay together so host/shader ABI parity is reviewable end to end.
+// Evidence: docs/metal-readiness.md, docs/benchmarks.md, and the Metal layout
+// validators. Owner: Opal Crypto maintainers. Revisit when preparation is split
+// into a production client or the Metal record ABI changes.
+
 import Foundation
 
 package extension PerformanceBenchmarkOperations {
@@ -125,6 +132,7 @@ package extension PerformanceBenchmarkOperations {
                 expectedResults: []
             )
         }
+        try Task.checkCancellation()
 
         let processorCount = max(1, ProcessInfo.processInfo.activeProcessorCount)
         let taskCount = min(
@@ -141,11 +149,13 @@ package extension PerformanceBenchmarkOperations {
             of: (Int, [UInt32], [Int8]).self
         ) { group in
             for taskIndex in 0..<taskCount {
+                try Task.checkCancellation()
                 let startIndex = taskIndex * baseChunkCount + min(taskIndex, remainder)
                 let endIndex = startIndex
                     + baseChunkCount
                     + (taskIndex < remainder ? 1 : 0)
                 group.addTask {
+                    try Task.checkCancellation()
                     let chunk = try makeMetalSchnorrVerificationBatchChunk(
                         signatures: signatures,
                         digests: digests,
@@ -170,15 +180,22 @@ package extension PerformanceBenchmarkOperations {
                 count: recordCount * packedPlaneCount
             )
             for try await (startIndex, chunkSignatureXWords, chunkPackedDigits) in group {
+                try Task.checkCancellation()
                 let chunkRecordCount = chunkSignatureXWords.count / 8
                 precondition(chunkPackedDigits.count == chunkRecordCount * packedPlaneCount)
 
                 let signatureDestinationStart = startIndex * 8
                 for offset in chunkSignatureXWords.indices {
+                    if offset.isMultiple(of: metalPreparationCopyCancellationCheckInterval) {
+                        try Task.checkCancellation()
+                    }
                     signatureXWords[signatureDestinationStart + offset]
                         = chunkSignatureXWords[offset]
                 }
                 for planeIndex in 0..<packedPlaneCount {
+                    if planeIndex.isMultiple(of: metalPreparationPlaneCancellationCheckInterval) {
+                        try Task.checkCancellation()
+                    }
                     let sourceStart = planeIndex * chunkRecordCount
                     let destinationStart = planeIndex * recordCount + startIndex
                     for localRecordIndex in 0..<chunkRecordCount {
@@ -188,6 +205,7 @@ package extension PerformanceBenchmarkOperations {
                 }
             }
 
+            try Task.checkCancellation()
             return MetalSchnorrVerificationBatchBenchmarkInput(
                 recordCount: recordCount,
                 signatureXWords: signatureXWords,
@@ -306,6 +324,7 @@ package extension PerformanceBenchmarkOperations {
                 verificationKeySource: verificationKeySource
             )
         }
+        try Task.checkCancellation()
 
         let processorCount = max(1, ProcessInfo.processInfo.activeProcessorCount)
         let taskCount = min(
@@ -322,11 +341,13 @@ package extension PerformanceBenchmarkOperations {
             of: (Int, [UInt32], [Int8], [UInt32]).self
         ) { group in
             for taskIndex in 0..<taskCount {
+                try Task.checkCancellation()
                 let startIndex = taskIndex * baseChunkCount + min(taskIndex, remainder)
                 let endIndex = startIndex
                     + baseChunkCount
                     + (taskIndex < remainder ? 1 : 0)
                 group.addTask {
+                    try Task.checkCancellation()
                     let chunk = try makeMetalSchnorrVaryingKeyVerificationBatchChunk(
                         signatures: signatures,
                         digests: digests,
@@ -361,16 +382,23 @@ package extension PerformanceBenchmarkOperations {
                 chunkPackedDigits,
                 chunkTableWords
             ) in group {
+                try Task.checkCancellation()
                 let chunkRecordCount = chunkSignatureXWords.count / 8
                 precondition(chunkPackedDigits.count == chunkRecordCount * packedPlaneCount)
                 precondition(chunkTableWords.count == chunkRecordCount * tableSlotCount)
 
                 let signatureDestinationStart = startIndex * 8
                 for offset in chunkSignatureXWords.indices {
+                    if offset.isMultiple(of: metalPreparationCopyCancellationCheckInterval) {
+                        try Task.checkCancellation()
+                    }
                     signatureXWords[signatureDestinationStart + offset]
                         = chunkSignatureXWords[offset]
                 }
                 for planeIndex in 0..<packedPlaneCount {
+                    if planeIndex.isMultiple(of: metalPreparationPlaneCancellationCheckInterval) {
+                        try Task.checkCancellation()
+                    }
                     let sourceStart = planeIndex * chunkRecordCount
                     let destinationStart = planeIndex * recordCount + startIndex
                     for localRecordIndex in 0..<chunkRecordCount {
@@ -379,6 +407,9 @@ package extension PerformanceBenchmarkOperations {
                     }
                 }
                 for slotIndex in 0..<tableSlotCount {
+                    if slotIndex.isMultiple(of: metalPreparationPlaneCancellationCheckInterval) {
+                        try Task.checkCancellation()
+                    }
                     let sourceStart = slotIndex * chunkRecordCount
                     let destinationStart = slotIndex * recordCount + startIndex
                     for localRecordIndex in 0..<chunkRecordCount {
@@ -388,6 +419,7 @@ package extension PerformanceBenchmarkOperations {
                 }
             }
 
+            try Task.checkCancellation()
             return MetalSchnorrVaryingKeyVerificationBatchBenchmarkInput(
                 recordCount: recordCount,
                 signatureXWords: signatureXWords,
@@ -543,6 +575,8 @@ package extension PerformanceBenchmarkOperations {
     }
 
     private static var minimumMetalSchnorrVerificationRecordsPerTask: Int { 128 }
+    private static var metalPreparationPlaneCancellationCheckInterval: Int { 32 }
+    private static var metalPreparationCopyCancellationCheckInterval: Int { 256 }
 
     private static func makeMetalSchnorrVerificationBatchChunk(
         signatures: [OpalCrypto.Signature.Schnorr],
@@ -565,6 +599,7 @@ package extension PerformanceBenchmarkOperations {
 
         for inputIndex in startIndex..<endIndex {
             let localRecordIndex = inputIndex - startIndex
+            try Task.checkCancellation()
             let signatureModel = signatures[inputIndex].signatureModel
             let signatureX = try FieldElementModel(data32: signatureModel.r)
             let signatureScalar = try ScalarModel(data32: signatureModel.s)
@@ -611,6 +646,7 @@ package extension PerformanceBenchmarkOperations {
             )
         }
 
+        try Task.checkCancellation()
         return (signatureXWords, packedDigits)
     }
 
@@ -660,6 +696,7 @@ package extension PerformanceBenchmarkOperations {
 
         for inputIndex in startIndex..<endIndex {
             let localRecordIndex = inputIndex - startIndex
+            try Task.checkCancellation()
             let signatureModel = signatures[inputIndex].signatureModel
             let signatureX = try FieldElementModel(data32: signatureModel.r)
             let signatureScalar = try ScalarModel(data32: signatureModel.s)
@@ -716,13 +753,16 @@ package extension PerformanceBenchmarkOperations {
             )
         }
 
+        try Task.checkCancellation()
         let varyingVerificationKeyAffineTable = JacobianPointModel
             .convertNonInfinityBatchToAffine(varyingVerificationKeyJacobianTable)
+        try Task.checkCancellation()
         precondition(
             varyingVerificationKeyAffineTable.count
                 == recordCount * metalSchnorrVaryingVerificationKeyOddMultipleCount
         )
         for localRecordIndex in 0..<recordCount {
+            try Task.checkCancellation()
             let tableStartIndex = localRecordIndex
                 * metalSchnorrVaryingVerificationKeyOddMultipleCount
             writeMetalSchnorrVaryingVerificationKeyTable(
@@ -746,6 +786,7 @@ package extension PerformanceBenchmarkOperations {
             )
         }
 
+        try Task.checkCancellation()
         return (signatureXWords, packedDigits, varyingVerificationKeyTableWords)
     }
 

@@ -30,8 +30,8 @@ extension OpalCrypto.Key {
         /// Creates an opaque signing capability for the private key encoded by this WIF value.
         ///
         /// Prefer the returned `SigningKey` for signing workflows that do not need to export raw private-key bytes.
-        public func makeSigningKey() throws -> OpalCrypto.Secp256k1.SigningKey {
-            try privateKey.makeSigningKey()
+        public func makeSigningKey() -> OpalCrypto.Secp256k1.SigningKey {
+            privateKey.makeSigningKey()
         }
 
         /// A redacted description that never includes WIF text or private key bytes.
@@ -80,34 +80,24 @@ extension OpalCrypto.Key {
         /// Serializes this value to Wallet Import Format text.
         ///
         /// The returned string is secret-bearing and can reconstruct the private key.
-        public func serialize() throws -> String {
+        public func serialize() -> String {
             let fields = [
                 OpalDiagnostics.Field.operationField("wif_serialize"),
                 OpalDiagnostics.Field.formatField("wif"),
                 OpalDiagnostics.Field.publicField("private_key_byte_count", privateKey.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("is_compressed", isCompressed)
             ]
-            do {
-                let serialized = try WalletImportFormatCodec.encode(
-                    privateKey: privateKey.rawRepresentation,
-                    isCompressed: isCompressed
-                )
-                Self.recordSucceeded(
-                    event: OpalDiagnostics.Event.wifSerializeSucceeded,
-                    fields: fields + [
-                        OpalDiagnostics.Field.publicField("output_character_count", serialized.count)
-                    ]
-                )
-                return serialized
-            } catch let error as WalletImportFormatCodec.Error {
-                let mappedError = Self.mapError(error)
-                Self.recordFailed(
-                    event: OpalDiagnostics.Event.wifSerializeFailed,
-                    error: mappedError,
-                    fields: fields
-                )
-                throw mappedError
-            }
+            let serialized = WalletImportFormatCodec.encode(
+                privateKey: privateKey,
+                isCompressed: isCompressed
+            )
+            Self.recordSucceeded(
+                event: OpalDiagnostics.Event.wifSerializeSucceeded,
+                fields: fields + [
+                    OpalDiagnostics.Field.publicField("output_character_count", serialized.count)
+                ]
+            )
+            return serialized
         }
 
         private static func recordSucceeded(

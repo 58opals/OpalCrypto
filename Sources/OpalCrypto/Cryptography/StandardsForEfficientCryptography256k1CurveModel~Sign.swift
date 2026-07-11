@@ -86,6 +86,9 @@ private extension StandardsForEfficientCryptography256k1CurveModel {
     static func makeSystemRandomScalarForEllipticCurveDigitalSignatureAlgorithm() throws -> ScalarModel {
         while true {
             var data = Data(count: 32)
+            // SAFETY: Data owns 32 writable bytes for the closure lifetime, so
+            // its nonnil base address remains valid while Security writes
+            // exactly 32 random bytes and does not retain the pointer.
             let status = data.withUnsafeMutableBytes { buffer -> Int32 in
                 guard let baseAddress = buffer.baseAddress else {
                     return errSecAllocate

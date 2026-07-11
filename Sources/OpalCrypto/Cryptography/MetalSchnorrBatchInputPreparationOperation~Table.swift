@@ -6,15 +6,8 @@ extension MetalSchnorrBatchInputPreparationOperation {
     static func makeCachedKeyTableWords(
         verificationKeyModel: VerificationKeyModel
     ) -> [UInt32] {
-        var words: [UInt32] = []
+        var words = sharedGeneratorTableWords
         words.reserveCapacity(cachedTableWordCount)
-        appendTableWords(makeOddMultiplesAffineTable(for: ScalarMultiplicationModel.generator), to: &words)
-        appendTableWords(
-            makeOddMultiplesAffineTable(
-                for: ScalarMultiplicationModel.generator.applyEndomorphism()
-            ),
-            to: &words
-        )
         appendTableWords(makeOddMultiplesAffineTable(for: verificationKeyModel.affinePoint), to: &words)
         appendTableWords(
             makeOddMultiplesAffineTable(

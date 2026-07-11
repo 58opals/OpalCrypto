@@ -4,6 +4,7 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
+    /// A 32-byte scalar used to open a Pedersen commitment.
     public struct Nonce: Sendable, Equatable {
         internal let scalarModel: ScalarModel
 
@@ -11,6 +12,7 @@ extension OpalCrypto.Pedersen {
             scalarModel.data32Bytes
         }
 
+        /// Creates a nonce from an exactly 32-byte scalar representation.
         public init(rawRepresentation: Data) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("nonce_parse"),

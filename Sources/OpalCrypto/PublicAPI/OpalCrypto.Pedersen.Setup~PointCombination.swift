@@ -4,6 +4,11 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Pedersen.Setup {
+    /// Adds commitment points and returns their secp256k1 group sum.
+    ///
+    /// - Throws: ``OpalCrypto/Pedersen/Error/emptyCommitmentList`` when `points`
+    ///   is empty or ``OpalCrypto/Pedersen/Error/invalidCommitment`` when the
+    ///   sum is the point at infinity.
     public static func addPoints(
         _ points: [OpalCrypto.Pedersen.CommitmentPoint]
     ) throws -> OpalCrypto.Pedersen.CommitmentPoint {
@@ -12,10 +17,12 @@ extension OpalCrypto.Pedersen.Setup {
             OpalDiagnostics.Field.publicField("point_count", points.count)
         ]
         do {
-            let point = try PedersenModel.Setup.addPoints(
-                points.map(\.rawRepresentation)
+            let affinePoint = try PedersenModel.Setup.addAffinePoints(
+                points.map(\.affinePoint)
             )
-            let commitmentPoint = try OpalCrypto.Pedersen.CommitmentPoint(validatingRawRepresentation: point)
+            let commitmentPoint = OpalCrypto.Pedersen.CommitmentPoint(
+                affinePoint: affinePoint
+            )
             recordCombineSucceeded(
                 outputByteCount: commitmentPoint.rawRepresentation.count,
                 fields: fields
@@ -25,9 +32,6 @@ extension OpalCrypto.Pedersen.Setup {
             let mappedError = mapError(error)
             recordCombineFailed(mappedError, fields: fields)
             throw mappedError
-        } catch let error as OpalCrypto.Pedersen.Error {
-            recordCombineFailed(error, fields: fields)
-            throw error
         }
     }
 }

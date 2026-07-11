@@ -21,6 +21,11 @@ extension CommunicationBoxModel {
         let outputCapacity = output.count
         var outputLength = 0
 
+        // SAFETY: The nested closures keep every Data allocation alive for the
+        // complete CCCrypt call. The key is exactly 32 bytes, the IV is exactly
+        // one AES block, and output owns outputCapacity writable bytes. A nil
+        // input base address is possible only for a zero-length input, whose
+        // matching byte count makes it valid for CommonCrypto to ignore.
         let status = output.withUnsafeMutableBytes { outputBuffer in
             input.withUnsafeBytes { inputBuffer in
                 key.withUnsafeBytes { keyBuffer in
