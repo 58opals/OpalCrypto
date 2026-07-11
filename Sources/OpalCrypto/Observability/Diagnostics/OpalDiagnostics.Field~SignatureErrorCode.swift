@@ -3,6 +3,32 @@
 import OpalDiagnostics
 
 extension OpalDiagnostics.Field {
+    static func mapMetalSchnorrBatchVerificationErrorCode(
+        for error: Swift.Error
+    ) -> OpalDiagnostics.ErrorCode? {
+        switch error {
+        case MetalSchnorrBatchVerificationError.unavailable,
+             MetalSchnorrBatchVerificationError.uncertifiedDevice:
+            OpalDiagnostics.ErrorCode.metalUnavailable
+        case MetalSchnorrBatchVerificationError.shaderLibraryUnavailable:
+            OpalDiagnostics.ErrorCode.metalResourceMissing
+        case MetalSchnorrBatchVerificationError.pipelineCreationFailed,
+             MetalSchnorrBatchVerificationError.selfTestFailed:
+            OpalDiagnostics.ErrorCode.metalPipelineInitializationFailed
+        case MetalSchnorrBatchVerificationError.bufferAllocationFailed,
+             MetalSchnorrBatchVerificationError.temporaryBufferLimitExceeded:
+            OpalDiagnostics.ErrorCode.metalAllocationFailed
+        case MetalSchnorrBatchVerificationError.commandEncodingFailed,
+             MetalSchnorrBatchVerificationError.commandFailed:
+            OpalDiagnostics.ErrorCode.metalCommandFailed
+        case MetalSchnorrBatchVerificationError.invalidInput,
+             MetalSchnorrBatchVerificationError.invalidOutput:
+            OpalDiagnostics.ErrorCode.metalInvalidOutput
+        default:
+            nil
+        }
+    }
+
     static func secp256k1ErrorCode(for error: Swift.Error) -> OpalDiagnostics.ErrorCode? {
         switch error {
         case OpalCrypto.Secp256k1.Error.invalidPrivateKeyLength:

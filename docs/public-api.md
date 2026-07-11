@@ -54,6 +54,49 @@ let schnorr = try signingKey.signSchnorr(digest: digest)
 let schnorrIsValid = try schnorr.verify(digest: digest, publicKey: publicKey)
 ```
 
+## Schnorr Verification Batches
+
+`OpalCrypto.Signature.Schnorr.VerificationBatch` verifies independent Bitcoin Cash Schnorr records while preserving input order. It returns one `Bool` per record; it is not probabilistic aggregate-signature verification. A mixed batch of valid and invalid signatures completes successfully, with each Boolean describing its corresponding record.
+
+Use one prepared verification key when every record shares a public key:
+
+```swift
+let verificationKey = OpalCrypto.Signature.VerificationKey(publicKey: publicKey)
+let batch = try OpalCrypto.Signature.Schnorr.VerificationBatch(
+    signatures: signatures,
+    digests: digests,
+    verificationKey: verificationKey
+)
+
+let results = try await batch.verify()
+```
+
+Use the varying-key initializer when each record has its own secp256k1 public key:
+
+```swift
+let batch = try OpalCrypto.Signature.Schnorr.VerificationBatch(
+    signatures: signatures,
+    digests: digests,
+    publicKeys: publicKeys
+)
+
+let results = try await batch.verify(using: .cpu)
+```
+
+`count` and `isEmpty` describe the immutable batch. Construction rejects mismatched signature, digest, or public-key counts before execution. An empty batch returns `[]` for every policy after checking task cancellation.
+
+The execution policies are:
+
+- `.automatic`: selects the qualified backend for the workload and environment. It uses Swift CPU execution below the qualified crossover, on unqualified devices and platforms, in Low Power Mode, and under serious or critical thermal pressure. A non-cancellation Metal failure discards all GPU output and recomputes the entire batch on the CPU.
+- `.cpu`: requires ordered, optimized multicore Swift execution.
+- `.metal`: requires a qualified Metal backend, even below the automatic crossover, and never falls back to the CPU. It throws `executionUnavailable(policy:)` when Metal is not qualified or available and `executionFailed(policy:)` when execution cannot complete.
+
+Cancellation propagates as `CancellationError` and never triggers fallback. Metal processes only public signatures, digests, and public keys; signing, nonces, private scalars, ECDH, and reusable payment address scan keys are outside this API.
+
+The initial production qualification envelope is macOS on the exact `Apple M1 Max` device name with Apple GPU family 7. Warm automatic selection starts at 4,096 records; a cold path that has not paid pipeline initialization and self-test starts at 8,192. That profile passed the five-process production-API qualification recorded in [metal-readiness.md](metal-readiness.md). Other device and platform profiles remain on CPU under `.automatic`, and explicit `.metal` is unavailable unless that profile is certified.
+
+Batch diagnostics are aggregate and privacy-safe: policy, selected backend, cached-key or varying-key shape, counts, stage durations, and stable low-cardinality Metal failure reasons. They never record signatures, digests, public keys, device names, driver strings, record indices, or per-record results.
+
 ## Batch Shared Secrets
 
 Use `OpalCrypto.Secp256k1.deriveSharedSecrets(privateKey:publicKeys:)` when a higher-level package needs ordered secp256k1 ECDH-style computation across many candidate public keys. Each `SharedSecret` matches the single-key `deriveSharedSecret(privateKey:publicKey:)` representation: SHA-256 of the compressed shared EC point.

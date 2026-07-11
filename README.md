@@ -72,7 +72,7 @@ See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 - In scope: facade-first BCH cryptography for keys, secp256k1, hashing, encoding, key derivation, and numeric primitives.
 - Out of scope: wallet or app-domain orchestration, address management, RPA scan policy, network or protocol/runtime responsibilities, non-BCH features, non-Swift expansion, or reliance on internal implementation details as public API. Higher-level packages such as Opal Base own wallet-facing reusable payment address behavior; Opal Crypto only supplies the cryptographic computation primitives they need.
 
-See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal prototype gate.
+See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal qualification boundary.
 
 ## Testing
 
@@ -106,7 +106,7 @@ Current benchmark smoke command:
 swift run -c release OpalCryptoBenchmarks -- --suite smoke
 ```
 
-Correctness result: Passed on 2026-07-05 with 222 tests in 30 suites.
+Correctness result: Passed on 2026-07-11 with 273 tests in 38 suites.
 
 ## Further Context
 

@@ -125,7 +125,7 @@ extension OpalCrypto.Signature {
             let fields = [
                 OpalDiagnostics.Field.operationField("verify"),
                 OpalDiagnostics.Field.algorithmField("schnorr"),
-                OpalDiagnostics.Field.formatField("bip340"),
+                OpalDiagnostics.Field.formatField("bitcoin_cash"),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField(
                     "verification_key_byte_count",
@@ -169,7 +169,7 @@ extension OpalCrypto.Signature {
             [
                 OpalDiagnostics.Field.operationField("sign"),
                 OpalDiagnostics.Field.algorithmField("schnorr"),
-                OpalDiagnostics.Field.formatField("bip340"),
+                OpalDiagnostics.Field.formatField("bitcoin_cash"),
                 OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
                 OpalDiagnostics.Field.publicField("private_key_byte_count", privateKeyByteCount),
                 OpalDiagnostics.Field.publicField("digest_byte_count", digest.rawRepresentation.count)

@@ -55,6 +55,77 @@ extension OpalDiagnostics.Field {
         publicField("verification_result", result)
     }
 
+    static func makeSchnorrBatchRequestedPolicyField(
+        _ requestedPolicy: String
+    ) -> OpalDiagnostics.Field {
+        publicField("requested_policy", requestedPolicy)
+    }
+
+    static func makeSchnorrBatchSelectedBackendField(
+        _ selectedBackend: String
+    ) -> OpalDiagnostics.Field {
+        publicField("selected_backend", selectedBackend)
+    }
+
+    static func makeSchnorrBatchInputShapeField(
+        _ inputShape: String
+    ) -> OpalDiagnostics.Field {
+        publicField("input_shape", inputShape)
+    }
+
+    static func makeSchnorrBatchRecordCountField(_ recordCount: Int) -> OpalDiagnostics.Field {
+        publicField("record_count", recordCount)
+    }
+
+    static func makeSchnorrBatchChunkCountField(_ chunkCount: Int) -> OpalDiagnostics.Field {
+        publicField("chunk_count", chunkCount)
+    }
+
+    static func makeSchnorrBatchValidResultCountField(
+        _ validResultCount: Int
+    ) -> OpalDiagnostics.Field {
+        publicField("valid_result_count", validResultCount)
+    }
+
+    static func makeSchnorrBatchInvalidResultCountField(
+        _ invalidResultCount: Int
+    ) -> OpalDiagnostics.Field {
+        publicField("invalid_result_count", invalidResultCount)
+    }
+
+    static func makeSchnorrBatchTotalDurationField(
+        _ totalDuration: Duration
+    ) -> OpalDiagnostics.Field {
+        OpalDiagnostics.Field(name: "total_duration", value: totalDuration)
+    }
+
+    static func makeSchnorrBatchPreparationDurationField(
+        _ preparationDuration: Duration
+    ) -> OpalDiagnostics.Field {
+        OpalDiagnostics.Field(
+            name: "cpu_preparation_duration",
+            value: preparationDuration
+        )
+    }
+
+    static func makeSchnorrBatchExecutionDurationField(
+        _ executionDuration: Duration
+    ) -> OpalDiagnostics.Field {
+        OpalDiagnostics.Field(name: "gpu_execution_duration", value: executionDuration)
+    }
+
+    static func makeSchnorrBatchReadbackDurationField(
+        _ readbackDuration: Duration
+    ) -> OpalDiagnostics.Field {
+        OpalDiagnostics.Field(name: "readback_duration", value: readbackDuration)
+    }
+
+    static func makeSchnorrBatchFallbackReasonField(
+        _ fallbackReason: OpalDiagnostics.ErrorCode
+    ) -> OpalDiagnostics.Field {
+        publicField("fallback_reason", fallbackReason.rawValue)
+    }
+
     static func errorFields(_ error: Swift.Error) -> [OpalDiagnostics.Field] {
         [
             OpalDiagnostics.Field.errorCode(errorCode(for: error)),

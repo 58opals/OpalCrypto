@@ -1,112 +1,209 @@
 # Metal Readiness
 
-This document records the current CPU-to-Metal decision point for Opal Crypto performance work. The repository contains a benchmark-only Metal probe for public verification batches; it is not a production Metal verifier and it is not an accepted acceleration path.
+This document records the July 11, 2026 Apple Silicon Metal performance spike for public Schnorr verification and its production qualification. The benchmark kernel and packaged production path passed their cached-key and varying-key evidence gates on the available M1 Max. The Swift CPU verifier remains the correctness source and portable fallback. Automatic Metal selection is qualified only for the exact M1 Max profile recorded below.
 
 ## Current Decision
 
-Metal planning is justified after two consecutive CPU-only plateau checks failed to produce a 10% targeted win:
+- **Benchmark go:** all five cached-key and all five varying-key release processes exceeded 2x end-to-end CPU/Metal throughput at 8,192 records, and Metal beat multicore Swift at 4,096 in every process.
+- **CPU production go:** `OpalCrypto.Signature.Schnorr.VerificationBatch` provides ordered cached-key and varying-key verification through optimized multicore Swift.
+- **Narrow Metal production go:** the shader is packaged as a precompiled SwiftPM resource and the production runtime is constrained to public inputs, bounded reusable buffers, one-time parity self-test, and explicit failure handling. The production API passed its five-process gate, so `.automatic` may select Metal on the exact qualified M1 Max profile.
+- **Marketing no-go:** do not add a README claim or general Apple Silicon performance claim. One Mac and one toolchain are not product evidence.
 
-- Stage 4 arithmetic experiment: a 5-bit sliding-window field/scalar exponentiation experiment regressed `Field sqrt`, `Field quadratic-residue check`, and `Scalar inversion`, so it was reverted.
-- Stage 4B public-batch allocation experiment: direct parsing from typed private keys improved `Batch compressed public-key derivation (256)` by only about 2.1% and regressed 1024-key and forced-mode benchmarks, so it was reverted.
+The measured crossover for both key modes is greater than 1,024 and no higher than 4,096 records. The benchmark did not sample 2,048, so it does not support a narrower break-even claim.
 
-The accepted Swift CPU path remains the correctness source of truth and the fallback.
+## Scope And Correctness Boundary
 
-## Stage 5 Probe Result
+The benchmark compares the Metal path with package-internal serial and multicore Swift operations that use the same internal Schnorr verifier as the public API while bypassing per-record diagnostics. Parallel verification preserves result order and uses uniformly balanced throwing-task-group chunks, at most `activeProcessorCount` workers, and at least 128 records per task.
 
-The first Stage 5 implementation adds CPU batch verification baselines and a benchmark-only Metal probe for public-data cached ECDSA and Schnorr verification batches. The probe validates Metal command setup, buffer transfer, scheduling, synchronization, readback, and CPU-side parity checking over CPU verification results. It does not execute secp256k1 verification on GPU, so it cannot be accepted as a Metal acceleration path even if timing noise occasionally looks favorable.
+Signing and fixture construction stay outside timing. Cached-key preparation builds only record-varying challenge data. Warm varying-key verification uses prepared tables; the fair CPU and Metal varying-key end-to-end cases both start with the same raw public-key bytes and include parsing and table construction. The Metal case also includes structure-of-arrays packing and a fresh table upload.
 
-Captured artifacts:
+Every benchmark and validation output is compared with the Swift result. A command-buffer status other than `.completed`, a preparation failure, or any output mismatch throws and fails the process. In production, the qualified Metal backend runs fixed known-answer self-tests after pipeline creation and then treats binary GPU output as authoritative; it does not repeat each batch on the CPU. Signing, nonces, private scalars, ECDH, reusable-payment-address scan keys, and other secret-bearing operations remain out of scope.
 
-- CPU ECDSA batch baseline: `.build/opalcrypto-benchmarks/metal-stage5-cpu-ecdsa-batch.jsonl`
-- CPU Schnorr batch baseline: `.build/opalcrypto-benchmarks/metal-stage5-cpu-schnorr-batch.jsonl`
-- Metal probe run 1: `.build/opalcrypto-benchmarks/metal-stage5-metal-probe-batch.jsonl`
-- Metal probe run 2: `.build/opalcrypto-benchmarks/metal-stage5-metal-probe-batch-run2.jsonl`
+## Measurement Environment
 
-Run 2 compared with the CPU baselines:
+| Property | Value |
+| --- | --- |
+| Computer | MacBook Pro 18,2 |
+| SoC | Apple M1 Max |
+| CPU | 10 cores reported by `activeProcessorCount` (8 performance, 2 efficiency) |
+| GPU | 32-core Apple GPU, Metal family `apple7` |
+| Memory | 64 GB |
+| OS | macOS 26.5.2, build 25F84 |
+| Swift | Apple Swift 6.3.2, swiftlang 6.3.2.1.108, clang 2100.1.1.101 |
+| Target | arm64-apple-macosx26.0, release configuration |
+| Power/thermal | Low Power Mode disabled; thermal state nominal in every evidence process |
+| Pipeline width | `threadExecutionWidth` 32; supported sweep widths 64, 128, and 256 |
 
-| Workload | CPU median avg | Metal probe median avg | Delta |
-| --- | ---: | ---: | ---: |
-| Batch ECDSA verify digest (cached key, 256) | 72098.056 us | 73198.875 us | +1.5% |
-| Batch ECDSA verify digest (cached key, 1024) | 287918.542 us | 286731.458 us | -0.4% |
-| Batch Schnorr verify (cached key, 256) | 65412.403 us | 65641.014 us | +0.3% |
-| Batch Schnorr verify (cached key, 1024) | 264647.292 us | 261269.125 us | -1.3% |
+The requested 512-thread candidate exceeded the pipeline's valid maximum and was not dispatched. Across the five cached-key processes, mean 8,192-record warm times were 128.521 ms at width 64, 127.569 ms at width 128, and 128.183 ms at width 256. Width 128 is therefore the retained default.
 
-Decision: no-go for Metal acceleration in this slice. The probe does not perform GPU secp256k1 verification and does not demonstrate a 10% end-to-end win across two release runs. Keep Swift CPU as the default and only fallback path.
+## Implementation Under Test
 
-## Stage 5 Real-Core Starting Point
+The optimized benchmark kernel uses fixed eight-limb, 32-bit Comba multiplication; bounded secp256k1 pseudo-Mersenne reduction; symmetry-specialized squaring; and a fixed addition chain for the `(p + 1) / 4` quadratic-residue exponent. The implementation was derived independently; no code was copied from UltrafastSecp256k1.
 
-A follow-up benchmark-only prototype adds a public-data Schnorr verification core that performs secp256k1 field arithmetic, signed WNAF point multiplication, point addition, and the Schnorr candidate X/Jacobi checks in Metal. CPU-side benchmark support prepares the already-public signature/challenge WNAF digits and cached-key affine tables, then the Metal runtime validates every GPU result against the Swift CPU reference result.
+CPU-prepared signed WNAF digits use component/index-major `Int8` structure-of-arrays storage so adjacent GPU threads read adjacent records. Cached generator/key tables are immutable uploads. Varying-key verification uses width-3 key WNAF, shares one generator table, and stores per-record public-key tables slot-major. Preparation batches affine conversion across each parallel chunk and derives the endomorphism table from the converted base table. Shared Metal buffers grow to bounded capacities and are reused across warm dispatches.
 
-This is a GPU-core milestone, not an accepted end-to-end acceleration path. On the first naive release-mode run, `Metal Schnorr verify core (cached key, 256)` measured about 483904 us per 256-record batch. After switching to CPU-prepared WNAF digits, affine tables, and nibble exponentiation for the residue check, the same 256-record core measured about 147992 us, versus about 67473 us for `Batch Schnorr verify (cached key, 256)`. At 1024 records, `Metal Schnorr verify core (cached key, 1024)` measured about 162419 us, versus about 280380 us for `Batch Schnorr verify (cached key, 1024)`.
+The validator covers 36 boundary pairs plus 10,000 deterministic generated field pairs for multiplication, squaring, and quadratic-residue parity; 9,979 generated operands are in the upper half of the field. It also covers all 16 Bitcoin Cash Schnorr vectors; an 8,192-record generated cached-key corpus with digest and signature corruption; an 8,192-record wrong-public-key pass; and a 256-record distinct-key corpus with public-key, digest, and signature corruption.
 
-Decision: keep the real-core Metal path benchmark-only. The 1024-record core result is the first useful GPU throughput signal, but acceptance still requires an end-to-end benchmark that includes CPU-side challenge preparation, WNAF/table preparation or caching policy, buffer setup, command scheduling, synchronization, readback, and CPU-side result validation across repeated release runs.
+## Production Qualification Boundary
 
-## Stage 5 End-to-End Batch Result
+The production API verifies each record independently and returns one ordered Boolean result per input. `.cpu` always uses the optimized Swift implementation. `.metal` requires a qualified Metal profile, runs even below the automatic crossover, and never falls back. `.automatic` uses CPU for empty or small workloads, unqualified devices and platforms, Low Power Mode, and serious or critical thermal state. On a qualified profile, its warm Metal threshold is 4,096 records and its cold threshold is 8,192 when pipeline initialization and self-test have not been paid.
 
-The next prototype step adds distinct Schnorr signatures and digests with a cached verification key, plus deliberate digest-mismatch negative records every 16th item. The Metal path now prepares per-record challenges and WNAF digits on CPU, reuses cached affine table words for the key, dispatches the Metal Schnorr core, reads back every result, and validates each result against the expected valid/invalid bit. Signing and fixture generation stay outside the measured operation. A follow-up width check moved the benchmark-only Metal WNAF path from width 6 to width 7, increasing cached odd multiples from 16 to 32 per component to reduce point additions.
+For `.automatic`, a non-cancellation Metal failure discards every GPU result and recomputes the complete batch on CPU. Cancellation propagates without fallback. Forced `.metal` reports an unavailable or failed public batch error and never returns partial results. The initial qualification envelope is macOS, exact Metal device name `Apple M1 Max`, and Apple GPU family 7. Unknown devices, other Apple GPU families, and other platforms are unqualified and stay on CPU under `.automatic`.
 
-Captured on July 8, 2026 in release mode:
+Production diagnostics emit only aggregate policy, backend, input-shape, count, timing, and stable failure-reason fields. Stable Metal reasons are `metal_unavailable`, `metal_resource_missing`, `metal_pipeline_initialization_failed`, `metal_allocation_failed`, `metal_command_failed`, and `metal_invalid_output`. Signatures, digests, public keys, device names, driver strings, record indices, and per-record results are never diagnostic fields. A mixed valid/invalid batch is a successful operation, not a backend failure.
 
-| Workload | 1024 median | 4096 median | 8192 median |
-| --- | ---: | ---: | ---: |
-| Metal Schnorr prep (cached key) | 8.837 ms | 36.064 ms | 72.166 ms |
-| Metal Schnorr end-to-end (cached key) | 464.752 ms | 561.923 ms | 594.464 ms |
-| CPU Batch Schnorr distinct (cached key) | 291.627 ms | 1166.481 ms | 2324.008 ms |
-| CPU / Metal end-to-end ratio | 0.63x | 2.08x | 3.91x |
+The production qualification is **passed for the exact recorded M1 Max profile**. Benchmark-kernel evidence alone did not enable routing; the separate public production-API gate below did.
 
-Decision: still benchmark-only, but no longer a no-go on throughput. The end-to-end path loses at 1024 records because fixed Metal core and dispatch cost dominates, then wins at 4096 and 8192 records. This is not enough for acceptance because it is a single release-mode run and the speedup is still far below the original 450x target. A manual square-specialization experiment regressed end-to-end timing, while width 7 produced a modest repeatable win; the next engineering question is whether the Metal core can reduce its fixed cost and per-record field arithmetic cost enough to make medium batches profitable and large batches materially faster.
+## Commands
 
-## Current Closeout
-
-The Stage 5 Metal work should pause as a benchmark-only research artifact unless a product workload needs thousands of public Schnorr verifications in one batch. The current prototype proves that Apple Silicon Metal can beat the Swift CPU verifier for large public batches, but the best measured speedup is about 3.91x at 8192 records and the path still loses at 1024 records. That is not close to the original 450x target and does not justify production integration without a concrete large-batch caller.
-
-Future work should be evidence-gated. Use Metal counters or Instruments before changing the kernel further, and only continue if profiling points to a specific bottleneck such as field multiplication occupancy, residue exponentiation, memory pressure from per-record digits, or command scheduling overhead. Keep the CPU verifier as the accepted path and keep this Metal code benchmark-target-only.
-
-## Candidate Selection
-
-Under the current no-secret-bearing-GPU boundary, the first Metal prototype candidate should be public batch verification, not private-key public-key derivation.
-
-Public-key derivation remains an important CPU benchmark, but its input includes private scalars. Moving private-key derivation to GPU needs a separate review of memory residency, command-buffer lifetime, timing behavior, device sharing, capture/debug tooling, and failure cleanup. That review is outside the current readiness gate.
-
-Batch verification remains the cleaner future candidate because signatures, digests, and public keys are public-data inputs. A future accepted prototype must implement the secp256k1 verification core in Metal and compare the existing Swift verification loop against that Metal kernel without changing public library APIs.
-
-Receiver scanning for reusable payment addresses is a separate candidate class. It may be valuable as Apple Silicon acceleration for local bulk historical catch-up, but it is not eligible from the current Opal Crypto proxy benchmark alone. Opal Base must first provide an end-to-end benchmark that separates candidate loading, public-key construction, batch shared-secret derivation, matching, address or locking script derivation, wallet state, persistence, and indexer I/O. A receiver-scan Metal prototype is justified only if that benchmark shows Opal Crypto shared-secret derivation dominates at restore scale after ordinary CPU and pipeline tuning.
-
-Any receiver-scan Metal backend is secret-bearing because scan private-key scalar material participates in GPU work. Before production use, it needs a security and product review covering GPU buffer residency, command-buffer lifetime, memory clearing limits, debug capture exposure, device sharing, timing behavior, failure cleanup, and CPU fallback behavior.
-
-## Prototype Scope
-
-The Stage 5 prototype should stay benchmark-target-only until it proves an end-to-end win:
-
-- Add benchmark-only CPU batch verification workloads for ECDSA cached-key verification and Schnorr cached-key verification.
-- Add a platform-gated Metal prototype path for the same public-data verification workload.
-- Keep the Swift CPU implementation as the reference result and fallback.
-- Compare every Metal result against the Swift CPU result for exact boolean parity.
-- Exclude private-key signing, nonce generation, scalar inversion for secrets, and private-key public-key derivation unless a separate secret-handling review approves them.
-
-## Acceptance Bar
-
-Before any Metal path can move beyond prototype status, capture a same-machine CPU reference artifact:
+Build and correctness validation:
 
 ```bash
-swift run -c release OpalCryptoBenchmarks -- --suite hot --filter "cached key" --output .build/opalcrypto-benchmarks/metal-cpu-reference-cached-verification.jsonl
+swift build -c release
+swift test
+OPALCRYPTO_RUN_PERF_TESTS=1 swift test
+swift run -c release OpalCryptoBenchmarks -- --validate-metal
 ```
 
-Then capture the Metal prototype artifact with the same workload shape. The Metal path is acceptable only if all of the following are true:
+Five fresh cached-key release processes, each with two warmups and five measured samples:
 
-- It beats the improved Swift CPU path end-to-end by at least 10% on the targeted batch verification workload.
-- The timing includes buffer setup, data transfer, command encoding, command scheduling, synchronization, result readback, and CPU-side result validation.
-- It repeats the win in at least two separate release-mode benchmark runs on the same machine.
-- It preserves exact verification results against the Swift CPU path.
-- It introduces no public API changes and no `Package.swift` dependency changes.
-- It remains platform-gated and falls back to Swift CPU when Metal is unavailable.
+```bash
+for run in 1 2 3 4 5; do
+  swift run -c release OpalCryptoBenchmarks -- --suite metal --warmups 2 --samples 5 --output ".build/opalcrypto-benchmarks/spike-gate-cached-run-${run}.jsonl"
+done
+```
 
-Kernel-only timing is not sufficient evidence.
+Five fresh varying-key release processes after the cached gate passed:
+
+```bash
+for run in 1 2 3 4 5; do
+  swift run -c release OpalCryptoBenchmarks -- --suite metal --filter "varying keys" --warmups 2 --samples 5 --output ".build/opalcrypto-benchmarks/spike-gate-varying-full-run-${run}.jsonl"
+done
+```
+
+Focused production API, CPU-operation, and diagnostics validation:
+
+```bash
+swift test --filter PublicAPISchnorrBatchVerificationValidator
+swift test --filter SchnorrBatchVerificationOperationValidator
+swift test --filter DiagnosticsIntegrationValidator
+```
+
+Five fresh production-API release processes, covering cached and varying inputs through forced CPU and forced Metal policies:
+
+```bash
+for run in 1 2 3 4 5; do
+  swift run -c release OpalCryptoBenchmarks -- --suite metal --filter "Production API" --warmups 2 --samples 5 --output ".build/opalcrypto-benchmarks/production-metal-qualified-run-${run}.jsonl"
+done
+```
+
+Every production process must pass the same per-shape gate: Metal at least 2x CPU end-to-end throughput at 8,192 records and no slower than CPU at 4,096, with exact ordered result parity. Any mismatch, command failure, unexpected forced-Metal fallback, unbounded allocation, or regression against the retained kernel fails qualification. All five recorded processes passed.
+
+Signing-disabled generic Xcode builds also passed for iOS, tvOS, visionOS, and watchOS. The first three compile the conditionally linked Metal target; watchOS compiles the same public batch API through the CPU-only library graph with no `OpalCryptoMetal` dependency. These compile checks do not certify non-macOS Metal profiles; that still requires real-device correctness and performance evidence.
+
+Final validation passed `swift build -c release`, 273 tests in 38 suites under both the normal and opt-in performance configurations, and the exclusive Metal validator. The validator reported 10,036 field cases, all 16 Bitcoin Cash Schnorr vectors, 8,192-record generated and wrong-key corpora, and the 256-record distinct-key corpus with the stable checksum `-3088338677`.
+
+## Production API Five-Process Evidence
+
+These medians include public batch construction, result conversion, varying-key table preparation, dispatch, and readback. Fixtures and signing remain outside timing. Speedup is multicore Swift time divided by forced Metal time.
+
+| Process | Cached 4,096 | Cached 8,192 | Varying 4,096 | Varying 8,192 |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 1.44x | 2.43x | 2.25x | 3.86x |
+| 2 | 1.56x | 2.63x | 2.48x | 4.05x |
+| 3 | 1.59x | 2.97x | 2.54x | 4.73x |
+| 4 | 1.81x | 2.86x | 2.77x | 4.55x |
+| 5 | 1.47x | 2.52x | 2.33x | 4.03x |
+
+Across the five final-runtime processes, cached-key 8,192-record Metal medians were 135.368–142.541 ms versus 344.150–416.803 ms on CPU, a 2.43x–2.97x range. Varying-key Metal medians were 141.442–149.672 ms versus 564.489–706.890 ms on CPU, a 3.86x–4.73x range. At 4,096 records, cached Metal was 1.44x–1.81x faster and varying Metal was 2.25x–2.77x faster. The production gate therefore retains the measured automatic crossover as greater than 1,024 and no higher than 4,096.
+
+## Before And After
+
+The before artifact used the previous end-to-end cached-key Metal implementation with one warmup and three samples. The optimized figures below are the median of the five fresh-process medians. The optimized CPU column is the fair multicore verifier; the older serial diagnostic loop measured 286.509, 1,147.867, and 2,304.388 ms at 1,024, 4,096, and 8,192 respectively and is not used for the gate.
+
+| Records | Before Metal end-to-end | Optimized Metal end-to-end | Optimized multicore Swift | CPU / Metal |
+| ---: | ---: | ---: | ---: | ---: |
+| 1,024 | 474.931 ms | 114.465 ms | 54.094 ms | 0.47x |
+| 4,096 | 579.494 ms | 118.849 ms | 219.899 ms | 1.85x |
+| 8,192 | 615.747 ms | 142.566 ms | 465.901 ms | 3.27x |
+
+Cached-key preparation and warm-execution medians make the end-to-end composition explicit:
+
+| Records | CPU prep | Warm Metal | End-to-end Metal | Multicore Swift | CPU / Metal |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,024 | 1.551 ms | 112.417 ms | 114.465 ms | 54.094 ms | 0.47x |
+| 4,096 | 5.586 ms | 112.650 ms | 118.849 ms | 219.899 ms | 1.85x |
+| 8,192 | 11.109 ms | 128.423 ms | 142.566 ms | 465.901 ms | 3.27x |
+
+Varying-key medians report both prebuilt-key verification and the fair raw-key end-to-end comparison used by the gate:
+
+| Records | Metal prep | Warm Metal | End-to-end Metal | CPU prebuilt keys | CPU raw-key end-to-end | Full CPU / Metal |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,024 | 15.262 ms | 106.724 ms | 121.044 ms | 64.167 ms | 108.153 ms | 0.89x |
+| 4,096 | 49.291 ms | 106.475 ms | 156.498 ms | 204.250 ms | 376.241 ms | 2.40x |
+| 8,192 | 93.617 ms | 122.590 ms | 215.950 ms | 414.616 ms | 706.875 ms | 3.27x |
+
+## Five-Process Evidence Gate
+
+Cached-key results:
+
+| Process | Metal 4,096 | CPU 4,096 | CPU / Metal | Metal 8,192 | CPU 8,192 | CPU / Metal |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 119.799 ms | 219.323 ms | 1.83x | 142.811 ms | 541.295 ms | 3.79x |
+| 2 | 118.849 ms | 217.595 ms | 1.83x | 140.138 ms | 533.707 ms | 3.81x |
+| 3 | 118.047 ms | 257.027 ms | 2.18x | 142.566 ms | 450.837 ms | 3.16x |
+| 4 | 118.365 ms | 219.899 ms | 1.86x | 146.102 ms | 399.125 ms | 2.73x |
+| 5 | 119.204 ms | 305.810 ms | 2.57x | 138.331 ms | 465.901 ms | 3.37x |
+
+Varying-key end-to-end results, with both sides starting from raw public-key bytes:
+
+| Process | Metal 4,096 | CPU 4,096 | CPU / Metal | Metal 8,192 | CPU 8,192 | CPU / Metal |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 149.986 ms | 446.668 ms | 2.98x | 234.239 ms | 903.864 ms | 3.86x |
+| 2 | 158.277 ms | 421.839 ms | 2.67x | 224.361 ms | 847.377 ms | 3.78x |
+| 3 | 159.894 ms | 376.241 ms | 2.35x | 215.950 ms | 706.875 ms | 3.27x |
+| 4 | 156.498 ms | 351.497 ms | 2.25x | 214.682 ms | 605.513 ms | 2.82x |
+| 5 | 145.676 ms | 286.632 ms | 1.97x | 191.927 ms | 564.008 ms | 2.94x |
+
+Every cached process passed the 8,192-record 2x gate with a 2.73x–3.81x range. Every corrected varying-key process passed with a 2.82x–3.86x range. Both modes beat their matching multicore Swift comparison at 4,096 in every process.
+
+Cold pipeline initialization is reported separately from warm execution. The ten evidence-process metadata records measured 37.418–47.934 ms with the system driver cache already populated; that range is not a first-ever shader-compilation guarantee.
+
+## Profiler Evidence
+
+Before and after Metal System Trace and Game Performance captures use the same cached-key 8,192-record end-to-end filter:
+
+```bash
+BENCHMARK_BINARY="$(swift build -c release --show-bin-path)/OpalCryptoBenchmarks"
+xctrace record --template "Metal System Trace" --output .build/opalcrypto-benchmarks/spike-after-metal.trace --launch -- "$BENCHMARK_BINARY" --suite metal --filter "Metal Schnorr verify end-to-end (cached key, 8192)" --warmups 1 --samples 3
+xctrace record --template "Game Performance" --output .build/opalcrypto-benchmarks/spike-after-game-performance.trace --launch -- "$BENCHMARK_BINARY" --suite metal --filter "Metal Schnorr verify end-to-end (cached key, 8192)" --warmups 1 --samples 3
+xctrace record --template "Metal System Trace" --output .build/opalcrypto-benchmarks/production-after-metal.trace --launch -- "$BENCHMARK_BINARY" --suite metal --filter "Production API Metal Schnorr verify (cached key, 8192)" --warmups 1 --samples 3
+xctrace record --template "Game Performance" --output .build/opalcrypto-benchmarks/production-after-game-performance.trace --launch -- "$BENCHMARK_BINARY" --suite metal --filter "Production API Metal Schnorr verify (cached key, 8192)" --warmups 1 --samples 3
+```
+
+The ignored local captures are:
+
+- Before: `.build/opalcrypto-benchmarks/spike-before-metal.trace` (272 MB) and `.build/opalcrypto-benchmarks/spike-before-game-performance.trace` (176 MB).
+- After: `.build/opalcrypto-benchmarks/spike-after-metal.trace` (161 MB) and `.build/opalcrypto-benchmarks/spike-after-game-performance.trace` (175 MB).
+- Production API: `.build/opalcrypto-benchmarks/production-after-metal.trace` (163 MB) and `.build/opalcrypto-benchmarks/production-after-game-performance.trace` (158 MB).
+
+The production captures used the forced-Metal cached-key public API at 8,192 records with one warmup and three samples. Their table of contents includes Metal command-buffer, GPU-interval, allocation, and GPU-counter schemas, and the benchmark process exited successfully. The captures preserve profiling evidence but do not support a portable GPU-counter claim.
+
+## Final Boundary And Next Gate
+
+The result is a **go for the public CPU batch API and automatic production Metal on the exact recorded M1 Max profile**. Broader device certification and marketing remain a **no-go** until cross-device Apple Silicon measurements, mobile and other supported-platform validation, and sustained real-caller evidence exist.
+
+The production result may be described narrowly as: on the recorded M1 Max configuration, five fresh release processes showed 2.43x–2.97x cached-key and 3.86x–4.73x varying-key end-to-end throughput at 8,192 public Schnorr records versus the matching multicore Swift path. It must not be promoted to README or general product marketing in this round.
 
 ## Non-Goals
 
-- Do not add a C or C++ backend.
-- Do not commit benchmark baseline artifacts.
-- Do not make Metal the default path from a benchmark-only prototype.
-- Do not send secret-bearing private-key, signing, nonce, or scalar material to GPU without a separate review.
-- Do not encode reusable payment address scan policy, address management, transaction output matching, wallet state, persistence, or indexer integration in Opal Crypto.
+- No C, C++, CUDA, or external cryptography backend.
+- No automatic Metal enablement outside the exact qualified M1 Max profile.
+- No Metal certification beyond the exact recorded M1 Max profile in this round.
+- No committed benchmark JSONL or Instruments artifact.
+- No GPU signing, nonce generation, private scalar handling, ECDH, reusable-payment-address scanning, or other secret-bearing work.
+- No claim about iPhone, iPad, other Macs, other Apple GPU families, or sustained production workloads.
+
+## Superseded Probe Evidence
+
+Earlier Stage 5 records measured a command/readback probe that did not execute secp256k1 verification on GPU, followed by a first real-core implementation and a single-run end-to-end prototype. A provisional varying-key run also packed tables from already-constructed verification keys and therefore did not satisfy the full-preparation boundary. Those historical/provisional results are not the current gate. The corrected July 11 five-process tables above are the source of truth for this spike.

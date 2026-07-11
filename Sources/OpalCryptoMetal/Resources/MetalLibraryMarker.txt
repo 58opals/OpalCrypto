@@ -1,0 +1,1 @@
+OpalCrypto precompiled Metal library resource bundle.

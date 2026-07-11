@@ -6,8 +6,6 @@ import OpalCrypto
 
 @main
 enum OpalCryptoBenchmarks {
-    private static let warmupIterations = 1
-    private static let measurementSampleCount = 3
     private static let machineReadableNumberLocale = Locale(identifier: "en_US_POSIX")
 
     nonisolated static func main() async {
@@ -29,6 +27,12 @@ enum OpalCryptoBenchmarks {
             return
         }
 
+        if options.shouldValidateMetal {
+            let checksum = try MetalValidation.run()
+            print("Metal validation checksum: \(checksum)")
+            return
+        }
+
         let benchmarks = try selectedBenchmarks(options: options)
         if options.shouldList {
             for benchmark in benchmarks {
@@ -37,11 +41,16 @@ enum OpalCryptoBenchmarks {
             return
         }
 
+        let metalCoreConfiguration: MetalSchnorrVerificationCore.Configuration?
+        if benchmarks.contains(where: \.usesMetalSchnorrVerificationCore) {
+            metalCoreConfiguration = try MetalSchnorrVerificationCore.configuration()
+        } else {
+            metalCoreConfiguration = nil
+        }
         let context = try BenchmarkContext.make()
         let metadata = BenchmarkRunMetadata.make(
             options: options,
-            warmupIterations: warmupIterations,
-            measurementSampleCount: measurementSampleCount
+            metalCoreConfiguration: metalCoreConfiguration
         )
         let reporter = try BenchmarkReporter(outputPath: options.outputPath)
         var checksum = 0
@@ -58,7 +67,9 @@ enum OpalCryptoBenchmarks {
             checksum ^= try await runBenchmark(
                 benchmark,
                 context: context,
-                reporter: reporter
+                reporter: reporter,
+                warmupIterations: options.warmupIterations,
+                measurementSampleCount: options.measurementSampleCount
             )
         }
 
@@ -78,7 +89,16 @@ enum OpalCryptoBenchmarks {
     }
 
     static func selectedBenchmarks(options: BenchmarkOptions) throws -> [BenchmarkCase] {
-        let selected = benchmarkCases().filter { benchmark in
+        var availableBenchmarks = benchmarkCases()
+        if options.suite == .metal || options.suite == .full {
+            let candidateSweepNames = [64, 128, 256, 512].map {
+                "Metal Schnorr threadgroup \($0) (cached key, 8192)"
+            }
+            if candidateSweepNames.contains(where: options.filterMatches) {
+                availableBenchmarks += metalThreadgroupWidthSweepBenchmarkCases()
+            }
+        }
+        let selected = availableBenchmarks.filter { benchmark in
             benchmark.isIncluded(in: options.suite)
                 && options.filterMatches(name: benchmark.name)
         }
@@ -91,14 +111,18 @@ enum OpalCryptoBenchmarks {
     static func runBenchmark(
         _ benchmark: BenchmarkCase,
         context: BenchmarkContext,
-        reporter: BenchmarkReporter
+        reporter: BenchmarkReporter,
+        warmupIterations: Int,
+        measurementSampleCount: Int
     ) async throws -> Int {
         switch benchmark.operation {
         case let .sync(operation):
             try runSyncBenchmark(
                 name: benchmark.name,
                 iterations: benchmark.iterations,
-                reporter: reporter
+                reporter: reporter,
+                warmupIterations: warmupIterations,
+                measurementSampleCount: measurementSampleCount
             ) {
                 try operation(context)
             }
@@ -106,7 +130,9 @@ enum OpalCryptoBenchmarks {
             try await runAsyncBenchmark(
                 name: benchmark.name,
                 iterations: benchmark.iterations,
-                reporter: reporter
+                reporter: reporter,
+                warmupIterations: warmupIterations,
+                measurementSampleCount: measurementSampleCount
             ) {
                 try await operation(context)
             }
@@ -117,15 +143,25 @@ enum OpalCryptoBenchmarks {
         name: String,
         iterations: Int,
         reporter: BenchmarkReporter,
+        warmupIterations: Int,
+        measurementSampleCount: Int,
         operation: () throws -> Int
     ) throws -> Int {
-        validateMeasurementConfiguration(iterations: iterations)
+        validateMeasurementConfiguration(
+            iterations: iterations,
+            warmupIterations: warmupIterations,
+            measurementSampleCount: measurementSampleCount
+        )
         var checksum = 0
+        MetalSchnorrVerificationCore.resetStageMeasurements()
         for _ in 0..<warmupIterations {
             _ = try operation()
         }
+        MetalSchnorrVerificationCore.resetStageMeasurements()
         var samples: [UInt64] = .init()
         samples.reserveCapacity(measurementSampleCount)
+        var metalStageSamples: [MetalSchnorrVerificationCore.StageMeasurement] = .init()
+        metalStageSamples.reserveCapacity(measurementSampleCount)
         for _ in 0..<measurementSampleCount {
             let startNanoseconds = DispatchTime.now().uptimeNanoseconds
             var sampleChecksum = 0
@@ -134,11 +170,21 @@ enum OpalCryptoBenchmarks {
             }
             samples.append(DispatchTime.now().uptimeNanoseconds - startNanoseconds)
             checksum ^= sampleChecksum
+            if let stageSample = MetalSchnorrVerificationCore.StageMeasurement.combining(
+                MetalSchnorrVerificationCore.takeStageMeasurements()
+            ) {
+                metalStageSamples.append(stageSample)
+            }
         }
+        precondition(
+            metalStageSamples.isEmpty || metalStageSamples.count == samples.count,
+            "Metal stage measurements must cover every benchmark sample."
+        )
         try printSummary(
             name: name,
             iterations: iterations,
             samples: samples,
+            metalStageSamples: metalStageSamples,
             reporter: reporter
         )
         return checksum
@@ -148,15 +194,25 @@ enum OpalCryptoBenchmarks {
         name: String,
         iterations: Int,
         reporter: BenchmarkReporter,
+        warmupIterations: Int,
+        measurementSampleCount: Int,
         operation: @Sendable () async throws -> Int
     ) async throws -> Int {
-        validateMeasurementConfiguration(iterations: iterations)
+        validateMeasurementConfiguration(
+            iterations: iterations,
+            warmupIterations: warmupIterations,
+            measurementSampleCount: measurementSampleCount
+        )
         var checksum = 0
+        MetalSchnorrVerificationCore.resetStageMeasurements()
         for _ in 0..<warmupIterations {
             _ = try await operation()
         }
+        MetalSchnorrVerificationCore.resetStageMeasurements()
         var samples: [UInt64] = .init()
         samples.reserveCapacity(measurementSampleCount)
+        var metalStageSamples: [MetalSchnorrVerificationCore.StageMeasurement] = .init()
+        metalStageSamples.reserveCapacity(measurementSampleCount)
         for _ in 0..<measurementSampleCount {
             let startNanoseconds = DispatchTime.now().uptimeNanoseconds
             var sampleChecksum = 0
@@ -165,11 +221,21 @@ enum OpalCryptoBenchmarks {
             }
             samples.append(DispatchTime.now().uptimeNanoseconds - startNanoseconds)
             checksum ^= sampleChecksum
+            if let stageSample = MetalSchnorrVerificationCore.StageMeasurement.combining(
+                MetalSchnorrVerificationCore.takeStageMeasurements()
+            ) {
+                metalStageSamples.append(stageSample)
+            }
         }
+        precondition(
+            metalStageSamples.isEmpty || metalStageSamples.count == samples.count,
+            "Metal stage measurements must cover every benchmark sample."
+        )
         try printSummary(
             name: name,
             iterations: iterations,
             samples: samples,
+            metalStageSamples: metalStageSamples,
             reporter: reporter
         )
         return checksum
@@ -179,6 +245,7 @@ enum OpalCryptoBenchmarks {
         name: String,
         iterations: Int,
         samples: [UInt64],
+        metalStageSamples: [MetalSchnorrVerificationCore.StageMeasurement],
         reporter: BenchmarkReporter
     ) throws {
         let sortedSamples = samples.sorted()
@@ -199,7 +266,8 @@ enum OpalCryptoBenchmarks {
                 samplesNanoseconds: samples,
                 medianMilliseconds: medianMilliseconds,
                 minimumMilliseconds: minimumMilliseconds,
-                medianAverageMicroseconds: medianAverageMicroseconds
+                medianAverageMicroseconds: medianAverageMicroseconds,
+                metalStageSamples: metalStageSamples
             )
         )
     }
@@ -208,8 +276,13 @@ enum OpalCryptoBenchmarks {
         String(format: "%.3f", locale: machineReadableNumberLocale, value)
     }
 
-    private static func validateMeasurementConfiguration(iterations: Int) {
+    private static func validateMeasurementConfiguration(
+        iterations: Int,
+        warmupIterations: Int,
+        measurementSampleCount: Int
+    ) {
         precondition(iterations > 0, "Benchmark iterations must be positive.")
+        precondition(warmupIterations > 0, "Benchmark warmup count must be positive.")
         precondition(measurementSampleCount > 0, "Benchmark sample count must be positive.")
     }
 }
@@ -229,11 +302,19 @@ extension OpalCryptoBenchmarks {
         func isIncluded(in suite: BenchmarkSuite) -> Bool {
             suite == .full || suites.contains(suite)
         }
+
+        var usesMetalSchnorrVerificationCore: Bool {
+            name.hasPrefix("Metal Schnorr verify core")
+                || name.hasPrefix("Metal Schnorr verify end-to-end")
+                || name.hasPrefix("Metal Schnorr verify warm")
+                || name.hasPrefix("Metal Schnorr threadgroup")
+        }
     }
 
     enum BenchmarkSuite: String, CaseIterable {
         case smoke
         case hot
+        case metal
         case full
 
         static var allowedValuesText: String {
@@ -242,51 +323,89 @@ extension OpalCryptoBenchmarks {
     }
 
     struct BenchmarkOptions {
+        static let defaultWarmupIterations = 1
+        static let defaultMeasurementSampleCount = 3
+
         let suite: BenchmarkSuite
         let filter: String?
         let outputPath: String?
+        let warmupIterations: Int
+        let measurementSampleCount: Int
         let shouldList: Bool
         let shouldShowHelp: Bool
+        let shouldValidateMetal: Bool
 
         static let usage = """
-            Usage: OpalCryptoBenchmarks [--suite smoke|hot|full] [--filter text] [--output path] [--list] [--help]
+            Usage: OpalCryptoBenchmarks [--suite smoke|hot|metal|full] [--filter text] [--output path] [--warmups N] [--samples N] [--list] [--help]
+                   OpalCryptoBenchmarks --validate-metal
 
             Options:
-              --suite smoke|hot|full  Select benchmark suite. Defaults to full.
-              --filter text           Run benchmark names containing text, case-insensitive.
-              --output path           Write JSONL records to path, creating parent directories.
-              --list                  Print selected benchmark names without running them.
-              --help                  Print this help text.
+              --suite smoke|hot|metal|full  Select benchmark suite. Defaults to full.
+              --filter text                 Run benchmark names containing text, case-insensitive.
+              --output path                 Write JSONL records to path, creating parent directories.
+              --warmups N                   Set positive warmup count. Defaults to 1.
+              --samples N                   Set positive measurement sample count. Defaults to 3.
+              --list                        Print selected benchmark names without running them.
+              --validate-metal              Run Metal correctness validation. Must be used alone.
+              --help                        Print this help text.
             """
 
         static func parse(_ arguments: [String]) throws -> BenchmarkOptions {
+            let normalizedArguments = arguments.first == "--"
+                ? Array(arguments.dropFirst())
+                : arguments
+            if let validationOptionIndex = normalizedArguments.firstIndex(
+                of: "--validate-metal"
+            ) {
+                var conflictingArguments = normalizedArguments
+                conflictingArguments.remove(at: validationOptionIndex)
+                guard conflictingArguments.isEmpty else {
+                    throw BenchmarkCommandError.metalValidationConflict(conflictingArguments)
+                }
+            }
+
             var suite: BenchmarkSuite = .full
             var filter: String?
             var outputPath: String?
+            var warmupIterations = defaultWarmupIterations
+            var measurementSampleCount = defaultMeasurementSampleCount
             var shouldList = false
             var shouldShowHelp = false
+            var shouldValidateMetal = false
 
             var index = 0
-            while index < arguments.count {
-                let argument = arguments[index]
+            while index < normalizedArguments.count {
+                let argument = normalizedArguments[index]
                 switch argument {
                 case "--suite":
-                    let value = try value(after: "--suite", at: index, in: arguments)
+                    let value = try value(
+                        after: "--suite",
+                        at: index,
+                        in: normalizedArguments
+                    )
                     index += 1
                     guard let parsedSuite = BenchmarkSuite(rawValue: value) else {
                         throw BenchmarkCommandError.unknownSuite(value)
                     }
                     suite = parsedSuite
                 case "--filter":
-                    filter = try value(after: "--filter", at: index, in: arguments)
+                    filter = try value(after: "--filter", at: index, in: normalizedArguments)
                     index += 1
                 case "--output":
-                    outputPath = try value(after: "--output", at: index, in: arguments)
+                    outputPath = try value(after: "--output", at: index, in: normalizedArguments)
                     index += 1
-                case "--":
-                    break
+                case "--warmups":
+                    let value = try value(after: "--warmups", at: index, in: normalizedArguments)
+                    warmupIterations = try positiveInteger(value, for: argument)
+                    index += 1
+                case "--samples":
+                    let value = try value(after: "--samples", at: index, in: normalizedArguments)
+                    measurementSampleCount = try positiveInteger(value, for: argument)
+                    index += 1
                 case "--list":
                     shouldList = true
+                case "--validate-metal":
+                    shouldValidateMetal = true
                 case "--help", "-h":
                     shouldShowHelp = true
                 default:
@@ -299,8 +418,11 @@ extension OpalCryptoBenchmarks {
                 suite: suite,
                 filter: filter,
                 outputPath: outputPath,
+                warmupIterations: warmupIterations,
+                measurementSampleCount: measurementSampleCount,
                 shouldList: shouldList,
-                shouldShowHelp: shouldShowHelp
+                shouldShowHelp: shouldShowHelp,
+                shouldValidateMetal: shouldValidateMetal
             )
         }
 
@@ -323,9 +445,21 @@ extension OpalCryptoBenchmarks {
             }
             return arguments[valueIndex]
         }
+
+        private static func positiveInteger(
+            _ value: String,
+            for option: String
+        ) throws -> Int {
+            guard let integer = Int(value), integer > 0 else {
+                throw BenchmarkCommandError.invalidPositiveInteger(option: option, value: value)
+            }
+            return integer
+        }
     }
 
     enum BenchmarkCommandError: Error, CustomStringConvertible {
+        case invalidPositiveInteger(option: String, value: String)
+        case metalValidationConflict([String])
         case missingValue(String)
         case noMatchingBenchmarks
         case unknownArgument(String)
@@ -333,6 +467,10 @@ extension OpalCryptoBenchmarks {
 
         var description: String {
             switch self {
+            case let .invalidPositiveInteger(option, value):
+                "Invalid value \(value) for \(option). Expected a positive integer."
+            case let .metalValidationConflict(options):
+                "--validate-metal must be used alone; remove \(options.joined(separator: ", "))."
             case let .missingValue(option):
                 "Missing value for \(option)."
             case .noMatchingBenchmarks:
@@ -346,7 +484,7 @@ extension OpalCryptoBenchmarks {
     }
 
     struct BenchmarkRunMetadata {
-        private static let schemaVersion = 1
+        private static let schemaVersion = 2
 
         let runID: String
         let timestamp: String
@@ -360,11 +498,11 @@ extension OpalCryptoBenchmarks {
         let filter: String?
         let warmupIterations: Int
         let measurementSampleCount: Int
+        let environment: BenchmarkRunEnvironment
 
         static func make(
             options: BenchmarkOptions,
-            warmupIterations: Int,
-            measurementSampleCount: Int
+            metalCoreConfiguration: MetalSchnorrVerificationCore.Configuration?
         ) -> BenchmarkRunMetadata {
             BenchmarkRunMetadata(
                 runID: UUID().uuidString,
@@ -388,13 +526,14 @@ extension OpalCryptoBenchmarks {
                 buildConfiguration: buildConfiguration,
                 suite: options.suite.rawValue,
                 filter: options.filter,
-                warmupIterations: warmupIterations,
-                measurementSampleCount: measurementSampleCount
+                warmupIterations: options.warmupIterations,
+                measurementSampleCount: options.measurementSampleCount,
+                environment: .make(metalCoreConfiguration: metalCoreConfiguration)
             )
         }
 
         var jsonObject: [String: Any] {
-            [
+            var object: [String: Any] = [
                 "type": "benchmark_run",
                 "schema_version": Self.schemaVersion,
                 "run_id": runID,
@@ -410,6 +549,8 @@ extension OpalCryptoBenchmarks {
                 "warmup_iterations": warmupIterations,
                 "measurement_sample_count": measurementSampleCount
             ]
+            object.merge(environment.jsonObject) { _, environmentValue in environmentValue }
+            return object
         }
 
         private static var currentArchitecture: String {
@@ -439,9 +580,10 @@ extension OpalCryptoBenchmarks {
         let medianMilliseconds: Double
         let minimumMilliseconds: Double
         let medianAverageMicroseconds: Double
+        let metalStageSamples: [MetalSchnorrVerificationCore.StageMeasurement]
 
         var jsonObject: [String: Any] {
-            [
+            var object: [String: Any] = [
                 "type": "benchmark",
                 "name": name,
                 "iterations": iterations,
@@ -451,6 +593,10 @@ extension OpalCryptoBenchmarks {
                 "min_ms": minimumMilliseconds,
                 "median_avg_us": medianAverageMicroseconds
             ]
+            if !metalStageSamples.isEmpty {
+                object["metal_stage_samples"] = metalStageSamples.map(\.jsonObject)
+            }
+            return object
         }
     }
 

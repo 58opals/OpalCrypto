@@ -28,10 +28,37 @@ let package = Package(
         .target(
             name: "OpalCrypto",
             dependencies: [
-                .product(name: "OpalDiagnostics", package: "OpalDiagnostics")
+                .product(name: "OpalDiagnostics", package: "OpalDiagnostics"),
+                .target(
+                    name: "OpalCryptoMetal",
+                    condition: .when(platforms: [.macOS, .iOS, .tvOS, .visionOS])
+                )
             ],
             resources: [
                 .process("Resources")
+            ]
+        ),
+        .target(
+            name: "OpalCryptoMetal",
+            exclude: [
+                "MetalSchnorrBatchVerification.metal"
+            ],
+            resources: [
+                .copy("Resources/MetalLibraryMarker.txt")
+            ],
+            plugins: [
+                "MetalLibraryBuildPlugin"
+            ]
+        ),
+        .executableTarget(
+            name: "MetalLibraryCompilerTool",
+            path: "Tools/MetalLibraryCompilerTool"
+        ),
+        .plugin(
+            name: "MetalLibraryBuildPlugin",
+            capability: .buildTool(),
+            dependencies: [
+                "MetalLibraryCompilerTool"
             ]
         ),
         .executableTarget(

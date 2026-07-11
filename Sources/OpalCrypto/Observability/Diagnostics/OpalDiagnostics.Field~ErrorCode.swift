@@ -4,6 +4,9 @@ import OpalDiagnostics
 
 extension OpalDiagnostics.Field {
     static func errorCode(for error: Swift.Error) -> OpalDiagnostics.ErrorCode {
+        if let errorCode = mapMetalSchnorrBatchVerificationErrorCode(for: error) {
+            return errorCode
+        }
         if let errorCode = secp256k1ErrorCode(for: error) {
             return errorCode
         }

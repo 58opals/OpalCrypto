@@ -125,7 +125,7 @@ extension OpalCryptoBenchmarks {
             BenchmarkCase(
                 name: "Batch Schnorr verify (cached key, 256)",
                 iterations: 3,
-                suites: [.hot],
+                suites: [.hot, .metal],
                 operation: .sync { context in
                     verificationChecksum(
                         try schnorrBatchResults(context: context, count: 256)
@@ -135,7 +135,7 @@ extension OpalCryptoBenchmarks {
             BenchmarkCase(
                 name: "Metal Schnorr verify core (cached key, 256)",
                 iterations: 1,
-                suites: [.hot],
+                suites: [.hot, .metal],
                 operation: .sync { context in
                     try MetalSchnorrVerificationCore.run(
                         input: context.metalSchnorrVerificationInput,
@@ -157,7 +157,7 @@ extension OpalCryptoBenchmarks {
             BenchmarkCase(
                 name: "Metal Schnorr verify core (cached key, 1024)",
                 iterations: 1,
-                suites: [.hot],
+                suites: [.hot, .metal],
                 operation: .sync { context in
                     try MetalSchnorrVerificationCore.run(
                         input: context.metalSchnorrVerificationInput,
@@ -168,7 +168,7 @@ extension OpalCryptoBenchmarks {
             BenchmarkCase(
                 name: "Batch Schnorr verify (cached key, 1024)",
                 iterations: 1,
-                suites: [.hot],
+                suites: [.hot, .metal],
                 operation: .sync { context in
                     verificationChecksum(
                         try schnorrBatchResults(context: context, count: 1024)
@@ -187,6 +187,8 @@ extension OpalCryptoBenchmarks {
                 }
             )
         ] + schnorrDistinctVerificationBenchmarkCases()
+            + schnorrVaryingKeyVerificationBenchmarkCases()
+            + schnorrProductionAPIBenchmarkCases()
     }
 
     private static func schnorrDistinctVerificationBenchmarkCases() -> [BenchmarkCase] {
@@ -195,28 +197,169 @@ extension OpalCryptoBenchmarks {
                 BenchmarkCase(
                     name: "Metal Schnorr verify prep (cached key, \(count))",
                     iterations: 1,
-                    suites: [.hot],
-                    operation: .sync { _ in
-                        try metalSchnorrPrepChecksum(count: count)
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await metalSchnorrPrepChecksum(count: count)
                     }
                 ),
                 BenchmarkCase(
                     name: "Metal Schnorr verify end-to-end (cached key, \(count))",
                     iterations: 1,
-                    suites: [.hot],
-                    operation: .sync { _ in
-                        try metalSchnorrEndToEndChecksum(count: count)
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await metalSchnorrEndToEndChecksum(count: count)
                     }
                 ),
                 BenchmarkCase(
-                    name: "Batch Schnorr verify distinct (cached key, \(count))",
+                    name: "Metal Schnorr verify warm (cached key, \(count))",
                     iterations: 1,
-                    suites: [.hot],
+                    suites: [.hot, .metal],
                     operation: .sync { _ in
-                        try cpuDistinctSchnorrBatchChecksum(count: count)
+                        try metalSchnorrPreparedChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "CPU serial Schnorr verify (cached key, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .sync { _ in
+                        try cpuDistinctSchnorrBatchSerialChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "CPU parallel Schnorr verify (cached key, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await cpuDistinctSchnorrBatchParallelChecksum(count: count)
                     }
                 )
             ]
+        }
+    }
+
+    private static func schnorrVaryingKeyVerificationBenchmarkCases() -> [BenchmarkCase] {
+        [1024, 4096, 8192].flatMap { count in
+            [
+                BenchmarkCase(
+                    name: "Metal Schnorr verify prep (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await metalSchnorrVaryingKeyPrepChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "Metal Schnorr verify end-to-end (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await metalSchnorrVaryingKeyEndToEndChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "Metal Schnorr verify warm (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .sync { _ in
+                        try metalSchnorrVaryingKeyPreparedChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "CPU serial Schnorr verify (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .sync { _ in
+                        try cpuVaryingKeySchnorrBatchSerialChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "CPU parallel Schnorr verify (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await cpuVaryingKeySchnorrBatchParallelChecksum(count: count)
+                    }
+                ),
+                BenchmarkCase(
+                    name: "CPU parallel Schnorr verify end-to-end (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.hot, .metal],
+                    operation: .asynchronous { _ in
+                        try await cpuVaryingKeySchnorrBatchEndToEndChecksum(count: count)
+                    }
+                )
+            ]
+        }
+    }
+
+    private static func schnorrProductionAPIBenchmarkCases() -> [BenchmarkCase] {
+        [1024, 4096, 8192].flatMap { count in
+            [
+                BenchmarkCase(
+                    name: "Production API CPU Schnorr verify (cached key, \(count))",
+                    iterations: 1,
+                    suites: [.metal],
+                    operation: .asynchronous { _ in
+                        try await productionCachedKeyChecksum(
+                            count: count,
+                            policy: .cpu
+                        )
+                    }
+                ),
+                BenchmarkCase(
+                    name: "Production API Metal Schnorr verify (cached key, \(count))",
+                    iterations: 1,
+                    suites: [.metal],
+                    operation: .asynchronous { _ in
+                        try await productionCachedKeyChecksum(
+                            count: count,
+                            policy: .metal
+                        )
+                    }
+                ),
+                BenchmarkCase(
+                    name: "Production API CPU Schnorr verify (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.metal],
+                    operation: .asynchronous { _ in
+                        try await productionVaryingKeyChecksum(
+                            count: count,
+                            policy: .cpu
+                        )
+                    }
+                ),
+                BenchmarkCase(
+                    name: "Production API Metal Schnorr verify (varying keys, \(count))",
+                    iterations: 1,
+                    suites: [.metal],
+                    operation: .asynchronous { _ in
+                        try await productionVaryingKeyChecksum(
+                            count: count,
+                            policy: .metal
+                        )
+                    }
+                )
+            ]
+        }
+    }
+
+    static func metalThreadgroupWidthSweepBenchmarkCases() -> [BenchmarkCase] {
+        guard let configuration = try? MetalSchnorrVerificationCore.configuration() else {
+            return []
+        }
+        return configuration.supportedThreadgroupWidths.map { threadgroupWidth in
+            BenchmarkCase(
+                name: "Metal Schnorr threadgroup \(threadgroupWidth) (cached key, 8192)",
+                iterations: 1,
+                suites: [.metal],
+                operation: .sync { _ in
+                    try MetalSchnorrVerificationCore.run(
+                        batchInput: try preparedMetalSchnorrBatchInput(count: 8192),
+                        threadgroupWidth: threadgroupWidth
+                    )
+                }
+            )
         }
     }
 
@@ -262,125 +405,246 @@ extension OpalCryptoBenchmarks {
         return checksum
     }
 
-    private static func metalSchnorrEndToEndChecksum(count: Int) throws -> Int {
-        let batchInput = try schnorrDistinctBatchInput(count: count)
-        return try MetalSchnorrVerificationCore.run(batchInput: batchInput)
+    private static func productionCachedKeyChecksum(
+        count: Int,
+        policy: OpalCrypto.BatchExecutionPolicy
+    ) async throws -> Int {
+        let fixture = try cpuSchnorrBatchFixture(count: count)
+        let batch = try OpalCrypto.Signature.Schnorr.VerificationBatch(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            verificationKey: schnorrDistinctBatchFixture.verificationKey
+        )
+        let results = try await batch.verify(using: policy)
+        try validateProductionResults(
+            results,
+            expected: fixture.expectedResults
+        )
+        return verificationChecksum(results)
     }
 
-    private static func metalSchnorrPrepChecksum(count: Int) throws -> Int {
-        try schnorrDistinctBatchInput(count: count).checksum
+    private static func productionVaryingKeyChecksum(
+        count: Int,
+        policy: OpalCrypto.BatchExecutionPolicy
+    ) async throws -> Int {
+        let fixture = try varyingKeySchnorrBatchFixture(count: count)
+        let batch = try OpalCrypto.Signature.Schnorr.VerificationBatch(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            publicKeys: fixture.publicKeys
+        )
+        let results = try await batch.verify(using: policy)
+        try validateProductionResults(
+            results,
+            expected: fixture.expectedResults
+        )
+        return verificationChecksum(results)
     }
 
-    private static func cpuDistinctSchnorrBatchChecksum(count: Int) throws -> Int {
-        let fixture = schnorrDistinctBatchFixture
-        precondition(count <= fixture.cases.count)
+    private static func validateProductionResults(
+        _ results: [Bool],
+        expected: [Bool]
+    ) throws {
+        guard results.count == expected.count else {
+            throw MetalVerificationProbeError.invalidResult(index: results.count)
+        }
+        guard let mismatch = results.indices.first(where: {
+            results[$0] != expected[$0]
+        }) else {
+            return
+        }
+        throw MetalVerificationProbeError.invalidResult(index: mismatch)
+    }
 
-        var checksum = 0
-        for (index, verificationCase) in fixture.cases.prefix(count).enumerated() {
-            let result = try verificationCase.signature.verify(
-                digest: verificationCase.digest,
-                verificationKey: fixture.verificationKey
+    private static func metalSchnorrEndToEndChecksum(count: Int) async throws -> Int {
+        let preparationStart = DispatchTime.now().uptimeNanoseconds
+        let batchInput = try await schnorrDistinctBatchInput(count: count)
+        let preparationNanoseconds = DispatchTime.now().uptimeNanoseconds - preparationStart
+        return try MetalSchnorrVerificationCore.run(
+            batchInput: batchInput,
+            cpuPreparationNanoseconds: preparationNanoseconds
+        )
+    }
+
+    private static func metalSchnorrPrepChecksum(count: Int) async throws -> Int {
+        try await schnorrDistinctBatchInput(count: count).checksum
+    }
+
+    private static func metalSchnorrPreparedChecksum(count: Int) throws -> Int {
+        try MetalSchnorrVerificationCore.run(
+            batchInput: try preparedMetalSchnorrBatchInput(count: count)
+        )
+    }
+
+    private static func metalSchnorrVaryingKeyPrepChecksum(count: Int) async throws -> Int {
+        let fixture = try varyingKeySchnorrBatchFixture(count: count)
+        let input = try await PerformanceBenchmarkOperations
+            .makeMetalSchnorrVaryingKeyVerificationBatchInputParallel(
+                signatures: fixture.signatures,
+                digests: fixture.digests,
+                expectedResults: fixture.expectedResults,
+                verificationKeyRawRepresentations: fixture.verificationKeyRawRepresentations
             )
-            guard result == verificationCase.expected else {
+        return varyingKeyMetalInputChecksum(input)
+    }
+
+    private static func metalSchnorrVaryingKeyEndToEndChecksum(count: Int) async throws -> Int {
+        let fixture = try varyingKeySchnorrBatchFixture(count: count)
+        let preparationStart = DispatchTime.now().uptimeNanoseconds
+        let input = try await PerformanceBenchmarkOperations
+            .makeMetalSchnorrVaryingKeyVerificationBatchInputParallel(
+                signatures: fixture.signatures,
+                digests: fixture.digests,
+                expectedResults: fixture.expectedResults,
+                verificationKeyRawRepresentations: fixture.verificationKeyRawRepresentations
+            )
+        let preparationNanoseconds = DispatchTime.now().uptimeNanoseconds - preparationStart
+        return try MetalSchnorrVerificationCore.run(
+            varyingKeyBatchInput: input,
+            cpuPreparationNanoseconds: preparationNanoseconds
+        )
+    }
+
+    private static func metalSchnorrVaryingKeyPreparedChecksum(count: Int) throws -> Int {
+        try MetalSchnorrVerificationCore.run(
+            varyingKeyBatchInput: try preparedMetalSchnorrVaryingKeyBatchInput(count: count)
+        )
+    }
+
+    private static func cpuVaryingKeySchnorrBatchSerialChecksum(count: Int) throws -> Int {
+        let fixture = try varyingKeySchnorrBatchFixture(count: count)
+        let results = try PerformanceBenchmarkOperations.verifySchnorrBatchSerial(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            verificationKeys: fixture.verificationKeys
+        )
+        return try verificationChecksum(results: results, expected: fixture.expectedResults)
+    }
+
+    private static func cpuVaryingKeySchnorrBatchParallelChecksum(count: Int) async throws -> Int {
+        let fixture = try varyingKeySchnorrBatchFixture(count: count)
+        let results = try await PerformanceBenchmarkOperations.verifySchnorrBatchParallel(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            verificationKeys: fixture.verificationKeys
+        )
+        return try verificationChecksum(results: results, expected: fixture.expectedResults)
+    }
+
+    private static func cpuVaryingKeySchnorrBatchEndToEndChecksum(
+        count: Int
+    ) async throws -> Int {
+        let fixture = try varyingKeySchnorrBatchFixture(count: count)
+        let results = try await PerformanceBenchmarkOperations.verifySchnorrBatchParallel(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            verificationKeyRawRepresentations: fixture.verificationKeyRawRepresentations
+        )
+        return try verificationChecksum(results: results, expected: fixture.expectedResults)
+    }
+
+    private static func varyingKeyMetalInputChecksum(
+        _ input: MetalSchnorrVaryingKeyVerificationBatchBenchmarkInput
+    ) -> Int {
+        var checksum = input.recordCount
+        checksum ^= input.signatureXWords.count
+        checksum ^= input.windowedNonAdjacentFormDigits.count
+        checksum ^= input.sharedGeneratorTableWords.count
+        checksum ^= input.varyingVerificationKeyTableWords.count
+        for (index, result) in input.expectedResults.enumerated() {
+            checksum ^= result == 1 ? index + 1 : -(index + 1)
+        }
+        return checksum
+    }
+
+    private static func cpuDistinctSchnorrBatchSerialChecksum(count: Int) throws -> Int {
+        let fixture = try cpuSchnorrBatchFixture(count: count)
+        let results = try PerformanceBenchmarkOperations.verifySchnorrBatchSerial(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            verificationKey: schnorrDistinctBatchFixture.verificationKey
+        )
+        return try verificationChecksum(results: results, expected: fixture.expectedResults)
+    }
+
+    private static func cpuDistinctSchnorrBatchParallelChecksum(count: Int) async throws -> Int {
+        let fixture = try cpuSchnorrBatchFixture(count: count)
+        let results = try await PerformanceBenchmarkOperations.verifySchnorrBatchParallel(
+            signatures: fixture.signatures,
+            digests: fixture.digests,
+            verificationKey: schnorrDistinctBatchFixture.verificationKey
+        )
+        return try verificationChecksum(results: results, expected: fixture.expectedResults)
+    }
+
+    private static func verificationChecksum(
+        results: [UInt32],
+        expected: [Bool]
+    ) throws -> Int {
+        precondition(results.count == expected.count)
+        var checksum = 0
+        for index in results.indices {
+            let expectedWord: UInt32 = expected[index] ? 1 : 0
+            guard results[index] == expectedWord else {
                 throw MetalVerificationProbeError.invalidResult(index: index)
             }
-            checksum ^= result ? (index + 1) : -(index + 1)
+            checksum ^= results[index] == 1 ? index + 1 : -(index + 1)
         }
         return checksum
     }
 
     private static func schnorrDistinctBatchInput(
         count: Int
-    ) throws -> MetalSchnorrVerificationBatchBenchmarkInput {
+    ) async throws -> MetalSchnorrVerificationBatchBenchmarkInput {
         let fixture = schnorrDistinctBatchFixture
-        precondition(count <= fixture.cases.count)
+        let cpuFixture = try cpuSchnorrBatchFixture(count: count)
 
-        var signatures: [OpalCrypto.Signature.Schnorr] = .init()
-        signatures.reserveCapacity(count)
-        var digests: [OpalCrypto.Signature.Digest] = .init()
-        digests.reserveCapacity(count)
-        var expectedResults: [Bool] = .init()
-        expectedResults.reserveCapacity(count)
+        return try await PerformanceBenchmarkOperations
+            .makeMetalSchnorrVerificationBatchInputParallel(
+                signatures: cpuFixture.signatures,
+                digests: cpuFixture.digests,
+                expectedResults: cpuFixture.expectedResults,
+                verificationKey: fixture.verificationKey,
+                tableWords: fixture.tableWords
+            )
+    }
 
-        for verificationCase in fixture.cases.prefix(count) {
-            signatures.append(verificationCase.signature)
-            digests.append(verificationCase.digest)
-            expectedResults.append(verificationCase.expected)
+    private static func preparedMetalSchnorrBatchInput(
+        count: Int
+    ) throws -> MetalSchnorrVerificationBatchBenchmarkInput {
+        guard let input = schnorrDistinctBatchFixture.preparedMetalInputs[count] else {
+            throw MetalVerificationProbeError.invalidResult(index: count)
         }
+        return input
+    }
 
-        return try PerformanceBenchmarkOperations.makeMetalSchnorrVerificationBatchInput(
-            signatures: signatures,
-            digests: digests,
-            expectedResults: expectedResults,
-            verificationKey: fixture.verificationKey,
-            tableWords: fixture.tableWords
-        )
+    private static func cpuSchnorrBatchFixture(
+        count: Int
+    ) throws -> SchnorrCPUVerificationBatchFixture {
+        guard let fixture = schnorrDistinctBatchFixture.cpuBatches[count] else {
+            throw MetalVerificationProbeError.invalidResult(index: count)
+        }
+        return fixture
+    }
+
+    private static func varyingKeySchnorrBatchFixture(
+        count: Int
+    ) throws -> SchnorrVaryingKeyCPUVerificationBatchFixture {
+        guard let fixture = schnorrVaryingKeyBatchFixture.cpuBatches[count] else {
+            throw MetalVerificationProbeError.invalidResult(index: count)
+        }
+        return fixture
+    }
+
+    private static func preparedMetalSchnorrVaryingKeyBatchInput(
+        count: Int
+    ) throws -> MetalSchnorrVaryingKeyVerificationBatchBenchmarkInput {
+        guard let input = schnorrVaryingKeyBatchFixture.preparedMetalInputs[count] else {
+            throw MetalVerificationProbeError.invalidResult(index: count)
+        }
+        return input
     }
 
     private static let schnorrDistinctBatchFixture = try! SchnorrDistinctBatchFixture()
-
-    private struct SchnorrDistinctVerificationCase: Sendable {
-        let digest: OpalCrypto.Signature.Digest
-        let signature: OpalCrypto.Signature.Schnorr
-        let expected: Bool
-    }
-
-    private struct SchnorrDistinctBatchFixture: Sendable {
-        static let maximumCount = 8192
-
-        let verificationKey: OpalCrypto.Signature.VerificationKey
-        let cases: [SchnorrDistinctVerificationCase]
-        let tableWords: [UInt32]
-
-        init() throws {
-            let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
-                rawRepresentation: Data([UInt8](repeating: 0x00, count: 31) + [0x01])
-            )
-            verificationKey = try OpalCrypto.Signature.deriveVerificationKey(
-                from: privateKey
-            )
-
-            var digests: [OpalCrypto.Signature.Digest] = .init()
-            digests.reserveCapacity(Self.maximumCount)
-            for index in 0..<Self.maximumCount {
-                let message = Data("opalcrypto-metal-schnorr-\(index)".utf8)
-                digests.append(
-                    try OpalCrypto.Signature.Digest(
-                        rawRepresentation: OpalCrypto.Hashing.sha256(message)
-                    )
-                )
-            }
-
-            var signatures: [OpalCrypto.Signature.Schnorr] = .init()
-            signatures.reserveCapacity(Self.maximumCount)
-            for digest in digests {
-                signatures.append(
-                    try OpalCrypto.Signature.Schnorr.sign(
-                        digest: digest,
-                        privateKey: privateKey,
-                        noncePolicy: .bip340Deterministic
-                    )
-                )
-            }
-
-            var cases: [SchnorrDistinctVerificationCase] = .init()
-            cases.reserveCapacity(Self.maximumCount)
-            for index in 0..<Self.maximumCount {
-                let shouldMismatchDigest = index % 16 == 15
-                cases.append(
-                    SchnorrDistinctVerificationCase(
-                        digest: shouldMismatchDigest
-                            ? digests[(index + 1) % Self.maximumCount]
-                            : digests[index],
-                        signature: signatures[index],
-                        expected: !shouldMismatchDigest
-                    )
-                )
-            }
-            self.cases = cases
-            tableWords = PerformanceBenchmarkOperations.makeMetalSchnorrVerificationTableWords(
-                verificationKey: verificationKey
-            )
-        }
-    }
+    private static let schnorrVaryingKeyBatchFixture = try! SchnorrVaryingKeyBatchFixture()
 }

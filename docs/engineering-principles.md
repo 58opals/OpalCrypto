@@ -26,4 +26,4 @@ Use Metal first for public, batched, independent workloads such as batch verific
 - Accept acceleration work only when end-to-end wall-clock results justify the added platform complexity.
 - Keep performance improvements compatible with the supported public facade unless a public API change is explicitly designed and reviewed.
 
-See [benchmarks.md](benchmarks.md) for the benchmark workflow, [performance-roadmap.md](performance-roadmap.md) for the staged CPU-to-Metal decision gate, and [metal-readiness.md](metal-readiness.md) for the current prototype boundary.
+See [benchmarks.md](benchmarks.md) for the benchmark workflow, [performance-roadmap.md](performance-roadmap.md) for the staged CPU-to-Metal decision gate, and [metal-readiness.md](metal-readiness.md) for the current qualification boundary.

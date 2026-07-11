@@ -59,7 +59,7 @@ extension DiagnosticsIntegrationValidator {
             #expect(record.category == OpalDiagnostics.Category.signature)
             #expect(field("operation", in: record)?.value == "verify")
             #expect(field("algorithm", in: record)?.value == "schnorr")
-            #expect(field("format", in: record)?.value == "bip340")
+            #expect(field("format", in: record)?.value == "bitcoin_cash")
             #expect(field("digest_byte_count", in: record)?.value == "32")
             expectPublicField(
                 "verification_key_byte_count",
