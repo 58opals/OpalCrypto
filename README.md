@@ -1,6 +1,6 @@
 # Opal Crypto
 
-Status: v0.1.0 Developer Preview.
+Status: v0.1.3 Developer Preview.
 
 Opal Crypto is the lowest-level BCH cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
@@ -20,11 +20,11 @@ Use Opal Crypto when you are building Swift BCH software and need stable cryptog
 
 ## Installation
 
-The current public facade surface is available from the `v0.1.0` release.
+The current public facade surface is available from the `v0.1.3` release.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", from: "0.1.0")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", from: "0.1.3")
 ]
 ```
 
@@ -55,7 +55,7 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 
 ## Key Capabilities
 
-- `Signature`: typed ECDSA and Schnorr signatures, 32-byte digests, verification keys, facade-owned formats, and nonce policies.
+- `Signature`: typed ECDSA and Schnorr signatures, 32-byte digests, verification keys, facade-owned formats, nonce policies, and immutable BCH Schnorr verification batches.
 - `Secp256k1`: typed private keys, public keys, scalars, shared secrets, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
 - `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
 - `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
@@ -64,6 +64,8 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 - `Numeric`: `UInt256`, `UInt512`, and `BigUnsignedInteger` facade wrappers.
 
 The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use nonthrowing `encodeBase32(bytes:)` with `decodeBase32Bytes(_:)` for byte-mode radix conversion, and `Encoding.FiveBitValues` with nonthrowing `encodeBase32(values:)` and `decodeBase32Values(_:)` for five-bit symbol mode. Base58 decoding offers `decodeBase58IfValid(_:)` for optional failure and `decodeBase58Validating(_:)` for an explicit error.
+
+`Signature.Schnorr.VerificationBatch` performs ordered per-record BCH Schnorr verification, not probabilistic aggregate verification, and exposes `.automatic`, `.cpu`, and `.metal` execution policies. Production Metal execution is qualified only for macOS on the exact `Apple M1 Max` device name with Apple GPU family 7; other profiles remain on the CPU under `.automatic`.
 
 See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 
@@ -106,7 +108,7 @@ Current benchmark smoke command:
 swift run -c release OpalCryptoBenchmarks -- --suite smoke
 ```
 
-Correctness result: Passed on 2026-07-11 with 273 tests in 38 suites.
+Correctness result: Passed on 2026-07-11 with 288 tests in 41 suites.
 
 ## Further Context
 

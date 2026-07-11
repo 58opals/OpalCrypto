@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.3 - 2026-07-11
+
+- Added ordered batch shared-secret derivation with automatic serial or parallel CPU execution for higher-level scan workloads.
+- Added immutable BCH Schnorr verification batches with ordered per-record results, optimized CPU execution, and explicit `.automatic`, `.cpu`, and `.metal` policies; this is not probabilistic aggregate verification.
+- Added production Metal acceleration qualified only for macOS on the exact `Apple M1 Max` device name with Apple GPU family 7; other profiles remain on the CPU under `.automatic`.
+- Reduced allocation and copy work at batch public-key and shared-secret boundaries while preserving public API behavior and execution thresholds.
+- Hardened cancellation, Metal lifecycle and output handling, public API contracts, benchmark coverage, and aggregate privacy-safe diagnostics.
+
 ## v0.1.0 - 2026-07-05
 
 - Initial public developer-preview release of the facade-first `OpalCrypto` package.
