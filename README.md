@@ -65,8 +65,6 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 
 The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use nonthrowing `encodeBase32(bytes:)` with `decodeBase32Bytes(_:)` for byte-mode radix conversion, and `Encoding.FiveBitValues` with nonthrowing `encodeBase32(values:)` and `decodeBase32Values(_:)` for five-bit symbol mode. Base58 decoding offers `decodeBase58IfValid(_:)` for optional failure and `decodeBase58Validating(_:)` for an explicit error.
 
-`Signature.Schnorr.VerificationBatch` performs ordered per-record BCH Schnorr verification, not probabilistic aggregate verification, and exposes `.automatic`, `.cpu`, and `.metal` execution policies. Production Metal execution is qualified only for macOS on the exact `Apple M1 Max` device name with Apple GPU family 7; other profiles remain on the CPU under `.automatic`.
-
 See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 
 ## Boundaries
