@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 - 2026-07-28
 
 - Made the Bitcoin Cash RFC6979 variant the default Schnorr nonce policy and deprecated the misleading BIP-340-named legacy policy.
 - Bound Pedersen commitments to the canonical CashFusion base point and deprecated caller-selected setup points.

@@ -1,6 +1,6 @@
 # Opal Crypto
 
-Status: Developer Preview. The latest tag is `v0.1.3`. Secret-scalar operations have not completed constant-time hardening and security review; do not use this preview for production key handling.
+Status: Developer Preview. The latest tag is `v0.2.0`. Secret-scalar operations have not completed constant-time hardening and security review; do not use this preview for production key handling.
 
 Opal Crypto is the lowest-level BCH cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
@@ -20,17 +20,17 @@ Use Opal Crypto when you are building or testing Swift BCH software and need typ
 
 ## Installation
 
-The current public facade surface is available from the `develop` branch.
+The current public facade surface is available from the `v0.2.0` release.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "develop")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", from: "0.2.0")
 ]
 ```
 
 Then add `"OpalCrypto"` to the target dependency list where you need it.
 
-The published `v0.1.3` manifest still contains a branch-based `OpalDiagnostics` requirement, so that historical tag cannot be selected with a version-based package requirement. The `develop` branch now uses the stable `OpalDiagnostics` `v0.2.0` release, allowing the next Opal Crypto tag to restore version-based installation.
+The `v0.2.0` release uses the stable `OpalDiagnostics` `v0.2.0` release, restoring version-based package installation. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement.
 
 ## Quick Start
 
