@@ -6,23 +6,44 @@ import OpalCrypto
 
 @Suite("Public API key-derivation validation")
 struct PublicAPIKeyDerivationValidator {
-    @Test("PBKDF2 HMAC-SHA-512 uses a 64-byte default and matches the source-compatible operation")
+    @Test("PBKDF2 HMAC-SHA-512 uses a 64-byte default and matches the compatibility operation")
     func derivePBKDF2SHA512UsingDefaultLength() throws {
         let password = Data("password".utf8)
         let salt = try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
         let explicitKey = try OpalCrypto.KeyDerivation.derivePBKDF2SHA512Key(
             password: password,
             salt: salt,
-            iterationCount: 16
+            iterationCount: 16,
+            maximumWorkUnitCount: 16
         )
-        let sourceCompatibleKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
+        let compatibilityKey = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
             password: password,
             salt: salt,
-            iterationCount: 16
+            iterationCount: 16,
+            maximumWorkUnitCount: 16
         )
 
         #expect(explicitKey.rawRepresentation.count == 64)
-        #expect(explicitKey == sourceCompatibleKey)
+        #expect(explicitKey == compatibilityKey)
+    }
+
+    @Test("PBKDF2 derivation cooperatively reports task cancellation")
+    func reportPBKDF2TaskCancellationCooperatively() async {
+        let derivationTask = Task {
+            withUnsafeCurrentTask { task in
+                task?.cancel()
+            }
+            return try OpalCrypto.KeyDerivation.derivePBKDF2SHA512Key(
+                password: Data("password".utf8),
+                salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
+                iterationCount: 16,
+                maximumWorkUnitCount: 16
+            )
+        }
+
+        await #expect(throws: CancellationError.self) {
+            _ = try await derivationTask.value
+        }
     }
 
     @Test(
@@ -39,7 +60,8 @@ struct PublicAPIKeyDerivationValidator {
                 password: Data("password".utf8),
                 salt: validSalt,
                 iterationCount: testCase.iterationCount,
-                derivedKeyLength: testCase.derivedKeyLength
+                derivedKeyLength: testCase.derivedKeyLength,
+                maximumWorkUnitCount: 16
             )
             Issue.record("Expected invalid PBKDF2 parameter error.")
         } catch let error as OpalCrypto.KeyDerivation.Error {
@@ -99,13 +121,60 @@ struct PublicAPIKeyDerivationValidator {
                 password: Data("password".utf8),
                 salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
                 iterationCount: 16,
-                derivedKeyLength: oversizedDerivedKeyLength
+                derivedKeyLength: oversizedDerivedKeyLength,
+                maximumWorkUnitCount: UInt64.max
             )
             Issue.record("Expected oversized PBKDF2 key-length error.")
         } catch let error as OpalCrypto.KeyDerivation.Error {
             #expect(error == .derivedKeyLengthExceedsLimit(actual: oversizedDerivedKeyLength))
         } catch {
             Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Allow PBKDF2 derivation at the exact work budget")
+    func allowPBKDF2DerivationAtExactWorkBudget() throws {
+        let derivedKey = try OpalCrypto.KeyDerivation.derivePBKDF2SHA512Key(
+            password: Data("password".utf8),
+            salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
+            iterationCount: 2,
+            derivedKeyLength: 65,
+            maximumWorkUnitCount: 4
+        )
+
+        #expect(derivedKey.rawRepresentation.count == 65)
+    }
+
+    @Test("Reject PBKDF2 derivation beyond the work budget")
+    func rejectPBKDF2DerivationBeyondWorkBudget() {
+        #expect(
+            throws: OpalCrypto.KeyDerivation.Error.workBudgetExceeded(
+                requiredWorkUnitCount: 4,
+                maximumWorkUnitCount: 3
+            )
+        ) {
+            _ = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
+                password: Data("password".utf8),
+                salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
+                iterationCount: 2,
+                derivedKeyLength: 65,
+                maximumWorkUnitCount: 3
+            )
+        }
+    }
+
+    @Test("Reject PBKDF2 work-unit multiplication overflow")
+    func rejectPBKDF2WorkUnitMultiplicationOverflow() {
+        let maximumDerivedKeyLength = Int(UInt64(UInt32.max) * 64)
+
+        #expect(throws: OpalCrypto.KeyDerivation.Error.workUnitCountOverflow) {
+            _ = try OpalCrypto.KeyDerivation.derivePBKDF2SHA512Key(
+                password: Data("password".utf8),
+                salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
+                iterationCount: Int.max,
+                derivedKeyLength: maximumDerivedKeyLength,
+                maximumWorkUnitCount: UInt64.max
+            )
         }
     }
 }

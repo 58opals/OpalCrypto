@@ -8,10 +8,11 @@ extension OpalCrypto.Communication {
     /// Decrypts an authenticated ciphertext with its recipient private key.
     ///
     /// - Returns: The original message and the derived symmetric key, which can decrypt other envelopes created with that key.
-    /// - Throws: ``OpalCrypto/Communication/Error/invalidCiphertext`` for an invalid envelope or authentication failure, and mapped key or cryptographic errors.
+    /// - Throws: ``OpalCrypto/Communication/Error/ciphertextByteCountExceedsMaximum(maximum:actual:)`` when the envelope exceeds `maximumCiphertextByteCount`, ``OpalCrypto/Communication/Error/invalidCiphertext`` for an invalid envelope or authentication failure, and mapped key or cryptographic errors.
     public static func decrypt(
         _ ciphertext: Ciphertext,
-        privateKey: OpalCrypto.Secp256k1.PrivateKey
+        privateKey: OpalCrypto.Secp256k1.PrivateKey,
+        maximumCiphertextByteCount: Int
     ) throws -> DecryptionResult {
         let fields = decryptFields(
             mode: "private_key",
@@ -19,7 +20,8 @@ extension OpalCrypto.Communication {
             keyLengthField: OpalDiagnostics.Field.publicField(
                 "private_key_byte_count",
                 privateKey.rawRepresentation.count
-            )
+            ),
+            maximumCiphertextByteCount: maximumCiphertextByteCount
         )
         recordCommunication(
             event: OpalDiagnostics.Event.communicationDecryptBegin,
@@ -29,7 +31,8 @@ extension OpalCrypto.Communication {
             let result = DecryptionResult(
                 resultModel: try CommunicationBoxModel.decrypt(
                     ciphertext.rawRepresentation,
-                    privateKey: privateKey.rawRepresentation
+                    privateKey: privateKey.rawRepresentation,
+                    maximumCiphertextByteCount: maximumCiphertextByteCount
                 )
             )
             recordCommunication(
@@ -54,10 +57,11 @@ extension OpalCrypto.Communication {
     /// Decrypts an authenticated ciphertext with a previously derived symmetric key.
     ///
     /// - Returns: The original unpadded message.
-    /// - Throws: ``OpalCrypto/Communication/Error/invalidCiphertext`` for an invalid envelope or authentication failure, and mapped key or cryptographic errors.
+    /// - Throws: ``OpalCrypto/Communication/Error/ciphertextByteCountExceedsMaximum(maximum:actual:)`` when the envelope exceeds `maximumCiphertextByteCount`, ``OpalCrypto/Communication/Error/invalidCiphertext`` for an invalid envelope or authentication failure, and mapped key or cryptographic errors.
     public static func decrypt(
         _ ciphertext: Ciphertext,
-        symmetricKey: SymmetricKey
+        symmetricKey: SymmetricKey,
+        maximumCiphertextByteCount: Int
     ) throws -> Data {
         let fields = decryptFields(
             mode: "symmetric_key",
@@ -65,7 +69,8 @@ extension OpalCrypto.Communication {
             keyLengthField: OpalDiagnostics.Field.publicField(
                 "symmetric_key_byte_count",
                 symmetricKey.rawRepresentation.count
-            )
+            ),
+            maximumCiphertextByteCount: maximumCiphertextByteCount
         )
         recordCommunication(
             event: OpalDiagnostics.Event.communicationDecryptBegin,
@@ -74,7 +79,8 @@ extension OpalCrypto.Communication {
         do {
             let message = try CommunicationBoxModel.decrypt(
                 ciphertext.rawRepresentation,
-                symmetricKey: symmetricKey.rawRepresentation
+                symmetricKey: symmetricKey.rawRepresentation,
+                maximumCiphertextByteCount: maximumCiphertextByteCount
             )
             recordCommunication(
                 event: OpalDiagnostics.Event.communicationDecryptSucceeded,
@@ -97,7 +103,8 @@ extension OpalCrypto.Communication {
     private static func decryptFields(
         mode: String,
         ciphertextByteCount: Int,
-        keyLengthField: OpalDiagnostics.Field
+        keyLengthField: OpalDiagnostics.Field,
+        maximumCiphertextByteCount: Int
     ) -> [OpalDiagnostics.Field] {
         [
             OpalDiagnostics.Field.operationField("decrypt"),
@@ -106,6 +113,10 @@ extension OpalCrypto.Communication {
             OpalDiagnostics.Field.publicField(
                 "minimum_ciphertext_byte_count",
                 CommunicationBoxModel.minimumCiphertextLength
+            ),
+            OpalDiagnostics.Field.publicField(
+                "maximum_ciphertext_byte_count",
+                maximumCiphertextByteCount
             ),
             keyLengthField
         ]

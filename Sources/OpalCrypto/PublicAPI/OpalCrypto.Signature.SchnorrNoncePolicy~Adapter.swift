@@ -5,6 +5,8 @@ import Foundation
 extension OpalCrypto.Signature.SchnorrNoncePolicy {
     var internalNoncePolicy: NonceGenerationPolicy {
         switch self {
+        case .bchDeterministic:
+            return .requestForComments6979BitcoinCashDefault
         case .bip340Deterministic:
             return .bitcoinImprovementProposalSchnorrDeterministic
         case .random:
@@ -14,8 +16,10 @@ extension OpalCrypto.Signature.SchnorrNoncePolicy {
 
     var diagnosticsName: String {
         switch self {
+        case .bchDeterministic:
+            return "bch_deterministic"
         case .bip340Deterministic:
-            return "bip340_deterministic"
+            return "legacy_bip_schnorr_deterministic"
         case .random:
             return "random"
         }

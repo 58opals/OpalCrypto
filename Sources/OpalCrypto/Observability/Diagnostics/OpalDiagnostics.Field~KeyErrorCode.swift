@@ -13,6 +13,10 @@ extension OpalDiagnostics.Field {
             OpalDiagnostics.ErrorCode.invalidDerivedKeyLength
         case OpalCrypto.KeyDerivation.Error.derivedKeyLengthExceedsLimit:
             OpalDiagnostics.ErrorCode.derivedKeyLengthExceedsLimit
+        case OpalCrypto.KeyDerivation.Error.workBudgetExceeded:
+            OpalDiagnostics.ErrorCode.workBudgetExceeded
+        case OpalCrypto.KeyDerivation.Error.workUnitCountOverflow:
+            OpalDiagnostics.ErrorCode.workUnitCountOverflow
         default:
             nil
         }
@@ -22,6 +26,12 @@ extension OpalDiagnostics.Field {
         switch error {
         case OpalCrypto.Key.Mnemonic.Error.invalidWordCount:
             OpalDiagnostics.ErrorCode.invalidWordCount
+        case OpalCrypto.Key.Mnemonic.Error.wordCountExceedsMaximum:
+            OpalDiagnostics.ErrorCode.wordCountExceedsMaximum
+        case OpalCrypto.Key.Mnemonic.Error.phraseByteCountExceedsMaximum:
+            OpalDiagnostics.ErrorCode.phraseByteCountExceedsMaximum
+        case OpalCrypto.Key.Mnemonic.Error.wordByteCountExceedsMaximum:
+            OpalDiagnostics.ErrorCode.wordByteCountExceedsMaximum
         case OpalCrypto.Key.Mnemonic.Error.invalidEntropyLength:
             OpalDiagnostics.ErrorCode.invalidEntropyLength
         case OpalCrypto.Key.Mnemonic.Error.invalidWord:
@@ -49,6 +59,8 @@ extension OpalDiagnostics.Field {
             OpalDiagnostics.ErrorCode.invalidChecksum
         case OpalCrypto.Key.WIF.Error.invalidPayloadLength:
             OpalDiagnostics.ErrorCode.invalidPayloadLength
+        case OpalCrypto.Key.WIF.Error.payloadLengthExceedsMaximum:
+            OpalDiagnostics.ErrorCode.payloadLengthExceedsMaximum
         case OpalCrypto.Key.WIF.Error.invalidVersion:
             OpalDiagnostics.ErrorCode.invalidVersion
         case OpalCrypto.Key.WIF.Error.invalidCompressionMarker:
@@ -79,6 +91,8 @@ extension OpalDiagnostics.Field {
             OpalDiagnostics.ErrorCode.invalidVersion
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidPayloadLength:
             OpalDiagnostics.ErrorCode.invalidPayloadLength
+        case OpalCrypto.Key.ExtendedPrivate.Error.payloadLengthExceedsMaximum:
+            OpalDiagnostics.ErrorCode.payloadLengthExceedsMaximum
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidParentFingerprintLength:
             OpalDiagnostics.ErrorCode.invalidParentFingerprintLength
         case OpalCrypto.Key.ExtendedPrivate.Error.invalidChainCodeLength:
@@ -110,6 +124,8 @@ extension OpalDiagnostics.Field {
             OpalDiagnostics.ErrorCode.invalidVersion
         case OpalCrypto.Key.ExtendedPublic.Error.invalidPayloadLength:
             OpalDiagnostics.ErrorCode.invalidPayloadLength
+        case OpalCrypto.Key.ExtendedPublic.Error.payloadLengthExceedsMaximum:
+            OpalDiagnostics.ErrorCode.payloadLengthExceedsMaximum
         case OpalCrypto.Key.ExtendedPublic.Error.invalidParentFingerprintLength:
             OpalDiagnostics.ErrorCode.invalidParentFingerprintLength
         case OpalCrypto.Key.ExtendedPublic.Error.invalidChainCodeLength:

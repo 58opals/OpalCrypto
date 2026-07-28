@@ -9,11 +9,25 @@ extension MetalSchnorrBatchInputPreparationOperation {
         publicKeys: [OpalCrypto.Secp256k1.PublicKey],
         range: Range<Int>
     ) async throws -> MetalSchnorrVaryingKeyBatchInput {
+        try await prepareVaryingKeyInput(
+            signatures: signatures,
+            digests: digests,
+            verificationKeySource: .publicKeys(publicKeys),
+            range: range
+        )
+    }
+
+    static func prepareVaryingKeyInput(
+        signatures: [OpalCrypto.Signature.Schnorr],
+        digests: [OpalCrypto.Signature.Digest],
+        verificationKeySource: MetalSchnorrVerificationKeySource,
+        range: Range<Int>
+    ) async throws -> MetalSchnorrVaryingKeyBatchInput {
         try validateRange(
             range,
             signatureCount: signatures.count,
             digestCount: digests.count,
-            publicKeyCount: publicKeys.count
+            publicKeyCount: verificationKeySource.count
         )
         try Task.checkCancellation()
         guard !range.isEmpty else {
@@ -36,7 +50,7 @@ extension MetalSchnorrBatchInputPreparationOperation {
                     let prepared = try prepareVaryingKeyRecords(
                         signatures: signatures,
                         digests: digests,
-                        publicKeys: publicKeys,
+                        verificationKeySource: verificationKeySource,
                         inputOffset: range.lowerBound,
                         localRange: localRange
                     )
@@ -89,7 +103,7 @@ extension MetalSchnorrBatchInputPreparationOperation {
     static func prepareVaryingKeyRecords(
         signatures: [OpalCrypto.Signature.Schnorr],
         digests: [OpalCrypto.Signature.Digest],
-        publicKeys: [OpalCrypto.Secp256k1.PublicKey],
+        verificationKeySource: MetalSchnorrVerificationKeySource,
         inputOffset: Int,
         localRange: Range<Int>
     ) throws -> (signatureXWords: [UInt32], packedDigits: [Int8], tableWords: [UInt32]) {
@@ -108,7 +122,7 @@ extension MetalSchnorrBatchInputPreparationOperation {
             let signatureModel = signatures[inputIndex].signatureModel
             let signatureX = try FieldElementModel(data32: signatureModel.r)
             let signatureScalar = try ScalarModel(data32: signatureModel.s)
-            let publicKey = publicKeys[inputIndex].parsedPublicKeyModel
+            let publicKey = try verificationKeySource.parsedPublicKeyModel(at: inputIndex)
             let challenge = try ChallengeHashModel.makeChallengeScalar(
                 digest32: digests[inputIndex].rawRepresentation,
                 r: signatureX,

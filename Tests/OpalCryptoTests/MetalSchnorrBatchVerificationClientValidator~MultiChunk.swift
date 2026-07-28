@@ -4,12 +4,11 @@ import Testing
 @testable import OpalCrypto
 
 extension MetalSchnorrBatchVerificationClientValidator {
-    @Test("Production Metal preserves order across multiple chunks")
+    @Test(
+        "Production Metal preserves order across multiple chunks",
+        .enabled(if: MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable)
+    )
     func preserveOrderAcrossMultipleProductionMetalChunks() async throws {
-        guard MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable else {
-            return
-        }
-
         let recordCount = 8_193
         let cachedSigningKey = try OpalCryptoTestSupport
             .makeTypedPrivateKey(451)

@@ -1,4 +1,4 @@
-// OpalDiagnostics.Event+OpalCrypto.swift
+// OpalDiagnostics.Event~OpalCrypto.swift
 
 import OpalDiagnostics
 

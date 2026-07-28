@@ -57,7 +57,10 @@ struct PublicAPICommunicationEnvelopeValidator {
     @Test("Communication ciphertext and symmetric-key values validate their byte shapes")
     func communicationCiphertextAndSymmetricKeyValuesValidateTheirByteShapes() throws {
         do {
-            _ = try OpalCrypto.Communication.Ciphertext(rawRepresentation: Data())
+            _ = try OpalCrypto.Communication.Ciphertext(
+                rawRepresentation: Data(),
+                maximumCiphertextByteCount: 65
+            )
             Issue.record("Expected invalid ciphertext error.")
         } catch let error as OpalCrypto.Communication.Error {
             #expect(error == .invalidCiphertext)
@@ -67,7 +70,8 @@ struct PublicAPICommunicationEnvelopeValidator {
 
         do {
             _ = try OpalCrypto.Communication.Ciphertext(
-                rawRepresentation: Data([0x04]) + Data(repeating: 0x01, count: 64)
+                rawRepresentation: Data([0x04]) + Data(repeating: 0x01, count: 64),
+                maximumCiphertextByteCount: 65
             )
             Issue.record("Expected invalid ciphertext error for malformed ephemeral public key.")
         } catch let error as OpalCrypto.Communication.Error {
@@ -80,11 +84,13 @@ struct PublicAPICommunicationEnvelopeValidator {
         let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
         let ciphertext = try OpalCrypto.Communication.encrypt(
             message: Data("shape".utf8),
-            recipientPublicKey: publicKey
+            recipientPublicKey: publicKey,
+            maximumCiphertextByteCount: 65
         )
         do {
             _ = try OpalCrypto.Communication.Ciphertext(
-                rawRepresentation: ciphertext.rawRepresentation + Data([0x00])
+                rawRepresentation: ciphertext.rawRepresentation + Data([0x00]),
+                maximumCiphertextByteCount: 66
             )
             Issue.record("Expected invalid ciphertext error for non-block-aligned payload.")
         } catch let error as OpalCrypto.Communication.Error {
@@ -98,6 +104,74 @@ struct PublicAPICommunicationEnvelopeValidator {
             Issue.record("Expected invalid symmetric-key length error.")
         } catch let error as OpalCrypto.Communication.Error {
             #expect(error == .invalidSymmetricKeyLength(expected: 32, actual: 31))
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Communication encryption accepts an exact ciphertext byte-count boundary")
+    func acceptCommunicationEncryptionAtExactCiphertextByteCountBoundary() throws {
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+
+        let ciphertext = try OpalCrypto.Communication.encrypt(
+            message: Data("exact".utf8),
+            recipientPublicKey: publicKey,
+            maximumCiphertextByteCount: 65
+        )
+
+        #expect(ciphertext.rawRepresentation.count == 65)
+    }
+
+    @Test("Communication encryption rejects over-budget ciphertext before key validation")
+    func rejectCommunicationEncryptionOverBudgetBeforeKeyValidation() {
+        do {
+            _ = try CommunicationBoxModel.encrypt(
+                message: Data(),
+                recipientPublicKey: Data(),
+                paddedPlaintextLength: nil,
+                maximumCiphertextByteCount: 64
+            )
+            Issue.record("Expected ciphertext budget rejection.")
+        } catch let error as CommunicationBoxModel.Error {
+            #expect(
+                error == .ciphertextByteCountExceedsMaximum(maximum: 64, actual: 65)
+            )
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Communication encryption maps over-budget requests to its public error")
+    func mapCommunicationEncryptionOverBudgetRequestsToPublicError() throws {
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+
+        #expect(
+            throws: OpalCrypto.Communication.Error
+                .ciphertextByteCountExceedsMaximum(maximum: 64, actual: 65)
+        ) {
+            _ = try OpalCrypto.Communication.encrypt(
+                message: Data(),
+                recipientPublicKey: publicKey,
+                maximumCiphertextByteCount: 64
+            )
+        }
+    }
+
+    @Test("Communication ciphertext preflight rejects overflowing envelope lengths")
+    func rejectCommunicationCiphertextPreflightWithOverflowingEnvelopeLengths() {
+        let blockAlignedPlaintextLength = Int.max - 15
+
+        do {
+            _ = try CommunicationBoxModel.preflightCiphertextByteCount(
+                messageByteCount: 0,
+                paddedPlaintextLength: blockAlignedPlaintextLength,
+                maximumCiphertextByteCount: Int.max
+            )
+            Issue.record("Expected ciphertext byte-count overflow.")
+        } catch let error as CommunicationBoxModel.Error {
+            #expect(error == .ciphertextByteCountOverflow)
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

@@ -1,4 +1,4 @@
-// OpalDiagnostics.ErrorCode+OpalCrypto.swift
+// OpalDiagnostics.ErrorCode~OpalCrypto.swift
 
 import OpalDiagnostics
 
@@ -6,6 +6,9 @@ extension OpalDiagnostics.ErrorCode {
     static let ambiguousLanguage = Self(rawValue: "ambiguous_language")
     static let cryptographyFailure = Self(rawValue: "cryptography_failure")
     static let derivedKeyLengthExceedsLimit = Self(rawValue: "derived_key_length_exceeds_limit")
+    static let decodedDataExceedsMaximumByteCount = Self(
+        rawValue: "decoded_data_exceeds_maximum_byte_count"
+    )
     static let depthOverflow = Self(rawValue: "depth_overflow")
     static let emptyCommitmentList = Self(rawValue: "empty_commitment_list")
     static let emptySalt = Self(rawValue: "empty_salt")
@@ -19,6 +22,8 @@ extension OpalDiagnostics.ErrorCode {
     static let invalidCharacterFound = Self(rawValue: "invalid_character_found")
     static let invalidChecksum = Self(rawValue: "invalid_checksum")
     static let invalidCiphertext = Self(rawValue: "invalid_ciphertext")
+    static let ciphertextByteCountExceedsMaximum = Self(rawValue: "ciphertext_byte_count_exceeds_maximum")
+    static let ciphertextByteCountOverflow = Self(rawValue: "ciphertext_byte_count_overflow")
     static let invalidCommitment = Self(rawValue: "invalid_commitment")
     static let invalidCommitmentLength = Self(rawValue: "invalid_commitment_length")
     static let invalidCompressionMarker = Self(rawValue: "invalid_compression_marker")
@@ -30,6 +35,9 @@ extension OpalDiagnostics.ErrorCode {
     static let invalidEntropyLength = Self(rawValue: "invalid_entropy_length")
     static let invalidFiveBitValue = Self(rawValue: "invalid_five_bit_value")
     static let invalidIterationCount = Self(rawValue: "invalid_iteration_count")
+    static let invalidMaximumDecodedByteCount = Self(
+        rawValue: "invalid_maximum_decoded_byte_count"
+    )
     static let invalidNonce = Self(rawValue: "invalid_nonce")
     static let invalidNonceLength = Self(rawValue: "invalid_nonce_length")
     static let invalidNoncePoint = Self(rawValue: "invalid_nonce_point")
@@ -68,7 +76,19 @@ extension OpalDiagnostics.ErrorCode {
     static let nonceAlreadyUsed = Self(rawValue: "nonce_already_used")
     static let nonCanonicalDER = Self(rawValue: "non_canonical_der")
     static let paddedPlaintextLengthMustBeMultipleOf16 = Self(rawValue: "padded_plaintext_length_must_be_multiple_of_16")
+    static let payloadLengthExceedsMaximum = Self(
+        rawValue: "payload_length_exceeds_maximum"
+    )
+    static let phraseByteCountExceedsMaximum = Self(
+        rawValue: "phrase_byte_count_exceeds_maximum"
+    )
     static let randomGenerationFailed = Self(rawValue: "random_generation_failed")
     static let verificationFailed = Self(rawValue: "verification_failed")
+    static let workBudgetExceeded = Self(rawValue: "work_budget_exceeded")
+    static let workUnitCountOverflow = Self(rawValue: "work_unit_count_overflow")
+    static let wordByteCountExceedsMaximum = Self(
+        rawValue: "word_byte_count_exceeds_maximum"
+    )
+    static let wordCountExceedsMaximum = Self(rawValue: "word_count_exceeds_maximum")
     static let wordListResourceMissing = Self(rawValue: "word_list_resource_missing")
 }

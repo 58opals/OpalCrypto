@@ -10,19 +10,51 @@ internal enum Base58CheckCodec {
         return Base58EncodingCodec.encode(payload + checksum)
     }
 
-    internal static func decode(_ string: String, minimumPayloadLength: Int = 1) throws -> Data {
+    internal static func decode(
+        _ string: String,
+        minimumPayloadLength: Int = 1,
+        maximumPayloadLength: Int
+    ) throws -> Data {
         let minimumPayloadLength = max(0, minimumPayloadLength)
+        guard maximumPayloadLength >= minimumPayloadLength,
+              maximumPayloadLength <= Int.max - 4 else {
+            let error = Error.invalidPayloadLength(actual: 0)
+            recordDecodeFailure(
+                error,
+                inputCharacterCount: string.count,
+                minimumPayloadLength: minimumPayloadLength,
+                maximumPayloadLength: maximumPayloadLength
+            )
+            throw error
+        }
         func recordFailure(_ error: Error) {
             recordDecodeFailure(
                 error,
                 inputCharacterCount: string.count,
-                minimumPayloadLength: minimumPayloadLength
+                minimumPayloadLength: minimumPayloadLength,
+                maximumPayloadLength: maximumPayloadLength
             )
         }
 
-        guard let decoded = Base58EncodingCodec.decode(string) else {
+        let decoded: Data
+        do {
+            decoded = try Base58EncodingCodec.decode(
+                string,
+                maximumDecodedByteCount: maximumPayloadLength + 4
+            )
+        } catch Base58EncodingCodec.Error.invalidCharacterFound {
             recordFailure(.invalidBase58)
             throw Error.invalidBase58
+        } catch Base58EncodingCodec.Error.decodedDataExceedsMaximumByteCount {
+            let error = Error.payloadLengthExceedsMaximum(
+                maximum: maximumPayloadLength
+            )
+            recordFailure(error)
+            throw error
+        } catch Base58EncodingCodec.Error.invalidMaximumDecodedByteCount {
+            let error = Error.invalidPayloadLength(actual: 0)
+            recordFailure(error)
+            throw error
         }
         guard decoded.count >= 4, decoded.count - 4 >= minimumPayloadLength else {
             let error = Error.invalidPayloadLength(actual: max(0, decoded.count - 4))
@@ -44,7 +76,8 @@ internal enum Base58CheckCodec {
     private static func recordDecodeFailure(
         _ error: Error,
         inputCharacterCount: Int,
-        minimumPayloadLength: Int
+        minimumPayloadLength: Int,
+        maximumPayloadLength: Int
     ) {
         OpalDiagnostics.logger(category: OpalDiagnostics.Category.encoding).record(
             event: OpalDiagnostics.Event.base58CheckDecodeFailed,
@@ -53,7 +86,8 @@ internal enum Base58CheckCodec {
                 OpalDiagnostics.Field.operationField("base58check_decode"),
                 OpalDiagnostics.Field.formatField("base58check"),
                 OpalDiagnostics.Field.publicField("input_character_count", inputCharacterCount),
-                OpalDiagnostics.Field.publicField("minimum_payload_length", minimumPayloadLength)
+                OpalDiagnostics.Field.publicField("minimum_payload_length", minimumPayloadLength),
+                OpalDiagnostics.Field.publicField("maximum_payload_length", maximumPayloadLength)
             ] + OpalDiagnostics.Field.errorFields(error)
         )
     }

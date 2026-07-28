@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Made the Bitcoin Cash RFC6979 variant the default Schnorr nonce policy and deprecated the misleading BIP-340-named legacy policy.
+- Bound Pedersen commitments to the canonical CashFusion base point and deprecated caller-selected setup points.
+- Mapped invalid BIP-32 master scalars to the public `invalidDerivedKey` error.
+- Required PBKDF2 callers to authorize an explicit HMAC-work budget, and made derivation cooperatively honor task cancellation before allocation and throughout pseudorandom-function rounds.
+- Required explicit decoded-byte budgets for generic Base58 and byte-mode Base32 decoding, bounded fixed-format Base58Check imports with limit-specific errors, and rejected oversized DER signatures and mnemonic phrases before unbounded processing or compatibility normalization.
+- Required explicit ciphertext-byte budgets for communication encryption, import, and decryption, with checked envelope-size arithmetic.
+- Replaced the unbounded arbitrary-precision left shift and its legacy zero sentinel with a throwing operation that requires a result-byte budget.
+- Made Metal benchmark initialization propagate unavailability instead of trapping, consolidated benchmark input preparation onto the production implementation, made fixture setup throw instead of trap, and made hardware-gated Metal tests report as skipped.
+- Added independent Bitcoin Cash Schnorr and CashFusion Pedersen compatibility vectors.
+- Added macOS CI, including a tagged-release gate against unstable dependencies.
+- Updated `OpalDiagnostics` from its development branch to the stable `v0.2.0` release. The historical Opal Crypto `v0.1.3` tag remains branch-based, while future tags can use version-based resolution.
+- Marked the preview as unsuitable for production key handling until secret-scalar operations complete constant-time hardening and security review.
+
 ## v0.1.3 - 2026-07-11
 
 - Added ordered batch shared-secret derivation with automatic serial or parallel CPU execution for higher-level scan workloads.

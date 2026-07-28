@@ -1,4 +1,4 @@
-// OpalDiagnostics.Level+OpalCrypto.swift
+// OpalDiagnostics.Level~OpalCrypto.swift
 
 import OpalDiagnostics
 

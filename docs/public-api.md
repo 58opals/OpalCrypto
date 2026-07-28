@@ -72,6 +72,12 @@ let ecdsaIsValid = try ecdsa.verifySHA256(message: message, publicKey: publicKey
 
 Use the `digest:` overloads for an already computed 32-byte digest; they do not hash it again.
 
+Schnorr signing defaults to `.bchDeterministic`, the Bitcoin Cash RFC 6979 variant with `Schnorr+SHA256` additional data. The deprecated `.bip340Deterministic` case preserves its historical `SHA256(privateKey || digest)` behavior for source compatibility; despite its legacy name, it does not implement BIP 340.
+
+## Pedersen Commitments
+
+Create `Pedersen.Setup` with `try OpalCrypto.Pedersen.Setup()`. The setup uses the fixed CashFusion independent base point, whose compressed encoding is `0x02 || UTF-8("CashFusion gives us fungibility.")`; callers cannot select a different point. The deprecated `init(alternateBasePoint:)` bridge remains source-compatible only when passed that same point and rejects every other point with `Pedersen.Error.insecureAlternateBasePoint`.
+
 ## Blind Signatures
 
 `BlindSignature.Signer` owns exactly one nonce. Call `signOnce(privateKey:requestScalar:)` to make nonce consumption explicit. Every alias of the actor shares that state, and any signing attempt after the first successful response throws `BlindSignature.Error.nonceAlreadyUsed`.
@@ -137,9 +143,13 @@ Conversions from validated `PrivateKey` or `WIF` values to `SigningKey` are nont
 
 `Key.Mnemonic.WordList` is a `RandomAccessCollection` of normalized words. Use collection indices and `firstIndex(of:)`; the source-compatible `words`, `contains(_:)`, and `index(of:)` conveniences remain available.
 
+Mnemonic phrase import rejects more than 24 words without fabricating an exact word count. It also bounds the raw UTF-8 phrase to 8,192 bytes and each raw word to 256 bytes before compatibility normalization, so malformed input cannot amplify normalization work without limit.
+
 ## Communication Padding
 
-`Communication.encrypt(message:recipientPublicKey:paddedPlaintextLength:)` prefixes the message with its four-byte length. With no explicit padding length, the plaintext expands to the smallest multiple of 16 that contains the prefix and message. An explicit `paddedPlaintextLength` must be at least `message.count + 4` and a multiple of 16; otherwise encryption throws a facade-owned padding error.
+`Communication.encrypt(message:recipientPublicKey:paddedPlaintextLength:maximumCiphertextByteCount:)` prefixes the message with its four-byte length. With no explicit padding length, the plaintext expands to the smallest multiple of 16 that contains the prefix and message. An explicit `paddedPlaintextLength` must be at least `message.count + 4` and a multiple of 16; otherwise encryption throws a facade-owned padding error.
+
+Every communication entry point requires the largest serialized ciphertext the caller is willing to process. Encryption checks the complete envelope size before key generation or allocation. `Communication.Ciphertext.init(rawRepresentation:maximumCiphertextByteCount:)` checks imported data before copying it, and both `decrypt` overloads enforce the current operation's budget before cryptographic work.
 
 ## Encoding
 
@@ -147,7 +157,10 @@ Base32 byte mode and Bech32-style five-bit value mode are separate APIs:
 
 ```swift
 let byteText = OpalCrypto.Encoding.encodeBase32(bytes: Data([0x00, 0x10]))
-let bytes = try OpalCrypto.Encoding.decodeBase32Bytes(byteText)
+let bytes = try OpalCrypto.Encoding.decodeBase32Bytes(
+    byteText,
+    maximumDecodedByteCount: 2
+)
 
 let values = try OpalCrypto.Encoding.FiveBitValues(rawRepresentation: Data([0, 1, 31]))
 let valueText = OpalCrypto.Encoding.encodeBase32(values: values)
@@ -155,15 +168,15 @@ let decodedValues = try OpalCrypto.Encoding.decodeBase32Values(valueText)
 let checksum = OpalCrypto.Encoding.computePolymodChecksum(values)
 ```
 
-Base58 decoding has explicit failure shapes: `decodeBase58IfValid(_:)` returns `nil`, while `decodeBase58Validating(_:)` throws `Encoding.Base58DecodingError.invalidText`.
+Generic Base58 and byte-mode Base32 decoding require an explicit maximum decoded byte count and stop when the result would cross it. Base58 decoding has explicit failure shapes: `decodeBase58IfValid(_:maximumDecodedByteCount:)` returns `nil`, while `decodeBase58Validating(_:maximumDecodedByteCount:)` distinguishes invalid text, an invalid limit, and a result that exceeds the limit. Fixed-format WIF and extended-key imports apply their exact protocol bounds internally and report `payloadLengthExceedsMaximum(maximum:)` when conversion stops before an exact oversized length is known.
 
 ## Key Derivation
 
-`KeyDerivation.derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:)` uses PBKDF2 with HMAC-SHA-512. Omitting `derivedKeyLength` produces 64 bytes. Salt values must be nonempty, iteration counts must be positive, and oversized output requests throw facade-owned `KeyDerivation.Error` values.
+`KeyDerivation.derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:maximumWorkUnitCount:)` uses PBKDF2 with HMAC-SHA-512. Omitting `derivedKeyLength` produces 64 bytes. One work unit is one HMAC evaluation, so the required work is the number of 64-byte output blocks multiplied by `iterationCount`. The operation validates that multiplication and the caller's budget before retaining the password or allocating the result. Salt values must be nonempty, iteration counts must be positive, and invalid lengths, work overflow, or insufficient budgets throw facade-owned `KeyDerivation.Error` values.
 
 ## Arbitrary-Precision Shifts
 
-`Numeric.BigUnsignedInteger.shiftedLeft(byBytes:)` reports a nonzero result that would exceed the in-memory representation as `Numeric.BigUnsignedInteger.LeftShiftError.exceedsRepresentableSize(byteCount:)`. The source-compatible `shiftLeft(byBytes:)` operation retains its legacy zero sentinel for that case.
+`Numeric.BigUnsignedInteger.shiftedLeft(byBytes:maximumResultByteCount:)` requires the caller to bound the nonzero result allocation. It reports a budget overrun as `Numeric.BigUnsignedInteger.LeftShiftError.exceedsMaximumResultByteCount(requiredByteCount:maximumResultByteCount:)` and an arithmetic or in-memory representation overflow as `exceedsRepresentableSize(byteCount:)`. Shifting zero returns zero without allocation.
 
 `Numeric.BigUnsignedInteger.init(bigEndianRepresentation:)` accepts a variable-width unsigned big-endian value, normalizes leading zeroes, and treats empty data as zero. Its `bigEndianRepresentation` is minimal and represents zero as empty data. `Numeric.UInt256.init(bigEndianRepresentation:)` instead requires exactly 32 bytes, and its representation always remains fixed-width.
 

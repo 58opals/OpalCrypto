@@ -6,7 +6,11 @@ extension ExtendedKeyPayloadModel {
     internal init(serialized: String) throws {
         let payload: Data
         do {
-            payload = try Base58CheckCodec.decode(serialized, minimumPayloadLength: 78)
+            payload = try Base58CheckCodec.decode(
+                serialized,
+                minimumPayloadLength: 78,
+                maximumPayloadLength: 78
+            )
         } catch let error as Base58CheckCodec.Error {
             switch error {
             case .invalidBase58:
@@ -15,6 +19,8 @@ extension ExtendedKeyPayloadModel {
                 throw Error.invalidChecksum
             case .invalidPayloadLength(let actual):
                 throw Error.invalidPayloadLength(actual: actual)
+            case .payloadLengthExceedsMaximum(let maximum):
+                throw Error.payloadLengthExceedsMaximum(maximum: maximum)
             }
         }
 

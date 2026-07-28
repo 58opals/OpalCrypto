@@ -14,6 +14,8 @@ extension CommunicationBoxModel {
         case invalidSymmetricKeyLength(actual: Int)
         case invalidPaddedPlaintextLength(minimum: Int, actual: Int)
         case paddedPlaintextLengthNotMultipleOf16(actual: Int)
+        case ciphertextByteCountExceedsMaximum(maximum: Int, actual: Int)
+        case ciphertextByteCountOverflow
         case invalidCiphertext
         case cryptographyFailure
     }

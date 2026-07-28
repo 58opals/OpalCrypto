@@ -71,6 +71,18 @@ extension PublicAPISecp256k1Validator {
         }
     }
 
+    @Test("Reject DER signatures above the fixed encoded-length limit")
+    func rejectDerSignaturesAboveFixedEncodedLengthLimit() {
+        let oversizedSignature = Data(repeating: 0x00, count: 73)
+
+        #expect(throws: OpalCrypto.Signature.Error.invalidDER) {
+            _ = try OpalCrypto.Signature.ECDSA(
+                rawRepresentation: oversizedSignature,
+                format: .der
+            )
+        }
+    }
+
     @Test("Normalize and query low-S signatures")
     func normalizeAndQueryLowSSignatures() throws {
         let highSData = StandardsForEfficientCryptography256k1CurveModel.Constant.n

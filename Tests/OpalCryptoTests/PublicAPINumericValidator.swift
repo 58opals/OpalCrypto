@@ -101,13 +101,11 @@ struct PublicAPINumericValidator {
         let value = OpalCrypto.Numeric.BigUnsignedInteger(Data([0x01, 0x02, 0x03]))
 
         #expect(value.shiftRight(byBytes: oversizedByteCount).isZero)
-        #expect(value.shiftLeft(byBytes: oversizedByteCount).isZero)
-        #expect(OpalCrypto.Numeric.BigUnsignedInteger.zero.shiftLeft(byBytes: oversizedByteCount).isZero)
     }
 
     @Test("Throw when a nonzero BigUnsignedInteger left shift cannot be represented")
     func throwWhenBigUnsignedIntegerLeftShiftCannotBeRepresented() throws {
-        let oversizedByteCount = UInt(Int.max) + 1
+        let oversizedByteCount = UInt.max
         let value = OpalCrypto.Numeric.BigUnsignedInteger(1)
 
         #expect(
@@ -115,29 +113,73 @@ struct PublicAPINumericValidator {
                 byteCount: oversizedByteCount
             )
         ) {
-            _ = try value.shiftedLeft(byBytes: oversizedByteCount)
+            _ = try value.shiftedLeft(
+                byBytes: oversizedByteCount,
+                maximumResultByteCount: UInt.max
+            )
         }
         #expect(
             try OpalCrypto.Numeric.BigUnsignedInteger.zero
-                .shiftedLeft(byBytes: oversizedByteCount)
+                .shiftedLeft(
+                    byBytes: oversizedByteCount,
+                    maximumResultByteCount: 0
+                )
                 .isZero
         )
+    }
+
+    @Test("Allow a BigUnsignedInteger left shift at the exact result-byte budget")
+    func allowBigUnsignedIntegerLeftShiftAtExactResultByteBudget() throws {
+        let value = OpalCrypto.Numeric.BigUnsignedInteger(Data([0x01, 0x02, 0x03]))
+
+        let shiftedValue = try value.shiftedLeft(
+            byBytes: 2,
+            maximumResultByteCount: 5
+        )
+
+        #expect(shiftedValue.bigEndianRepresentation == Data([0x01, 0x02, 0x03, 0x00, 0x00]))
+    }
+
+    @Test("Reject a BigUnsignedInteger left shift beyond the result-byte budget")
+    func rejectBigUnsignedIntegerLeftShiftBeyondResultByteBudget() {
+        let value = OpalCrypto.Numeric.BigUnsignedInteger(Data([0x01, 0x02, 0x03]))
+
+        #expect(
+            throws: OpalCrypto.Numeric.BigUnsignedInteger.LeftShiftError
+                .exceedsMaximumResultByteCount(
+                    requiredByteCount: 5,
+                    maximumResultByteCount: 4
+                )
+        ) {
+            _ = try value.shiftedLeft(
+                byBytes: 2,
+                maximumResultByteCount: 4
+            )
+        }
     }
 
     @Test(
         "BigUnsignedInteger left shifts preserve ordinary output and reject oversized output",
         arguments: BigUnsignedIntegerLeftShiftCase.allCases
     )
-    func bigUnsignedIntegerLeftShiftsPreserveOrdinaryOutputAndRejectOversizedOutput(
+    func preserveOrdinaryBigUnsignedIntegerLeftShiftOutputAndRejectOversizedOutput(
         testCase: BigUnsignedIntegerLeftShiftCase
-    ) {
+    ) throws {
         let value = OpalCrypto.Numeric.BigUnsignedInteger(Data(testCase.inputBytes))
-        let shiftedValue = value.shiftLeft(byBytes: testCase.shiftByteCount)
 
         if let expectedBytes = testCase.expectedBytes {
+            let shiftedValue = try value.shiftedLeft(
+                byBytes: testCase.shiftByteCount,
+                maximumResultByteCount: testCase.maximumResultByteCount
+            )
             #expect(shiftedValue.serialize() == Data(expectedBytes))
         } else {
-            #expect(shiftedValue.isZero)
+            #expect(throws: OpalCrypto.Numeric.BigUnsignedInteger.LeftShiftError.self) {
+                _ = try value.shiftedLeft(
+                    byBytes: testCase.shiftByteCount,
+                    maximumResultByteCount: testCase.maximumResultByteCount
+                )
+            }
         }
     }
 

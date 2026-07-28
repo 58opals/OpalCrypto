@@ -4,22 +4,52 @@ import Foundation
 import OpalDiagnostics
 
 extension OpalCrypto.Pedersen {
-    /// A Pedersen commitment setup bound to an alternate secp256k1 base point.
+    /// A Pedersen commitment setup bound to the protocol's canonical independent
+    /// secp256k1 base point.
     public struct Setup: Sendable, Equatable {
         internal let setupModel: PedersenModel.Setup
 
+        /// Creates a setup using the protocol's canonical independent base point.
+        public init() throws {
+            try self.init(
+                makeSetupModel: { try PedersenModel.Setup() },
+                alternateBasePointByteCount: PedersenModel.Setup
+                    .canonicalAlternateBasePointData.count
+            )
+        }
+
         /// Creates a setup from a validated public key.
         ///
-        /// - Throws: ``OpalCrypto/Pedersen/Error/insecureAlternateBasePoint`` when the alternate point equals the standard generator or produces an invalid combined point.
+        /// This source-compatible bridge accepts only the protocol's canonical
+        /// independent base point.
+        ///
+        /// - Throws: ``OpalCrypto/Pedersen/Error/insecureAlternateBasePoint`` when
+        ///   `alternateBasePoint` is not the canonical point.
+        @available(*, deprecated, message: "Use init() to select the canonical base point.")
         public init(alternateBasePoint: OpalCrypto.Secp256k1.PublicKey) throws {
+            try self.init(
+                makeSetupModel: {
+                    try PedersenModel.Setup(
+                        alternateBasePointModel: alternateBasePoint.parsedPublicKeyModel
+                    )
+                },
+                alternateBasePointByteCount: alternateBasePoint.rawRepresentation.count
+            )
+        }
+
+        private init(
+            makeSetupModel: () throws -> PedersenModel.Setup,
+            alternateBasePointByteCount: Int
+        ) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("setup"),
-                OpalDiagnostics.Field.publicField("alternate_base_point_byte_count", alternateBasePoint.rawRepresentation.count)
+                OpalDiagnostics.Field.publicField(
+                    "alternate_base_point_byte_count",
+                    alternateBasePointByteCount
+                )
             ]
             do {
-                setupModel = try PedersenModel.Setup(
-                    alternateBasePointModel: alternateBasePoint.parsedPublicKeyModel
-                )
+                setupModel = try makeSetupModel()
             } catch let error as PedersenModel.Error {
                 let mappedError = Self.mapError(error)
                 OpalDiagnostics.logger(category: OpalDiagnostics.Category.pedersen).record(

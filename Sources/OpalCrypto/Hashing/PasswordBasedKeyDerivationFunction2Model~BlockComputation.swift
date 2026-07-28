@@ -1,7 +1,7 @@
-// PasswordBasedKeyDerivationFunction2Model+.swift
+// PasswordBasedKeyDerivationFunction2Model~BlockComputation.swift
 
-import Foundation
 import CryptoKit
+import Foundation
 
 extension PasswordBasedKeyDerivationFunction2Model {
     func computeBlock(blockNumber: Int) throws -> Array<UInt8> {
@@ -17,6 +17,7 @@ extension PasswordBasedKeyDerivationFunction2Model {
 
         if iterationCount > 1 {
             for _ in 2...iterationCount {
+                try Task.checkCancellation()
                 let authenticationCode = HMAC<SHA512>.authenticationCode(for: currentBlock, using: symmetricKey)
                 // SAFETY: HMAC<SHA512>.MAC exposes exactly sha512BlockSize
                 // initialized bytes for this closure. UInt8 has byte alignment,

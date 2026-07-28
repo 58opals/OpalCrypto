@@ -17,7 +17,8 @@ extension OpalCryptoBenchmarks {
                             rawRepresentation: context.batch64PrivateKeyData[0]
                         ),
                         iterationCount: 2048,
-                        derivedKeyLength: 64
+                        derivedKeyLength: 64,
+                        maximumWorkUnitCount: 2048
                     )
                     return derivedKey.rawRepresentation.count ^ Int(derivedKey.rawRepresentation[0])
                 }

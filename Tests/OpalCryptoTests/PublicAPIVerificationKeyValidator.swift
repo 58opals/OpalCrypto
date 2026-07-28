@@ -110,7 +110,7 @@ struct PublicAPIVerificationKeyValidator {
         let signature = try OpalCrypto.Signature.Schnorr.sign(
             digest: digest,
             privateKey: privateKey,
-            noncePolicy: .bip340Deterministic
+            noncePolicy: .bchDeterministic
         )
 
         let rawResult = try signature.verify(digest: digest, publicKey: verificationKey.publicKey)

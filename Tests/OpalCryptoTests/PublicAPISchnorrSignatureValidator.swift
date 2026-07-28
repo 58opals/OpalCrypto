@@ -6,8 +6,38 @@ import OpalCrypto
 
 @Suite("Public API Schnorr signature validation")
 struct PublicAPISchnorrSignatureValidator {
-    @Test("Exercise Schnorr deterministic sign and verify through public facade")
-    func exerciseSchnorrDeterministicSignAndVerifyThroughPublicFacade() throws {
+    @Test("Default Schnorr signing matches the Bitcoin Cash Node RFC6979 vector")
+    func matchDefaultSchnorrSigningWithBitcoinCashNodeVector() throws {
+        // Bitcoin Cash Node `src/test/key_tests.cpp`, deterministic Schnorr
+        // signing case for key1 and Hash("Very deterministic message").
+        let privateKey = try OpalCrypto.Secp256k1.PrivateKey(
+            rawRepresentation: Data(
+                hexadecimal:
+                    "12b004fff7f4b69ef8650e767f18f11ede158148b425660723b9f9a66e61f747"
+            )
+        )
+        let digest = try OpalCrypto.Signature.Digest(
+            rawRepresentation: Data(
+                hexadecimal:
+                    "5255683da567900bfd3e786ed8836a4e7763c221bf1ac20ece2a5171b9199e8a"
+            )
+        )
+        let expectedSignature = try Data(
+            hexadecimal:
+                "2c56731ac2f7a7e7f11518fc7722a166b02438924ca9d8b4d111347b81d07175"
+                + "71846de67ad3d913a8fdf9d8f3f73161a4c48ae81cb183b214765feb86e255ce"
+        )
+
+        let signature = try OpalCrypto.Signature.Schnorr.sign(
+            digest: digest,
+            privateKey: privateKey
+        )
+
+        #expect(signature.rawRepresentation == expectedSignature)
+    }
+
+    @Test("Exercise Bitcoin Cash deterministic Schnorr signing through public facade")
+    func exerciseBitcoinCashDeterministicSchnorrSigningThroughPublicFacade() throws {
         let privateKey = try makePrivateKey(2)
         let digest = try OpalCrypto.Signature.Digest(
             rawRepresentation: Data(repeating: 0xAB, count: 32)
@@ -16,30 +46,32 @@ struct PublicAPISchnorrSignatureValidator {
         let signature = try OpalCrypto.Signature.Schnorr.sign(
             digest: digest,
             privateKey: privateKey,
-            noncePolicy: .bip340Deterministic
+            noncePolicy: .bchDeterministic
         )
 
         #expect(try signature.verify(digest: digest, publicKey: publicKey))
     }
 
-    @Test("SigningKey Schnorr signing matches legacy deterministic output")
-    func signingKeySchnorrSigningMatchesLegacyDeterministicOutput() throws {
+    @Test("Schnorr signing defaults match explicit Bitcoin Cash deterministic output")
+    func matchSchnorrSigningDefaultsWithExplicitBitcoinCashDeterministicOutput() throws {
         let privateKey = try makePrivateKey(2)
         let signingKey = privateKey.makeSigningKey()
         let digest = try OpalCrypto.Signature.Digest(
             rawRepresentation: Data(repeating: 0xCD, count: 32)
         )
-        let legacySignature = try OpalCrypto.Signature.Schnorr.sign(
+        let explicitSignature = try OpalCrypto.Signature.Schnorr.sign(
             digest: digest,
             privateKey: privateKey,
-            noncePolicy: .bip340Deterministic
+            noncePolicy: .bchDeterministic
         )
-        let signingKeySignature = try signingKey.signSchnorr(
+        let defaultSignature = try OpalCrypto.Signature.Schnorr.sign(
             digest: digest,
-            noncePolicy: .bip340Deterministic
+            privateKey: privateKey
         )
+        let signingKeySignature = try signingKey.signSchnorr(digest: digest)
 
-        #expect(signingKeySignature.rawRepresentation == legacySignature.rawRepresentation)
+        #expect(defaultSignature.rawRepresentation == explicitSignature.rawRepresentation)
+        #expect(signingKeySignature.rawRepresentation == explicitSignature.rawRepresentation)
         #expect(try signingKeySignature.verify(digest: digest, publicKey: signingKey.publicKey))
         #expect(try signingKeySignature.verify(digest: digest, verificationKey: signingKey.verificationKey))
     }

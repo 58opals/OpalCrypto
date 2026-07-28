@@ -4,6 +4,8 @@ import Foundation
 
 extension StandardsForEfficientCryptography256k1CurveModel {
     enum DistinguishedEncodingRules {
+        private static let maximumEncodedSignatureByteCount = 72
+
         static func encodeSignature(r: Data, s: Data) throws -> Data {
             guard r.count == 32, s.count == 32 else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.invalidSignatureLength(actual: r.count + s.count)
@@ -25,6 +27,9 @@ extension StandardsForEfficientCryptography256k1CurveModel {
         }
         
         static func decodeSignature(_ distinguishedEncodingRulesEncoded: Data) throws -> (r: Data, s: Data) {
+            guard distinguishedEncodingRulesEncoded.count <= maximumEncodedSignatureByteCount else {
+                throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed
+            }
             let data = Data(distinguishedEncodingRulesEncoded)
             guard !data.isEmpty else {
                 throw StandardsForEfficientCryptography256k1CurveModel.Error.derMalformed

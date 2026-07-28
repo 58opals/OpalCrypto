@@ -76,7 +76,7 @@ extension OpalCryptoBenchmarks {
         let results = try PerformanceBenchmarkOperations.verifySchnorrBatchSerial(
             signatures: fixture.signatures,
             digests: fixture.digests,
-            verificationKey: schnorrDistinctBatchFixture.verificationKey
+            verificationKey: try schnorrDistinctBatchFixture.verificationKey
         )
         return try verificationChecksum(results: results, expected: fixture.expectedResults)
     }
@@ -86,7 +86,7 @@ extension OpalCryptoBenchmarks {
         let results = try await PerformanceBenchmarkOperations.verifySchnorrBatchParallel(
             signatures: fixture.signatures,
             digests: fixture.digests,
-            verificationKey: schnorrDistinctBatchFixture.verificationKey
+            verificationKey: try schnorrDistinctBatchFixture.verificationKey
         )
         return try verificationChecksum(results: results, expected: fixture.expectedResults)
     }
@@ -94,7 +94,7 @@ extension OpalCryptoBenchmarks {
     private static func schnorrDistinctBatchInput(
         count: Int
     ) async throws -> MetalSchnorrVerificationBatchBenchmarkInput {
-        let fixture = schnorrDistinctBatchFixture
+        let fixture = try schnorrDistinctBatchFixture
         let cpuFixture = try cpuSchnorrBatchFixture(count: count)
 
         return try await PerformanceBenchmarkOperations
@@ -110,7 +110,7 @@ extension OpalCryptoBenchmarks {
     static func preparedMetalSchnorrBatchInput(
         count: Int
     ) throws -> MetalSchnorrVerificationBatchBenchmarkInput {
-        guard let input = schnorrDistinctBatchFixture.preparedMetalInputs[count] else {
+        guard let input = try schnorrDistinctBatchFixture.preparedMetalInputs[count] else {
             throw MetalVerificationProbeError.invalidResult(index: count)
         }
         return input

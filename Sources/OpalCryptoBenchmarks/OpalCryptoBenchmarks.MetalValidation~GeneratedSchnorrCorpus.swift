@@ -21,7 +21,7 @@ extension OpalCryptoBenchmarks.MetalValidation {
             let originalSignature = try OpalCrypto.Signature.Schnorr.sign(
                 digest: originalDigest,
                 privateKey: privateKey,
-                noncePolicy: .bip340Deterministic
+                noncePolicy: .bchDeterministic
             )
 
             switch index % 32 {

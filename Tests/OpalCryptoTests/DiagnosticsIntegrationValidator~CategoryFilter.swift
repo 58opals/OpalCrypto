@@ -11,7 +11,7 @@ extension DiagnosticsIntegrationValidator {
         try OpalDiagnostics.withConfiguration(Self.diagnosticsConfiguration) {
             OpalDiagnostics.clearRecentRecords()
 
-            _ = OpalCrypto.Encoding.decodeBase58("0")
+            _ = OpalCrypto.Encoding.decodeBase58("0", maximumDecodedByteCount: 32)
             #expect(throws: OpalCrypto.Key.WIF.Error.self) {
                 _ = try OpalCrypto.Key.WIF("0")
             }

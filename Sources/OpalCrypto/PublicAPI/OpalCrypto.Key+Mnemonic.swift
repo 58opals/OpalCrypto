@@ -39,10 +39,7 @@ extension OpalCrypto.Key {
         ///
         /// `phrase` is secret-bearing input. Diagnostics record only public-safe metadata such as word count, language, and error code.
         public init(phrase: String, language: Word.Language? = nil) throws {
-            let fields = Self.parseFields(
-                wordCount: phrase.split(whereSeparator: \.isWhitespace).count,
-                language: language
-            )
+            let fields = Self.parseFields(phrase: phrase, language: language)
             do {
                 let parsed = try MnemonicCodecModel.parse(phrase: phrase, language: language)
                 self.init(parsed: parsed)
@@ -160,6 +157,32 @@ extension OpalCrypto.Key {
                 OpalDiagnostics.Field.operationField("mnemonic_parse"),
                 OpalDiagnostics.Field.formatField("bip39"),
                 OpalDiagnostics.Field.publicField("word_count", wordCount),
+                OpalDiagnostics.Field.publicField("language", language?.rawValue ?? "auto")
+            ]
+        }
+
+        private static func parseFields(
+            phrase: String,
+            language: Word.Language?
+        ) -> [OpalDiagnostics.Field] {
+            let boundedWordCount = phrase.split(
+                maxSplits: MnemonicCodecModel.maximumSupportedWordCount,
+                whereSeparator: \.isWhitespace
+            ).count
+            if boundedWordCount <= MnemonicCodecModel.maximumSupportedWordCount {
+                return parseFields(wordCount: boundedWordCount, language: language)
+            }
+            return [
+                OpalDiagnostics.Field.operationField("mnemonic_parse"),
+                OpalDiagnostics.Field.formatField("bip39"),
+                OpalDiagnostics.Field.publicField(
+                    "word_count_exceeds_maximum",
+                    true
+                ),
+                OpalDiagnostics.Field.publicField(
+                    "maximum_word_count",
+                    MnemonicCodecModel.maximumSupportedWordCount
+                ),
                 OpalDiagnostics.Field.publicField("language", language?.rawValue ?? "auto")
             ]
         }

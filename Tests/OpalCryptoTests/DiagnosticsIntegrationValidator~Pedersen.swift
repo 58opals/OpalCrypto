@@ -9,9 +9,7 @@ extension DiagnosticsIntegrationValidator {
     @Test("Pedersen point combination does not emit commitment-parse diagnostics")
     func validatePedersenPointCombinationDoesNotEmitCommitmentParseDiagnostics() throws {
         try withDiagnosticsCapture {
-            let alternateBasePrivateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(31)
-            let alternateBasePoint = try OpalCrypto.Secp256k1.derivePublicKey(from: alternateBasePrivateKey)
-            let setup = try OpalCrypto.Pedersen.Setup(alternateBasePoint: alternateBasePoint)
+            let setup = try OpalCrypto.Pedersen.Setup()
             let firstCommitment = try setup.commit(
                 amount: 4,
                 nonce: OpalCrypto.Pedersen.Nonce(rawRepresentation: OpalCryptoTestSupport.makePrivateKey(3))
@@ -40,9 +38,7 @@ extension DiagnosticsIntegrationValidator {
     @Test("Pedersen commit records public-safe provided nonce length")
     func validatePedersenCommitRecordsPublicSafeProvidedNonceLength() throws {
         try withDiagnosticsCapture {
-            let alternateBasePrivateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(41)
-            let alternateBasePoint = try OpalCrypto.Secp256k1.derivePublicKey(from: alternateBasePrivateKey)
-            let setup = try OpalCrypto.Pedersen.Setup(alternateBasePoint: alternateBasePoint)
+            let setup = try OpalCrypto.Pedersen.Setup()
 
             OpalDiagnostics.clearRecentRecords()
 

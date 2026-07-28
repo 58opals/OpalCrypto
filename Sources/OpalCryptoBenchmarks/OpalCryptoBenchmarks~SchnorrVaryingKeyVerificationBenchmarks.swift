@@ -143,7 +143,7 @@ extension OpalCryptoBenchmarks {
     static func varyingKeySchnorrBatchFixture(
         count: Int
     ) throws -> SchnorrVaryingKeyCPUVerificationBatchFixture {
-        guard let fixture = schnorrVaryingKeyBatchFixture.cpuBatches[count] else {
+        guard let fixture = try schnorrVaryingKeyBatchFixture.cpuBatches[count] else {
             throw MetalVerificationProbeError.invalidResult(index: count)
         }
         return fixture
@@ -152,7 +152,7 @@ extension OpalCryptoBenchmarks {
     private static func preparedMetalSchnorrVaryingKeyBatchInput(
         count: Int
     ) throws -> MetalSchnorrVaryingKeyVerificationBatchBenchmarkInput {
-        guard let input = schnorrVaryingKeyBatchFixture.preparedMetalInputs[count] else {
+        guard let input = try schnorrVaryingKeyBatchFixture.preparedMetalInputs[count] else {
             throw MetalVerificationProbeError.invalidResult(index: count)
         }
         return input

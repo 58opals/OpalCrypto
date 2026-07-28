@@ -52,7 +52,8 @@ extension DiagnosticsIntegrationValidator {
                     password: password,
                     salt: salt,
                     iterationCount: 0,
-                    derivedKeyLength: 32
+                    derivedKeyLength: 32,
+                    maximumWorkUnitCount: 1
                 )
             }
 
@@ -80,7 +81,8 @@ extension DiagnosticsIntegrationValidator {
                 password: Data("wallet-password-material".utf8),
                 salt: salt,
                 iterationCount: 1,
-                derivedKeyLength: nil
+                derivedKeyLength: nil,
+                maximumWorkUnitCount: 1
             )
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.pbkdf2DeriveSucceeded))
@@ -93,11 +95,56 @@ extension DiagnosticsIntegrationValidator {
             expectPublicField("iteration_count", in: record, equals: "1")
             expectPublicField("requested_derived_key_byte_count", in: record, equals: "64")
             expectPublicField("has_explicit_derived_key_length", in: record, equals: "false")
+            expectPublicField("maximum_work_unit_count", in: record, equals: "1")
             expectPublicField("output_byte_count", in: record, equals: "64")
             expectPublicField("derived_key_byte_count", in: record, equals: "64")
             #expect(field("password", in: record) == nil)
             #expect(field("salt", in: record) == nil)
             #expect(record.fields.contains { $0.value.contains("wallet-password-material") } == false)
+        }
+    }
+
+    @Test("PBKDF2 work-budget failures record a stable public error code")
+    func validatePBKDF2WorkBudgetFailuresRecordStablePublicErrorCode() throws {
+        try withDiagnosticsCapture {
+            let salt = try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8))
+
+            #expect(
+                throws: OpalCrypto.KeyDerivation.Error.workBudgetExceeded(
+                    requiredWorkUnitCount: 4,
+                    maximumWorkUnitCount: 3
+                )
+            ) {
+                _ = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
+                    password: Data("wallet-password-material".utf8),
+                    salt: salt,
+                    iterationCount: 2,
+                    derivedKeyLength: 65,
+                    maximumWorkUnitCount: 3
+                )
+            }
+
+            let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.pbkdf2DeriveFailed))
+            #expect(field("error_code", in: record)?.value == "work_budget_exceeded")
+            expectPublicField("maximum_work_unit_count", in: record, equals: "3")
+
+            OpalDiagnostics.clearRecentRecords()
+            let maximumDerivedKeyLength = Int(UInt64(UInt32.max) * 64)
+
+            #expect(throws: OpalCrypto.KeyDerivation.Error.workUnitCountOverflow) {
+                _ = try OpalCrypto.KeyDerivation.derivePBKDF2SHA512Key(
+                    password: Data("wallet-password-material".utf8),
+                    salt: salt,
+                    iterationCount: Int.max,
+                    derivedKeyLength: maximumDerivedKeyLength,
+                    maximumWorkUnitCount: UInt64.max
+                )
+            }
+
+            let overflowRecord = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.pbkdf2DeriveFailed)
+            )
+            #expect(field("error_code", in: overflowRecord)?.value == "work_unit_count_overflow")
         }
     }
 }

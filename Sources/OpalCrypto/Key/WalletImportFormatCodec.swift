@@ -34,7 +34,11 @@ internal enum WalletImportFormatCodec {
     internal static func decode(_ string: String) throws -> (privateKey: Data, isCompressed: Bool) {
         let payload: Data
         do {
-            payload = try Base58CheckCodec.decode(string, minimumPayloadLength: 33)
+            payload = try Base58CheckCodec.decode(
+                string,
+                minimumPayloadLength: 33,
+                maximumPayloadLength: 34
+            )
         } catch let error as Base58CheckCodec.Error {
             switch error {
             case .invalidBase58:
@@ -43,6 +47,8 @@ internal enum WalletImportFormatCodec {
                 throw Error.invalidChecksum
             case .invalidPayloadLength(let actual):
                 throw Error.invalidPayloadLength(actual: actual)
+            case .payloadLengthExceedsMaximum(let maximum):
+                throw Error.payloadLengthExceedsMaximum(maximum: maximum)
             }
         }
 

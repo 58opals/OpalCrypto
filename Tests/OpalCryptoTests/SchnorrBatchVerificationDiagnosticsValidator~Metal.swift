@@ -5,11 +5,11 @@ import Testing
 @testable import OpalCrypto
 
 extension SchnorrBatchVerificationDiagnosticsValidator {
-    @Test("Metal batch verification records aggregate stage durations")
+    @Test(
+        "Metal batch verification records aggregate stage durations",
+        .enabled(if: MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable)
+    )
     func recordAggregateMetalStageDurations() async throws {
-        guard MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable else {
-            return
-        }
         try await OpalDiagnostics.withConfiguration(
             DiagnosticsIntegrationValidator.diagnosticsConfiguration
         ) {

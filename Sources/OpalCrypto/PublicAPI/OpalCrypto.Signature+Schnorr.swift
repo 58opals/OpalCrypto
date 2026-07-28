@@ -35,11 +35,12 @@ extension OpalCrypto.Signature {
 
         /// Signs a 32-byte digest with Bitcoin Cash Schnorr signing.
         ///
-        /// The default nonce policy is deterministic BIP-340 derivation. The digest is not hashed again.
+        /// The default nonce policy is Bitcoin Cash deterministic derivation.
+        /// The digest is not hashed again.
         public static func sign(
             digest: Digest,
             privateKey: OpalCrypto.Secp256k1.PrivateKey,
-            noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
+            noncePolicy: SchnorrNoncePolicy = .bchDeterministic
         ) throws -> Schnorr {
             let fields = signFields(
                 digest: digest,
@@ -79,7 +80,7 @@ extension OpalCrypto.Signature {
         internal static func sign(
             digest: Digest,
             parsedPrivateKeyModel: ParsedPrivateKeyModel,
-            noncePolicy: SchnorrNoncePolicy = .bip340Deterministic
+            noncePolicy: SchnorrNoncePolicy = .bchDeterministic
         ) throws -> Schnorr {
             let fields = signFields(
                 digest: digest,

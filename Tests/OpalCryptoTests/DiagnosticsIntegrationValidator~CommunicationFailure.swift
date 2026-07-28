@@ -15,12 +15,14 @@ extension DiagnosticsIntegrationValidator {
             let ciphertext = try OpalCrypto.Communication.encrypt(
                 message: message,
                 recipientPublicKey: publicKey,
-                paddedPlaintextLength: 32
+                paddedPlaintextLength: 32,
+                maximumCiphertextByteCount: 81
             )
             var tamperedCiphertextData = ciphertext.rawRepresentation
             tamperedCiphertextData[tamperedCiphertextData.index(before: tamperedCiphertextData.endIndex)] ^= 0x01
             let tamperedCiphertext = try OpalCrypto.Communication.Ciphertext(
-                rawRepresentation: tamperedCiphertextData
+                rawRepresentation: tamperedCiphertextData,
+                maximumCiphertextByteCount: 81
             )
 
             OpalDiagnostics.clearRecentRecords()
@@ -28,7 +30,8 @@ extension DiagnosticsIntegrationValidator {
             #expect(throws: OpalCrypto.Communication.Error.self) {
                 _ = try OpalCrypto.Communication.decrypt(
                     tamperedCiphertext,
-                    privateKey: privateKey
+                    privateKey: privateKey,
+                    maximumCiphertextByteCount: 81
                 )
             }
 
@@ -62,7 +65,8 @@ extension DiagnosticsIntegrationValidator {
             #expect(throws: OpalCrypto.Communication.Error.self) {
                 _ = try OpalCrypto.Communication.decrypt(
                     tooShortCiphertext,
-                    privateKey: privateKey
+                    privateKey: privateKey,
+                    maximumCiphertextByteCount: 1
                 )
             }
 

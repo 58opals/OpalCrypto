@@ -4,12 +4,11 @@ import Testing
 @testable import OpalCrypto
 
 extension MetalSchnorrBatchVerificationClientValidator {
-    @Test("Concurrent cached and varying Metal verification has no cross-talk")
+    @Test(
+        "Concurrent cached and varying Metal verification has no cross-talk",
+        .enabled(if: MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable)
+    )
     func preventCrossTalkBetweenConcurrentCachedAndVaryingVerification() async throws {
-        guard MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable else {
-            return
-        }
-
         let cachedSigningKey = try OpalCryptoTestSupport
             .makeTypedPrivateKey(421)
             .makeSigningKey()

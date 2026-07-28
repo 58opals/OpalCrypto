@@ -13,27 +13,50 @@ extension OpalCrypto {
 
         /// Decodes valid Base58 text, returning `nil` for invalid input.
         ///
-        /// Prefer ``decodeBase58IfValid(_:)`` when optional failure is intended,
-        /// or ``decodeBase58Validating(_:)`` when invalid input must be reported.
-        public static func decodeBase58(_ text: String) -> Data? {
-            decodeBase58IfValid(text)
+        /// Prefer ``decodeBase58IfValid(_:maximumDecodedByteCount:)`` when optional failure is
+        /// intended, or ``decodeBase58Validating(_:maximumDecodedByteCount:)`` when invalid
+        /// input must be reported.
+        /// - Parameter maximumDecodedByteCount: The largest decoded result the caller accepts.
+        public static func decodeBase58(
+            _ text: String,
+            maximumDecodedByteCount: Int
+        ) -> Data? {
+            decodeBase58IfValid(text, maximumDecodedByteCount: maximumDecodedByteCount)
         }
 
         /// Decodes valid Base58 text, returning `nil` for invalid input.
-        public static func decodeBase58IfValid(_ text: String) -> Data? {
-            try? decodeBase58Validating(text)
+        /// - Parameter maximumDecodedByteCount: The largest decoded result the caller accepts.
+        public static func decodeBase58IfValid(
+            _ text: String,
+            maximumDecodedByteCount: Int
+        ) -> Data? {
+            try? decodeBase58Validating(
+                text,
+                maximumDecodedByteCount: maximumDecodedByteCount
+            )
         }
 
         /// Decodes Base58 text and reports invalid input as an error.
         ///
         /// - Throws: ``OpalCrypto/Encoding/Base58DecodingError/invalidText`` when `text`
-        ///   contains a character outside the Base58 alphabet.
-        public static func decodeBase58Validating(_ text: String) throws -> Data {
-            guard let decoded = Base58EncodingCodec.decode(text) else {
-                recordBase58DecodeFailure(text: text)
-                throw Base58DecodingError.invalidText
+        ///   contains a character outside the Base58 alphabet, or another
+        ///   ``OpalCrypto/Encoding/Base58DecodingError`` when the byte limit is invalid or
+        ///   decoding would exceed it.
+        /// - Parameter maximumDecodedByteCount: The largest decoded result the caller accepts.
+        public static func decodeBase58Validating(
+            _ text: String,
+            maximumDecodedByteCount: Int
+        ) throws -> Data {
+            do {
+                return try Base58EncodingCodec.decode(
+                    text,
+                    maximumDecodedByteCount: maximumDecodedByteCount
+                )
+            } catch let error as Base58EncodingCodec.Error {
+                let mappedError = mapBase58Error(error)
+                recordBase58DecodeFailure(mappedError, text: text)
+                throw mappedError
             }
-            return decoded
         }
 
         /// Encodes arbitrary bytes using byte-mode Base32 conversion.
@@ -55,8 +78,19 @@ extension OpalCrypto {
         }
 
         /// Decodes byte-mode Base32 text.
-        public static func decodeBase32Bytes(_ text: String) throws -> Data {
-            try decodeBase32(text, interpretedAsFiveBitValues: false, mode: "bytes")
+        /// - Parameter maximumDecodedByteCount: The largest decoded result the caller accepts.
+        /// - Throws: ``OpalCrypto/Encoding/Error`` when the text is invalid, the byte limit is
+        ///   negative, or decoding would exceed the limit.
+        public static func decodeBase32Bytes(
+            _ text: String,
+            maximumDecodedByteCount: Int
+        ) throws -> Data {
+            try decodeBase32(
+                text,
+                interpretedAsFiveBitValues: false,
+                maximumDecodedByteCount: maximumDecodedByteCount,
+                mode: "bytes"
+            )
         }
 
         /// Encodes validated five-bit symbols using the Base32 alphabet.
@@ -72,6 +106,7 @@ extension OpalCrypto {
             let values = try decodeBase32(
                 text,
                 interpretedAsFiveBitValues: true,
+                maximumDecodedByteCount: nil,
                 mode: "five_bit_values"
             )
             return try FiveBitValues(rawRepresentation: values)
@@ -82,18 +117,31 @@ extension OpalCrypto {
             PolynomialModuloChecksumModel.compute(Array(values.rawRepresentation))
         }
 
-        private static func recordBase58DecodeFailure(text: String) {
+        private static func mapBase58Error(
+            _ error: Base58EncodingCodec.Error
+        ) -> Base58DecodingError {
+            switch error {
+            case .invalidCharacterFound:
+                return .invalidText
+            case .invalidMaximumDecodedByteCount(let actual):
+                return .invalidMaximumDecodedByteCount(actual: actual)
+            case .decodedDataExceedsMaximumByteCount(let maximum):
+                return .decodedDataExceedsMaximumByteCount(maximum: maximum)
+            }
+        }
+
+        private static func recordBase58DecodeFailure(
+            _ error: Base58DecodingError,
+            text: String
+        ) {
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.encoding).record(
                 event: OpalDiagnostics.Event.base58DecodeFailed,
                 level: .opalCryptoDefault(for: OpalDiagnostics.Event.base58DecodeFailed),
                 fields: [
                     OpalDiagnostics.Field.operationField("base58_decode"),
                     OpalDiagnostics.Field.formatField("base58"),
-                    OpalDiagnostics.Field.publicField("input_character_count", text.count),
-                    OpalDiagnostics.Field.errorCode(
-                        OpalDiagnostics.ErrorCode(rawValue: "invalid_base58")
-                    )
-                ]
+                    OpalDiagnostics.Field.publicField("input_character_count", text.count)
+                ] + OpalDiagnostics.Field.errorFields(error)
             )
         }
 
@@ -103,18 +151,24 @@ extension OpalCrypto {
                 return .invalidFiveBitValue(actual: actual)
             case .invalidCharacterFound:
                 return .invalidCharacterFound
+            case .invalidMaximumDecodedByteCount(let actual):
+                return .invalidMaximumDecodedByteCount(actual: actual)
+            case .decodedDataExceedsMaximumByteCount(let maximum):
+                return .decodedDataExceedsMaximumByteCount(maximum: maximum)
             }
         }
 
         private static func decodeBase32(
             _ text: String,
             interpretedAsFiveBitValues: Bool,
+            maximumDecodedByteCount: Int?,
             mode: String
         ) throws -> Data {
             do {
                 return try Base32EncodingCodec.decode(
                     text,
-                    interpretedAsFiveBitValues: interpretedAsFiveBitValues
+                    interpretedAsFiveBitValues: interpretedAsFiveBitValues,
+                    maximumDecodedByteCount: maximumDecodedByteCount
                 )
             } catch let error as Base32EncodingCodec.Error {
                 let mappedError = mapBase32Error(error)

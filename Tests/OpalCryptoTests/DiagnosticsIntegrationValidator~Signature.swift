@@ -113,6 +113,7 @@ extension DiagnosticsIntegrationValidator {
             let schnorrRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.schnorrSignSucceeded))
             #expect(field("operation", in: schnorrRecord)?.value == "sign")
             #expect(field("algorithm", in: schnorrRecord)?.value == "schnorr")
+            expectPublicField("nonce_policy", in: schnorrRecord, equals: "bch_deterministic")
             expectPublicField("private_key_byte_count", in: schnorrRecord, equals: "32")
             #expect(field("private_key", in: schnorrRecord) == nil)
         }
@@ -144,6 +145,7 @@ extension DiagnosticsIntegrationValidator {
             let schnorrRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.schnorrSignSucceeded))
             #expect(field("operation", in: schnorrRecord)?.value == "sign")
             #expect(field("algorithm", in: schnorrRecord)?.value == "schnorr")
+            expectPublicField("nonce_policy", in: schnorrRecord, equals: "bch_deterministic")
             expectPublicField("private_key_byte_count", in: schnorrRecord, equals: "32")
             #expect(field("private_key", in: schnorrRecord) == nil)
             #expect(field("signing_key", in: schnorrRecord) == nil)

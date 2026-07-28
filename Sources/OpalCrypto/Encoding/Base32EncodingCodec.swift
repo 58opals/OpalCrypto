@@ -56,7 +56,11 @@ internal struct Base32EncodingCodec {
         encodeValidatedFiveBitValues(values.rawRepresentation)
     }
 
-    internal static func decode(_ string: String, interpretedAsFiveBitValues: Bool) throws -> Data {
+    internal static func decode(
+        _ string: String,
+        interpretedAsFiveBitValues: Bool,
+        maximumDecodedByteCount: Int? = nil
+    ) throws -> Data {
         guard !hasMixedCaseLetters(string) else {
             throw Error.invalidCharacterFound
         }
@@ -70,6 +74,11 @@ internal struct Base32EncodingCodec {
                 data.append(UInt8(index))
             }
         case false:
+            guard let maximumDecodedByteCount, maximumDecodedByteCount >= 0 else {
+                throw Error.invalidMaximumDecodedByteCount(
+                    actual: maximumDecodedByteCount ?? -1
+                )
+            }
             var value = LargeUnsignedIntegerArithmeticModel(0)
             var leadingZeroCharacterCount = 0
             var isReadingLeadingZeroes = true
@@ -77,11 +86,22 @@ internal struct Base32EncodingCodec {
                 let index = try decodedIndex(for: asciiValue)
                 if isReadingLeadingZeroes, index == 0 {
                     leadingZeroCharacterCount += 1
+                    guard leadingZeroCharacterCount <= maximumDecodedByteCount else {
+                        throw Error.decodedDataExceedsMaximumByteCount(
+                            maximum: maximumDecodedByteCount
+                        )
+                    }
                 } else {
                     isReadingLeadingZeroes = false
                 }
                 value.multiply(by: UInt64(baseNumber))
                 value.add(UInt64(index))
+                guard value.serializedByteCount
+                    <= maximumDecodedByteCount - leadingZeroCharacterCount else {
+                    throw Error.decodedDataExceedsMaximumByteCount(
+                        maximum: maximumDecodedByteCount
+                    )
+                }
             }
             data = Data(repeating: 0x00, count: leadingZeroCharacterCount)
             data.append(value.serialize())

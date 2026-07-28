@@ -63,7 +63,7 @@ extension OpalCryptoBenchmarks {
         let batch = try OpalCrypto.Signature.Schnorr.VerificationBatch(
             signatures: fixture.signatures,
             digests: fixture.digests,
-            verificationKey: schnorrDistinctBatchFixture.verificationKey
+            verificationKey: try schnorrDistinctBatchFixture.verificationKey
         )
         let results = try await batch.verify(using: policy)
         try validateProductionResults(

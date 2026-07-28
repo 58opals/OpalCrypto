@@ -34,7 +34,7 @@ struct PublicAPISurfaceValidator {
     }
 
     private func packageRoot() throws -> URL {
-        var directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
 
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent("Package.swift")

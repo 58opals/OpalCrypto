@@ -145,6 +145,51 @@ struct PublicAPIKeyMnemonicValidator {
         }
     }
 
+    @Test("Reject mnemonic phrases above the supported word-count limit")
+    func rejectMnemonicPhrasesAboveSupportedWordCountLimit() {
+        let phrase = Array(repeating: "abandon", count: 25).joined(separator: " ")
+
+        #expect(
+            throws: OpalCrypto.Key.Mnemonic.Error.wordCountExceedsMaximum(maximum: 24)
+        ) {
+            _ = try OpalCrypto.Key.Mnemonic(phrase: phrase, language: .english)
+        }
+    }
+
+    @Test("Reject oversized mnemonic phrases before compatibility normalization")
+    func rejectOversizedMnemonicPhrasesBeforeCompatibilityNormalization() {
+        let phrase = String(
+            repeating: "a",
+            count: MnemonicCodecModel.maximumPhraseByteCount + 1
+        )
+
+        #expect(
+            throws: OpalCrypto.Key.Mnemonic.Error.phraseByteCountExceedsMaximum(
+                maximum: MnemonicCodecModel.maximumPhraseByteCount,
+                actual: MnemonicCodecModel.maximumPhraseByteCount + 1
+            )
+        ) {
+            _ = try OpalCrypto.Key.Mnemonic(phrase: phrase, language: .english)
+        }
+    }
+
+    @Test("Reject oversized mnemonic words before compatibility normalization")
+    func rejectOversizedMnemonicWordsBeforeCompatibilityNormalization() {
+        let phrase = String(
+            repeating: "a",
+            count: MnemonicCodecModel.maximumWordByteCount + 1
+        )
+
+        #expect(
+            throws: OpalCrypto.Key.Mnemonic.Error.wordByteCountExceedsMaximum(
+                maximum: MnemonicCodecModel.maximumWordByteCount,
+                actual: MnemonicCodecModel.maximumWordByteCount + 1
+            )
+        ) {
+            _ = try OpalCrypto.Key.Mnemonic(phrase: phrase, language: .english)
+        }
+    }
+
     @Test("Mnemonic generation maps random byte failures to facade errors")
     func validateMnemonicGenerationMapsRandomByteFailuresToFacadeErrors() {
         #expect(throws: OpalCrypto.Key.Mnemonic.Error.randomGenerationFailed(status: -1)) {

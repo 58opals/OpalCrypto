@@ -9,5 +9,9 @@ extension OpalCrypto.Encoding {
         case invalidFiveBitValue(actual: UInt8)
         /// Base32 input contains an invalid character or mixes letter case.
         case invalidCharacterFound
+        /// The requested decoded-byte limit is negative.
+        case invalidMaximumDecodedByteCount(actual: Int)
+        /// Decoding would produce more bytes than the caller-provided limit.
+        case decodedDataExceedsMaximumByteCount(maximum: Int)
     }
 }

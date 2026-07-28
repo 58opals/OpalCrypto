@@ -36,24 +36,28 @@ struct PublicAPICommunicationRoundTripValidator {
         let ciphertext = try OpalCrypto.Communication.encrypt(
             message: message,
             recipientPublicKey: recipientPublicKey,
-            paddedPlaintextLength: 32
+            paddedPlaintextLength: 32,
+            maximumCiphertextByteCount: 81
         )
         let decrypted = try OpalCrypto.Communication.decrypt(
             ciphertext,
-            privateKey: recipientPrivateKey
+            privateKey: recipientPrivateKey,
+            maximumCiphertextByteCount: 81
         )
 
         #expect(decrypted.message == message)
         #expect(
             try OpalCrypto.Communication.decrypt(
                 ciphertext,
-                symmetricKey: decrypted.symmetricKey
+                symmetricKey: decrypted.symmetricKey,
+                maximumCiphertextByteCount: 81
             ) == message
         )
         #expect(
             try OpalCrypto.Communication.encrypt(
                 message: Data(),
-                recipientPublicKey: recipientPublicKey
+                recipientPublicKey: recipientPublicKey,
+                maximumCiphertextByteCount: 65
             ).rawRepresentation.count == 65
         )
     }
@@ -73,11 +77,13 @@ struct PublicAPICommunicationRoundTripValidator {
         let ciphertext = try OpalCrypto.Communication.encrypt(
             message: message,
             recipientPublicKey: uncompressedRecipientPublicKey,
-            paddedPlaintextLength: 32
+            paddedPlaintextLength: 32,
+            maximumCiphertextByteCount: 81
         )
         let decrypted = try OpalCrypto.Communication.decrypt(
             ciphertext,
-            privateKey: recipientPrivateKey
+            privateKey: recipientPrivateKey,
+            maximumCiphertextByteCount: 81
         )
 
         #expect(decrypted.message == message)

@@ -14,7 +14,24 @@ struct InternalBase58CheckValidator {
         minimumPayloadLength: Int
     ) {
         #expect(throws: Base58CheckCodec.Error.invalidPayloadLength(actual: 0)) {
-            _ = try Base58CheckCodec.decode("", minimumPayloadLength: minimumPayloadLength)
+            _ = try Base58CheckCodec.decode(
+                "",
+                minimumPayloadLength: minimumPayloadLength,
+                maximumPayloadLength: 0
+            )
+        }
+    }
+
+    @Test("Reject oversized payloads without inventing an actual length")
+    func rejectOversizedPayloadsWithoutInventingAnActualLength() {
+        #expect(
+            throws: Base58CheckCodec.Error
+                .payloadLengthExceedsMaximum(maximum: 1)
+        ) {
+            _ = try Base58CheckCodec.decode(
+                "111111",
+                maximumPayloadLength: 1
+            )
         }
     }
 }

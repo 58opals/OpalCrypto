@@ -131,6 +131,8 @@ extension OpalCrypto.Key {
                 return .invalidChecksum
             case .invalidPayloadLength(let actual):
                 return .invalidPayloadLength(actual: actual)
+            case .payloadLengthExceedsMaximum(let maximum):
+                return .payloadLengthExceedsMaximum(maximum: maximum)
             case .invalidVersion(let actual):
                 return .invalidVersion(actual: actual)
             case .invalidCompressionMarker(let actual):

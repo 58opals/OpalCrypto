@@ -37,32 +37,43 @@ internal struct Base58EncodingCodec {
         return String(charactersResult.reversed())
     }
     
-    internal static func decode(_ base58: String) -> Data? {
+    internal static func decode(
+        _ base58: String,
+        maximumDecodedByteCount: Int
+    ) throws -> Data {
+        guard maximumDecodedByteCount >= 0 else {
+            throw Error.invalidMaximumDecodedByteCount(actual: maximumDecodedByteCount)
+        }
+
         var total = LargeUnsignedIntegerArithmeticModel.zero
+        var leadingOneCount = 0
+        var isReadingLeadingOnes = true
         
         for asciiValue in base58.utf8 {
-            guard asciiValue < 128 else { return nil }
+            guard asciiValue < 128 else { throw Error.invalidCharacterFound }
             let value = asciiLookup[Int(asciiValue)]
-            guard value >= 0 else { return nil }
+            guard value >= 0 else { throw Error.invalidCharacterFound }
+            if isReadingLeadingOnes, value == 0 {
+                leadingOneCount += 1
+                guard leadingOneCount <= maximumDecodedByteCount else {
+                    throw Error.decodedDataExceedsMaximumByteCount(
+                        maximum: maximumDecodedByteCount
+                    )
+                }
+            } else {
+                isReadingLeadingOnes = false
+            }
             total.multiply(by: UInt64(baseNumber))
             total.add(UInt64(value))
+            guard total.serializedByteCount <= maximumDecodedByteCount - leadingOneCount else {
+                throw Error.decodedDataExceedsMaximumByteCount(
+                    maximum: maximumDecodedByteCount
+                )
+            }
         }
         
-        var bytes: [UInt8] = .init()
-        var current = total
-        while !current.isZero {
-            let remainder = current.divide(by: 256)
-            bytes.append(UInt8(remainder))
-        }
-        bytes.reverse()
-        
-        let leadingOnes = base58.prefix { $0 == characters.first! }.count
-        if leadingOnes > 0 {
-            var prefixed: [UInt8] = .init(repeating: 0, count: leadingOnes)
-            prefixed.append(contentsOf: bytes)
-            return Data(prefixed)
-        }
-        
-        return Data(bytes)
+        var decoded = Data(repeating: 0, count: leadingOneCount)
+        decoded.append(total.serialize())
+        return decoded
     }
 }

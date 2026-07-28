@@ -7,6 +7,39 @@ import Testing
 
 @Suite("Schnorr signature validation")
 struct SchnorrSignatureValidator {
+    @Test("Map public Schnorr nonce policies to their accurate internal behavior")
+    func mapPublicSchnorrNoncePoliciesToTheirAccurateInternalBehavior() {
+        #expect(
+            OpalCrypto.Signature.SchnorrNoncePolicy.bchDeterministic.internalNoncePolicy
+                == .requestForComments6979BitcoinCashDefault
+        )
+        #expect(
+            OpalCrypto.Signature.SchnorrNoncePolicy.bchDeterministic.diagnosticsName
+                == "bch_deterministic"
+        )
+        #expect(
+            OpalCrypto.Signature.SchnorrNoncePolicy.random.internalNoncePolicy
+                == .systemRandom
+        )
+        #expect(
+            OpalCrypto.Signature.SchnorrNoncePolicy.random.diagnosticsName
+                == "random"
+        )
+    }
+
+    @available(*, deprecated, message: "Exercises deprecated source compatibility.")
+    @Test("Preserve the legacy behavior of the deprecated BIP-340-named policy")
+    func preserveLegacyBehaviorOfDeprecatedBitcoinImprovementProposal340NamedPolicy() {
+        #expect(
+            OpalCrypto.Signature.SchnorrNoncePolicy.bip340Deterministic.internalNoncePolicy
+                == .bitcoinImprovementProposalSchnorrDeterministic
+        )
+        #expect(
+            OpalCrypto.Signature.SchnorrNoncePolicy.bip340Deterministic.diagnosticsName
+                == "legacy_bip_schnorr_deterministic"
+        )
+    }
+
     @Test("Create signature from sixty-four bytes")
     func createSignatureFromSixtyFourBytes() throws {
         let payload = Data((0..<64).map { UInt8($0) })

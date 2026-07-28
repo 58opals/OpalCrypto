@@ -54,4 +54,16 @@ enum BigUnsignedIntegerLeftShiftCase: CaseIterable, CustomStringConvertible, Sen
             nil
         }
     }
+
+    var maximumResultByteCount: UInt {
+        switch self {
+        case .identity:
+            3
+        case .ordinaryByteShift:
+            5
+        case .oversizedThreeByteResultLength,
+             .oversizedSingleByteResultLength:
+            1_024
+        }
+    }
 }

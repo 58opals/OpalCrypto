@@ -93,7 +93,7 @@ extension OpalCryptoBenchmarks {
                     let signature = try OpalCrypto.Signature.Schnorr.sign(
                         digest: context.schnorrDigest,
                         privateKey: context.singlePrivateKey,
-                        noncePolicy: .bip340Deterministic
+                        noncePolicy: .bchDeterministic
                     )
                     return signature.rawRepresentation.count ^ Int(signature.rawRepresentation[0])
                 }

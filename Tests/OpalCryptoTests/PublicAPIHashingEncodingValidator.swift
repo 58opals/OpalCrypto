@@ -28,7 +28,12 @@ struct PublicAPIHashingEncodingValidator {
         #expect(hmacSecureHashAlgorithm512.count == 64)
 
         let base58Encoded = OpalCrypto.Encoding.encodeBase58(payloadData)
-        #expect(OpalCrypto.Encoding.decodeBase58(base58Encoded) == payloadData)
+        #expect(
+            OpalCrypto.Encoding.decodeBase58(
+                base58Encoded,
+                maximumDecodedByteCount: payloadData.count
+            ) == payloadData
+        )
 
         let base32FiveBitInput = Data([0, 1, 2, 3, 4, 5, 30, 31])
         let base32FiveBitValues = try OpalCrypto.Encoding.FiveBitValues(
@@ -47,13 +52,15 @@ struct PublicAPIHashingEncodingValidator {
             password: Data("password".utf8),
             salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
             iterationCount: 16,
-            derivedKeyLength: 32
+            derivedKeyLength: 32,
+            maximumWorkUnitCount: 16
         )
         let derivedKeyAgain = try OpalCrypto.KeyDerivation.derivePBKDF2Key(
             password: Data("password".utf8),
             salt: OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("salt".utf8)),
             iterationCount: 16,
-            derivedKeyLength: 32
+            derivedKeyLength: 32,
+            maximumWorkUnitCount: 16
         )
         #expect(derivedKey.rawRepresentation.count == 32)
         #expect(derivedKey == derivedKeyAgain)
@@ -62,7 +69,11 @@ struct PublicAPIHashingEncodingValidator {
         largeUnsignedInteger.multiply(by: 16)
         #expect(!largeUnsignedInteger.isZero)
         #expect(largeUnsignedInteger.serialize().count > 0)
-        #expect(!largeUnsignedInteger.shiftLeft(byBytes: 1).isZero)
+        #expect(
+            try !largeUnsignedInteger
+                .shiftedLeft(byBytes: 1, maximumResultByteCount: 3)
+                .isZero
+        )
 
         let unsigned256 = try OpalCrypto.Numeric.UInt256(data32Bytes: Data(repeating: 0x01, count: 32))
         let unsigned512 = try OpalCrypto.Numeric.UInt512(data64Bytes: Data(repeating: 0x02, count: 64))
@@ -97,7 +108,10 @@ struct PublicAPIHashingEncodingValidator {
         testCase: Base32ByteModeRoundTripCase
     ) throws {
         let encoded = try OpalCrypto.Encoding.encodeBase32Bytes(testCase.payload)
-        let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(encoded)
+        let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(
+            encoded,
+            maximumDecodedByteCount: testCase.payload.count
+        )
 
         #expect(decoded == testCase.payload)
     }
@@ -110,7 +124,12 @@ struct PublicAPIHashingEncodingValidator {
         let encoded = OpalCrypto.Encoding.encodeBase58(slicedPayload)
 
         #expect(encoded == OpalCrypto.Encoding.encodeBase58(normalizedPayload))
-        #expect(OpalCrypto.Encoding.decodeBase58(encoded) == normalizedPayload)
+        #expect(
+            OpalCrypto.Encoding.decodeBase58(
+                encoded,
+                maximumDecodedByteCount: normalizedPayload.count
+            ) == normalizedPayload
+        )
     }
 
     @Test("Encode Base32 byte-mode using canonical known-answer strings")
@@ -137,7 +156,10 @@ struct PublicAPIHashingEncodingValidator {
         ]
 
         for vector in vectors {
-            let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(vector.0)
+            let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(
+                vector.0,
+                maximumDecodedByteCount: vector.1.count
+            )
             #expect(decoded == vector.1)
         }
     }
@@ -212,7 +234,10 @@ struct PublicAPIHashingEncodingValidator {
     @Test("Reject mixed-case Base32 decode in byte mode")
     func validateBase32DecodeRejectsMixedCaseInByteMode() {
         #expect(throws: OpalCrypto.Encoding.Error.invalidCharacterFound) {
-            _ = try OpalCrypto.Encoding.decodeBase32Bytes("qP")
+            _ = try OpalCrypto.Encoding.decodeBase32Bytes(
+                "qP",
+                maximumDecodedByteCount: 8
+            )
         }
     }
 }

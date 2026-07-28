@@ -40,7 +40,11 @@ extension DiagnosticsIntegrationValidator {
     func validateBase58CheckDiagnosticsReportNormalizedMinimumPayloadLengths() throws {
         try withDiagnosticsCapture {
             #expect(throws: Base58CheckCodec.Error.self) {
-                _ = try Base58CheckCodec.decode("0", minimumPayloadLength: -4)
+                _ = try Base58CheckCodec.decode(
+                    "0",
+                    minimumPayloadLength: -4,
+                    maximumPayloadLength: 78
+                )
             }
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58CheckDecodeFailed))
@@ -51,7 +55,11 @@ extension DiagnosticsIntegrationValidator {
             let validBase58Check = Base58CheckCodec.encode(payload: Data([0x01]))
             let invalidChecksum = String(validBase58Check.dropLast()) + (validBase58Check.last == "1" ? "2" : "1")
             #expect(throws: Base58CheckCodec.Error.invalidChecksum) {
-                _ = try Base58CheckCodec.decode(invalidChecksum, minimumPayloadLength: -4)
+                _ = try Base58CheckCodec.decode(
+                    invalidChecksum,
+                    minimumPayloadLength: -4,
+                    maximumPayloadLength: 78
+                )
             }
 
             let checksumRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.base58CheckDecodeFailed))
@@ -78,6 +86,65 @@ extension DiagnosticsIntegrationValidator {
         }
     }
 
+    @Test("Encoding limit diagnostics use stable facade error codes")
+    func validateEncodingLimitDiagnosticsUseStableFacadeErrorCodes() throws {
+        let base58ErrorCode = try #require(
+            OpalDiagnostics.Field.errorFields(
+                OpalCrypto.Encoding.Base58DecodingError
+                    .decodedDataExceedsMaximumByteCount(maximum: 32)
+            )
+            .first { $0.name == "error_code" }?
+            .value
+        )
+        let base32ErrorCode = try #require(
+            OpalDiagnostics.Field.errorFields(
+                OpalCrypto.Encoding.Error.invalidMaximumDecodedByteCount(actual: -1)
+            )
+            .first { $0.name == "error_code" }?
+            .value
+        )
+
+        #expect(base58ErrorCode == "decoded_data_exceeds_maximum_byte_count")
+        #expect(base32ErrorCode == "invalid_maximum_decoded_byte_count")
+    }
+
+    @Test("Mnemonic resource-limit diagnostics use stable facade error codes")
+    func validateMnemonicResourceLimitDiagnosticsUseStableFacadeErrorCodes() throws {
+        let wordCountErrorCode = try #require(
+            OpalDiagnostics.Field.errorFields(
+                OpalCrypto.Key.Mnemonic.Error.wordCountExceedsMaximum(maximum: 24)
+            )
+            .first { $0.name == "error_code" }?
+            .value
+        )
+        let phraseByteCountErrorCode = try #require(
+            OpalDiagnostics.Field.errorFields(
+                OpalCrypto.Key.Mnemonic.Error.phraseByteCountExceedsMaximum(
+                    maximum: 8_192,
+                    actual: 8_193
+                )
+            )
+            .first { $0.name == "error_code" }?
+            .value
+        )
+
+        #expect(wordCountErrorCode == "word_count_exceeds_maximum")
+        #expect(phraseByteCountErrorCode == "phrase_byte_count_exceeds_maximum")
+    }
+
+    @Test("Fixed-format payload-limit diagnostics use a stable facade error code")
+    func validateFixedFormatPayloadLimitDiagnosticsUseStableFacadeErrorCode() throws {
+        let errorCode = try #require(
+            OpalDiagnostics.Field.errorFields(
+                OpalCrypto.Key.WIF.Error.payloadLengthExceedsMaximum(maximum: 34)
+            )
+            .first { $0.name == "error_code" }?
+            .value
+        )
+
+        #expect(errorCode == "payload_length_exceeds_maximum")
+    }
+
     @Test("Default OpalDiagnostics configuration keeps OpalCrypto silent")
     func validateDefaultOpalDiagnosticsConfigurationKeepsOpalCryptoSilent() throws {
         try OpalDiagnostics.withConfiguration(.init()) {
@@ -94,7 +161,7 @@ extension DiagnosticsIntegrationValidator {
     @Test("OpalDiagnostics trace wrapper propagates current trace into records")
     func validateOpalDiagnosticsTraceWrapperPropagatesCurrentTraceIntoRecords() throws {
         try withDiagnosticsCapture {
-            let traceID = OpalDiagnostics.TraceID(rawValue: "wallet-diagnostics-flow")
+            let traceID = OpalDiagnostics.TraceID(publicValue: "wallet-diagnostics-flow")
 
             try OpalDiagnostics.withTraceID(traceID) {
                 _ = try OpalCrypto.Secp256k1.PrivateKey(

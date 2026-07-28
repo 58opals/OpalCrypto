@@ -3,11 +3,17 @@
 import Foundation
 
 extension CommunicationBoxModel {
-    static var minimumCiphertextLength: Int {
-        33 + 16 + 16
-    }
+    static let ciphertextEnvelopeOverheadByteCount = 33 + 16
+    static let minimumCiphertextLength = ciphertextEnvelopeOverheadByteCount + 16
 
-    static func validateCiphertextEnvelope(_ ciphertext: Data) throws {
+    static func validateCiphertextEnvelope(
+        _ ciphertext: Data,
+        maximumCiphertextByteCount: Int
+    ) throws {
+        try validateCiphertextByteCount(
+            ciphertext.count,
+            maximumCiphertextByteCount: maximumCiphertextByteCount
+        )
         guard ciphertext.count >= minimumCiphertextLength else {
             throw Error.invalidCiphertext
         }
@@ -23,6 +29,18 @@ extension CommunicationBoxModel {
         let encryptedPayload = ciphertext.dropFirst(33).dropLast(16)
         guard !encryptedPayload.isEmpty, encryptedPayload.count.isMultiple(of: 16) else {
             throw Error.invalidCiphertext
+        }
+    }
+
+    static func validateCiphertextByteCount(
+        _ ciphertextByteCount: Int,
+        maximumCiphertextByteCount: Int
+    ) throws {
+        guard ciphertextByteCount <= maximumCiphertextByteCount else {
+            throw Error.ciphertextByteCountExceedsMaximum(
+                maximum: maximumCiphertextByteCount,
+                actual: ciphertextByteCount
+            )
         }
     }
 

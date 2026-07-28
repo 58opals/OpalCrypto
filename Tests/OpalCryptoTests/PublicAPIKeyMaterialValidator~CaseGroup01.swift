@@ -46,6 +46,36 @@ extension PublicAPIKeyMaterialValidator {
         }
     }
 
+    @Test("Reject overlong valid-alphabet wallet import text before full conversion")
+    func rejectOverlongValidAlphabetWalletImportTextBeforeFullConversion() {
+        let overlongText = String(repeating: "1", count: 10_000)
+
+        #expect(
+            throws: OpalCrypto.Key.WIF.Error
+                .payloadLengthExceedsMaximum(maximum: 34)
+        ) {
+            _ = try OpalCrypto.Key.WIF(overlongText)
+        }
+    }
+
+    @Test("Reject overlong valid-alphabet extended-key text before full conversion")
+    func rejectOverlongValidAlphabetExtendedKeyTextBeforeFullConversion() {
+        let overlongText = String(repeating: "1", count: 10_000)
+
+        #expect(
+            throws: OpalCrypto.Key.ExtendedPrivate.Error
+                .payloadLengthExceedsMaximum(maximum: 78)
+        ) {
+            _ = try OpalCrypto.Key.ExtendedPrivate(overlongText)
+        }
+        #expect(
+            throws: OpalCrypto.Key.ExtendedPublic.Error
+                .payloadLengthExceedsMaximum(maximum: 78)
+        ) {
+            _ = try OpalCrypto.Key.ExtendedPublic(overlongText)
+        }
+    }
+
     @Test("Round-trip extended keys and derive raw child indices")
     func roundTripExtendedKeysAndDeriveRawChildIndices() throws {
         let rootKey = try OpalCrypto.Key.ExtendedPrivate.root(

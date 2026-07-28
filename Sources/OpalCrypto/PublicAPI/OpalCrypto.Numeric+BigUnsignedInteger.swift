@@ -43,29 +43,33 @@ extension OpalCrypto.Numeric {
             bigEndianRepresentation
         }
 
-        /// Shifts this value left by whole bytes.
-        ///
-        /// This source-compatible entry point returns zero when the requested
-        /// result cannot be represented in an in-memory `Data` value. Prefer
-        /// ``shiftedLeft(byBytes:)`` when that failure must be distinguished from
-        /// a valid zero result.
-        public func shiftLeft(byBytes byteCount: UInt) -> BigUnsignedInteger {
-            (try? shiftedLeft(byBytes: byteCount)) ?? .zero
-        }
-
         /// Returns this value shifted left by whole bytes.
         ///
-        /// Shifting zero always returns zero, regardless of `byteCount`.
+        /// Shifting zero always returns zero without consuming the result-byte
+        /// budget, regardless of `byteCount`.
         ///
         /// - Throws: ``OpalCrypto/Numeric/BigUnsignedInteger/LeftShiftError/exceedsRepresentableSize(byteCount:)``
         ///   when the requested nonzero result cannot fit in an in-memory `Data`
-        ///   value.
-        public func shiftedLeft(byBytes byteCount: UInt) throws -> BigUnsignedInteger {
+        ///   value, or
+        ///   ``OpalCrypto/Numeric/BigUnsignedInteger/LeftShiftError/exceedsMaximumResultByteCount(requiredByteCount:maximumResultByteCount:)``
+        ///   when it exceeds the caller's byte budget.
+        public func shiftedLeft(
+            byBytes byteCount: UInt,
+            maximumResultByteCount: UInt
+        ) throws -> BigUnsignedInteger {
             guard !rawValue.isZero else { return .zero }
-            guard byteCount <= UInt(Int.max) else {
+            let (requiredByteCount, byteCountOverflowed) = UInt(rawValue.serializedByteCount)
+                .addingReportingOverflow(byteCount)
+            guard !byteCountOverflowed else {
                 throw LeftShiftError.exceedsRepresentableSize(byteCount: byteCount)
             }
-            guard byteCount <= UInt(Int.max - rawValue.serializedByteCount) else {
+            guard requiredByteCount <= maximumResultByteCount else {
+                throw LeftShiftError.exceedsMaximumResultByteCount(
+                    requiredByteCount: requiredByteCount,
+                    maximumResultByteCount: maximumResultByteCount
+                )
+            }
+            guard requiredByteCount <= UInt(Int.max) else {
                 throw LeftShiftError.exceedsRepresentableSize(byteCount: byteCount)
             }
             return BigUnsignedInteger(rawValue: rawValue.shiftLeft(byBytes: Int(byteCount)))

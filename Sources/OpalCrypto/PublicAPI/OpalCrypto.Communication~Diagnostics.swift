@@ -49,6 +49,10 @@ extension OpalCrypto.Communication {
             return .invalidPaddedPlaintextLength(minimum: minimum, actual: actual)
         case .paddedPlaintextLengthNotMultipleOf16(let actual):
             return .paddedPlaintextLengthMustBeMultipleOf16(actual: actual)
+        case .ciphertextByteCountExceedsMaximum(let maximum, let actual):
+            return .ciphertextByteCountExceedsMaximum(maximum: maximum, actual: actual)
+        case .ciphertextByteCountOverflow:
+            return .ciphertextByteCountOverflow
         case .invalidCiphertext:
             return .invalidCiphertext
         case .cryptographyFailure:

@@ -107,10 +107,10 @@ extension OpalCrypto.Secp256k1 {
             )
         }
 
-        /// Signs a 32-byte digest with deterministic Schnorr signing by default.
+        /// Signs a 32-byte digest with Bitcoin Cash deterministic Schnorr signing by default.
         public func signSchnorr(
             digest: OpalCrypto.Signature.Digest,
-            noncePolicy: OpalCrypto.Signature.SchnorrNoncePolicy = .bip340Deterministic
+            noncePolicy: OpalCrypto.Signature.SchnorrNoncePolicy = .bchDeterministic
         ) throws -> OpalCrypto.Signature.Schnorr {
             try OpalCrypto.Signature.Schnorr.sign(
                 digest: digest,

@@ -5,11 +5,11 @@ import Testing
 @testable import OpalCrypto
 
 extension MetalSchnorrBatchVerificationClientValidator {
-    @Test("Cancellation discards Metal output and releases the client")
+    @Test(
+        "Cancellation discards Metal output and releases the client",
+        .enabled(if: MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable)
+    )
     func discardMetalOutputAndReleaseClientAfterCancellation() async throws {
-        guard MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable else {
-            return
-        }
         let signingKey = try OpalCryptoTestSupport
             .makeTypedPrivateKey(471)
             .makeSigningKey()

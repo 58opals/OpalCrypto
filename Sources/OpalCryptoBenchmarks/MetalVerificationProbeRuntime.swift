@@ -4,11 +4,19 @@
 import Metal
 
 final class MetalVerificationProbeRuntime: @unchecked Sendable {
-    static let shared = try! MetalVerificationProbeRuntime()
+    private static let sharedResult: Result<MetalVerificationProbeRuntime, Swift.Error> = Result {
+        try MetalVerificationProbeRuntime()
+    }
 
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let pipelineState: MTLComputePipelineState
+
+    static var shared: MetalVerificationProbeRuntime {
+        get throws {
+            try sharedResult.get()
+        }
+    }
 
     private init() throws {
         guard let device = MTLCreateSystemDefaultDevice(),

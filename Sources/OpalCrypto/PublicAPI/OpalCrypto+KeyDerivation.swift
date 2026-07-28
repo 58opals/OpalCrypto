@@ -8,23 +8,31 @@ extension OpalCrypto {
 
         /// Derives a key with PBKDF2 using HMAC-SHA-512.
         ///
-        /// This source-compatible entry point uses the same algorithm as
-        /// ``derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:)``.
+        /// This compatibility entry point uses the same algorithm as
+        /// ``derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:maximumWorkUnitCount:)``.
         /// Prefer that explicitly named operation in new code.
         ///
         /// - Parameter derivedKeyLength: The requested byte count, or `nil` for
         ///   the default 64-byte output.
+        /// - Parameter maximumWorkUnitCount: The maximum number of HMAC
+        ///   evaluations the caller permits.
+        /// - Throws: ``OpalCrypto/KeyDerivation/Error`` when the salt, iteration
+        ///   count, requested length, or work budget is invalid, or
+        ///   `CancellationError` when the current task is cancelled during
+        ///   derivation.
         public static func derivePBKDF2Key(
             password: Data,
             salt: Salt,
             iterationCount: Int,
-            derivedKeyLength: Int? = nil
+            derivedKeyLength: Int? = nil,
+            maximumWorkUnitCount: UInt64
         ) throws -> DerivedKey {
             try derivePBKDF2SHA512Key(
                 password: password,
                 salt: salt,
                 iterationCount: iterationCount,
-                derivedKeyLength: derivedKeyLength
+                derivedKeyLength: derivedKeyLength,
+                maximumWorkUnitCount: maximumWorkUnitCount
             )
         }
 
@@ -36,15 +44,21 @@ extension OpalCrypto {
         ///   - salt: A nonempty salt value.
         ///   - iterationCount: A positive number of pseudorandom-function rounds.
         ///   - derivedKeyLength: The requested byte count. The default is 64 bytes.
+        ///   - maximumWorkUnitCount: The maximum number of HMAC evaluations the
+        ///     caller permits. Deriving one block consumes `iterationCount`
+        ///     work units.
         /// - Returns: A key containing exactly `derivedKeyLength` bytes, or 64
         ///   bytes when the argument is omitted.
         /// - Throws: ``OpalCrypto/KeyDerivation/Error`` when the salt, iteration
-        ///   count, or requested length is invalid.
+        ///   count, requested length, or work budget is invalid, or
+        ///   `CancellationError` when the current task is cancelled during
+        ///   derivation.
         public static func derivePBKDF2SHA512Key(
             password: Data,
             salt: Salt,
             iterationCount: Int,
-            derivedKeyLength: Int? = nil
+            derivedKeyLength: Int? = nil,
+            maximumWorkUnitCount: UInt64
         ) throws -> DerivedKey {
             let resolvedDerivedKeyLength = derivedKeyLength
                 ?? PasswordBasedKeyDerivationFunction2Model.defaultDerivedKeyLength
@@ -54,14 +68,19 @@ extension OpalCrypto {
                 OpalDiagnostics.Field.publicField("salt_byte_count", salt.rawRepresentation.count),
                 OpalDiagnostics.Field.publicField("iteration_count", iterationCount),
                 OpalDiagnostics.Field.publicField("requested_derived_key_byte_count", resolvedDerivedKeyLength),
-                OpalDiagnostics.Field.publicField("has_explicit_derived_key_length", derivedKeyLength != nil)
+                OpalDiagnostics.Field.publicField("has_explicit_derived_key_length", derivedKeyLength != nil),
+                OpalDiagnostics.Field.publicField(
+                    "maximum_work_unit_count",
+                    String(maximumWorkUnitCount)
+                )
             ]
             do {
                 let derivedKey = try PasswordBasedKeyDerivationFunction2Model(
                     password: password,
                     salt: salt.rawRepresentation,
                     iterationCount: iterationCount,
-                    derivedKeyLength: derivedKeyLength
+                    derivedKeyLength: derivedKeyLength,
+                    maximumWorkUnitCount: maximumWorkUnitCount
                 ).deriveKey()
                 let parsedDerivedKey = try DerivedKey(rawRepresentation: derivedKey)
                 recordDeriveSucceeded(parsedDerivedKey, fields: fields)
@@ -114,6 +133,16 @@ extension OpalCrypto {
                 return .invalidDerivedKeyLength(actual: actual)
             case .keyLengthExceedsLimit(let actual):
                 return .derivedKeyLengthExceedsLimit(actual: actual)
+            case .workBudgetExceeded(
+                let requiredWorkUnitCount,
+                let maximumWorkUnitCount
+            ):
+                return .workBudgetExceeded(
+                    requiredWorkUnitCount: requiredWorkUnitCount,
+                    maximumWorkUnitCount: maximumWorkUnitCount
+                )
+            case .workUnitCountOverflow:
+                return .workUnitCountOverflow
             }
         }
     }

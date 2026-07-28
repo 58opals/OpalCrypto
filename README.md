@@ -1,12 +1,12 @@
 # Opal Crypto
 
-Status: v0.1.3 Developer Preview.
+Status: Developer Preview. The latest tag is `v0.1.3`. Secret-scalar operations have not completed constant-time hardening and security review; do not use this preview for production key handling.
 
 Opal Crypto is the lowest-level BCH cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
 ## Audience
 
-Use Opal Crypto when you are building Swift BCH software and need stable cryptographic capabilities behind one public facade. Downstream code should integrate through `OpalCrypto` instead of depending on internal implementation types or source layout.
+Use Opal Crypto when you are building or testing Swift BCH software and need typed cryptographic capabilities behind one public facade. Downstream code should integrate through `OpalCrypto` instead of depending on internal implementation types or source layout.
 
 ## Requirements
 
@@ -20,15 +20,17 @@ Use Opal Crypto when you are building Swift BCH software and need stable cryptog
 
 ## Installation
 
-The current public facade surface is available from the `v0.1.3` release.
+The current public facade surface is available from the `develop` branch.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", from: "0.1.3")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "develop")
 ]
 ```
 
 Then add `"OpalCrypto"` to the target dependency list where you need it.
+
+The published `v0.1.3` manifest still contains a branch-based `OpalDiagnostics` requirement, so that historical tag cannot be selected with a version-based package requirement. The `develop` branch now uses the stable `OpalDiagnostics` `v0.2.0` release, allowing the next Opal Crypto tag to restore version-based installation.
 
 ## Quick Start
 
@@ -59,11 +61,11 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 - `Secp256k1`: typed private keys, public keys, scalars, shared secrets, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
 - `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
 - `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
-- `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives.
-- `KeyDerivation`: PBKDF2-HMAC-SHA-512 key derivation with a 64-byte default output.
-- `Numeric`: `UInt256`, `UInt512`, and `BigUnsignedInteger` facade wrappers.
+- `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives, with explicit decoded-byte budgets.
+- `KeyDerivation`: PBKDF2-HMAC-SHA-512 key derivation with a 64-byte default output and an explicit HMAC-work budget.
+- `Numeric`: `UInt256`, `UInt512`, and budgeted `BigUnsignedInteger` facade wrappers.
 
-The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use nonthrowing `encodeBase32(bytes:)` with `decodeBase32Bytes(_:)` for byte-mode radix conversion, and `Encoding.FiveBitValues` with nonthrowing `encodeBase32(values:)` and `decodeBase32Values(_:)` for five-bit symbol mode. Base58 decoding offers `decodeBase58IfValid(_:)` for optional failure and `decodeBase58Validating(_:)` for an explicit error.
+The Base32 APIs use the Bech32 alphabet and stay intentionally low-level. Use nonthrowing `encodeBase32(bytes:)` with `decodeBase32Bytes(_:maximumDecodedByteCount:)` for byte-mode radix conversion, and `Encoding.FiveBitValues` with nonthrowing `encodeBase32(values:)` and `decodeBase32Values(_:)` for five-bit symbol mode. Base58 decoding offers `decodeBase58IfValid(_:maximumDecodedByteCount:)` for optional failure and `decodeBase58Validating(_:maximumDecodedByteCount:)` for an explicit error.
 
 See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 
@@ -106,7 +108,7 @@ Current benchmark smoke command:
 swift run -c release OpalCryptoBenchmarks -- --suite smoke
 ```
 
-Correctness result: Passed on 2026-07-11 with 288 tests in 41 suites.
+Correctness result: Passed on 2026-07-28 with 320 tests in 41 suites.
 
 ## Further Context
 

@@ -20,7 +20,10 @@ extension OpalCryptoBenchmarks {
                 iterations: 500,
                 suites: [],
                 operation: .sync { context in
-                    let decoded = OpalCrypto.Encoding.decodeBase58(context.base58EncodedPayload)!
+                    let decoded = OpalCrypto.Encoding.decodeBase58(
+                        context.base58EncodedPayload,
+                        maximumDecodedByteCount: context.basePayload.count
+                    )!
                     return decoded.count ^ Int(decoded[0])
                 }
             ),
@@ -39,7 +42,8 @@ extension OpalCryptoBenchmarks {
                 suites: [],
                 operation: .sync { context in
                     let decoded = try OpalCrypto.Encoding.decodeBase32Bytes(
-                        context.base32EncodedPayload
+                        context.base32EncodedPayload,
+                        maximumDecodedByteCount: context.basePayload.count
                     )
                     return decoded.count ^ Int(decoded[0])
                 }

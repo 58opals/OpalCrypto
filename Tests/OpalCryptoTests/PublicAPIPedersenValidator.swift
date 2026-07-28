@@ -2,15 +2,32 @@
 
 import Foundation
 import Testing
-import OpalCrypto
+@testable import OpalCrypto
 
 @Suite("Public API Pedersen validation")
 struct PublicAPIPedersenValidator {
+    @Test("Canonical Pedersen setup matches the CashFusion commitment vector")
+    func matchCanonicalPedersenSetupWithCashFusionCommitmentVector() throws {
+        // Electron Cash CashFusion defines C = nonce*G + amount*H with
+        // H = 0x02 || "CashFusion gives us fungibility.". For amount=1 and
+        // nonce=1, the independently fixed result is G+H.
+        let expectedPoint = try Data(
+            hexadecimal:
+                "04d0b5936940a92aafa870b1b8c5cae550f355eb2943743994485a25378f8e5923"
+                + "6e984b2e65a6142fbd8647f9f711278bfa30d88fba96f373a143da1f7b5f0ad1"
+        )
+
+        let commitment = try OpalCrypto.Pedersen.Setup().commit(
+            amount: 1,
+            nonce: makeNonce(1)
+        )
+
+        #expect(commitment.point.uncompressedRepresentation == expectedPoint)
+    }
+
     @Test("Pedersen commitments combine like summed amounts and nonces")
     func validatePedersenCommitmentsCombineLikeSummedAmountsAndNonces() throws {
-        let setup = try OpalCrypto.Pedersen.Setup(
-            alternateBasePoint: alternateBasePoint()
-        )
+        let setup = try OpalCrypto.Pedersen.Setup()
         let commitment0 = try setup.commit(amount: 0, nonce: makeNonce(1))
         let commitment5 = try setup.commit(amount: 5, nonce: makeNonce(2))
         let commitmentMinus10 = try setup.commit(amount: -10, nonce: makeNonce(3))
@@ -39,6 +56,7 @@ struct PublicAPIPedersenValidator {
         )
     }
 
+    @available(*, deprecated)
     @Test("Pedersen setup rejects an insecure alternate base point")
     func validatePedersenSetupRejectsInsecureAlternateBasePoint() {
         #expect(throws: OpalCrypto.Pedersen.Error.insecureAlternateBasePoint) {
@@ -52,6 +70,7 @@ struct PublicAPIPedersenValidator {
         }
     }
 
+    @available(*, deprecated)
     @Test("Pedersen setup rejects the generator as an alternate base point")
     func validatePedersenSetupRejectsGeneratorAsAlternateBasePoint() {
         #expect(throws: OpalCrypto.Pedersen.Error.insecureAlternateBasePoint) {
@@ -65,11 +84,37 @@ struct PublicAPIPedersenValidator {
         }
     }
 
+    @available(*, deprecated)
+    @Test("Pedersen setup rejects twice the generator as an alternate base point")
+    func validatePedersenSetupRejectsTwiceTheGeneratorAsAlternateBasePoint() {
+        #expect(throws: OpalCrypto.Pedersen.Error.insecureAlternateBasePoint) {
+            _ = try OpalCrypto.Pedersen.Setup(
+                alternateBasePoint: OpalCrypto.Secp256k1.derivePublicKey(
+                    from: OpalCryptoTestSupport.makeTypedPrivateKey(2)
+                )
+            )
+        }
+    }
+
+    @available(*, deprecated)
+    @Test("Deprecated Pedersen setup bridge preserves canonical setup behavior")
+    func validateDeprecatedPedersenSetupBridgePreservesCanonicalSetupBehavior() throws {
+        let setup = try OpalCrypto.Pedersen.Setup()
+        let bridgedSetup = try OpalCrypto.Pedersen.Setup(
+            alternateBasePoint: makeCanonicalAlternateBasePoint()
+        )
+        let nonce = try makeNonce(9)
+
+        #expect(bridgedSetup == setup)
+        #expect(
+            try bridgedSetup.commit(amount: 12, nonce: nonce)
+                == setup.commit(amount: 12, nonce: nonce)
+        )
+    }
+
     @Test("Pedersen aggregation preserves valid zero-sum nonces")
     func pedersenAggregationPreservesValidZeroSumNonces() throws {
-        let setup = try OpalCrypto.Pedersen.Setup(
-            alternateBasePoint: alternateBasePoint()
-        )
+        let setup = try OpalCrypto.Pedersen.Setup()
         let positiveAmountCommitment = try setup.commit(amount: 1, nonce: makeNonce(1))
         let cancelingNonceCommitment = try setup.commit(
             amount: 2,
@@ -105,15 +150,15 @@ struct PublicAPIPedersenValidator {
 
     @Test("Pedersen setup rejects commitments created by a different setup")
     func pedersenSetupRejectsCommitmentsCreatedByADifferentSetup() throws {
-        let setup = try OpalCrypto.Pedersen.Setup(
-            alternateBasePoint: alternateBasePoint()
-        )
-        let otherSetup = try OpalCrypto.Pedersen.Setup(
-            alternateBasePoint: try OpalCrypto.Secp256k1.derivePublicKey(
-                from: OpalCryptoTestSupport.makeTypedPrivateKey(21)
+        let setup = try OpalCrypto.Pedersen.Setup()
+        let commitment = try setup.commit(amount: 1, nonce: makeNonce(1))
+        let foreignCommitment = OpalCrypto.Pedersen.Commitment(
+            commitmentModel: PedersenModel.Commitment(
+                setupIdentifier: Data(repeating: 0xff, count: 33),
+                nonceScalar: commitment.commitmentModel.nonceScalar,
+                affinePoint: commitment.commitmentModel.affinePoint
             )
         )
-        let foreignCommitment = try otherSetup.commit(amount: 1, nonce: makeNonce(1))
 
         do {
             _ = try setup.combine([foreignCommitment])
@@ -127,9 +172,7 @@ struct PublicAPIPedersenValidator {
 
     @Test("Pedersen commit reports identity outputs as invalid commitments")
     func pedersenCommitReportsIdentityOutputsAsInvalidCommitments() throws {
-        let setup = try OpalCrypto.Pedersen.Setup(
-            alternateBasePoint: alternateBasePoint()
-        )
+        let setup = try OpalCrypto.Pedersen.Setup()
 
         do {
             _ = try setup.commit(
@@ -144,9 +187,9 @@ struct PublicAPIPedersenValidator {
         }
     }
 
-    private func alternateBasePoint() throws -> OpalCrypto.Secp256k1.PublicKey {
+    private func makeCanonicalAlternateBasePoint() throws -> OpalCrypto.Secp256k1.PublicKey {
         try OpalCrypto.Secp256k1.PublicKey(
-            rawRepresentation: Data([0x02]) + Data("CashFusion gives us fungibility.".utf8)
+            rawRepresentation: PedersenModel.Setup.canonicalAlternateBasePointData
         )
     }
 

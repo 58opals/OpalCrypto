@@ -8,5 +8,10 @@ extension OpalCrypto.KeyDerivation {
         case emptySalt
         case invalidDerivedKeyLength(actual: Int)
         case derivedKeyLengthExceedsLimit(actual: Int)
+        case workBudgetExceeded(
+            requiredWorkUnitCount: UInt64,
+            maximumWorkUnitCount: UInt64
+        )
+        case workUnitCountOverflow
     }
 }

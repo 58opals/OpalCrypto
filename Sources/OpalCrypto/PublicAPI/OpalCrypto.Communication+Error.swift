@@ -13,6 +13,8 @@ extension OpalCrypto.Communication {
         case invalidSymmetricKeyLength(expected: Int, actual: Int)
         case invalidPaddedPlaintextLength(minimum: Int, actual: Int)
         case paddedPlaintextLengthMustBeMultipleOf16(actual: Int)
+        case ciphertextByteCountExceedsMaximum(maximum: Int, actual: Int)
+        case ciphertextByteCountOverflow
         case invalidCiphertext
         case cryptographyFailure
     }

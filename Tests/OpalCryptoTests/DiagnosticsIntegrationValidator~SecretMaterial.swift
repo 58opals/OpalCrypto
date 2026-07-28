@@ -36,7 +36,8 @@ extension DiagnosticsIntegrationValidator {
                 password: Data(passphrase.utf8),
                 salt: try OpalCrypto.KeyDerivation.Salt(rawRepresentation: Data("public-salt".utf8)),
                 iterationCount: 1,
-                derivedKeyLength: 32
+                derivedKeyLength: 32,
+                maximumWorkUnitCount: 1
             )
 
             let forbiddenValues = [

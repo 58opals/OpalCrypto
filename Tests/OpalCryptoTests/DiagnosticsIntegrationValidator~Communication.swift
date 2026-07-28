@@ -14,12 +14,17 @@ extension DiagnosticsIntegrationValidator {
             let ciphertext = try OpalCrypto.Communication.encrypt(
                 message: Data("diagnostics-decrypt-success".utf8),
                 recipientPublicKey: publicKey,
-                paddedPlaintextLength: 32
+                paddedPlaintextLength: 32,
+                maximumCiphertextByteCount: 81
             )
 
             OpalDiagnostics.clearRecentRecords()
 
-            _ = try OpalCrypto.Communication.decrypt(ciphertext, privateKey: privateKey)
+            _ = try OpalCrypto.Communication.decrypt(
+                ciphertext,
+                privateKey: privateKey,
+                maximumCiphertextByteCount: 81
+            )
 
             let beginRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.communicationDecryptBegin))
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.communicationDecryptSucceeded))
@@ -42,13 +47,22 @@ extension DiagnosticsIntegrationValidator {
             let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
             let ciphertext = try OpalCrypto.Communication.encrypt(
                 message: Data("symmetric-diagnostics".utf8),
-                recipientPublicKey: publicKey
+                recipientPublicKey: publicKey,
+                maximumCiphertextByteCount: 81
             )
-            let decrypted = try OpalCrypto.Communication.decrypt(ciphertext, privateKey: privateKey)
+            let decrypted = try OpalCrypto.Communication.decrypt(
+                ciphertext,
+                privateKey: privateKey,
+                maximumCiphertextByteCount: 81
+            )
 
             OpalDiagnostics.clearRecentRecords()
 
-            _ = try OpalCrypto.Communication.decrypt(ciphertext, symmetricKey: decrypted.symmetricKey)
+            _ = try OpalCrypto.Communication.decrypt(
+                ciphertext,
+                symmetricKey: decrypted.symmetricKey,
+                maximumCiphertextByteCount: 81
+            )
 
             let beginRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.communicationDecryptBegin))
             let successRecord = try #require(diagnosticRecord(named: OpalDiagnostics.Event.communicationDecryptSucceeded))
@@ -88,13 +102,15 @@ extension DiagnosticsIntegrationValidator {
             let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
             let ciphertext = try OpalCrypto.Communication.encrypt(
                 message: Data("ciphertext-diagnostics".utf8),
-                recipientPublicKey: publicKey
+                recipientPublicKey: publicKey,
+                maximumCiphertextByteCount: 81
             )
 
             OpalDiagnostics.clearRecentRecords()
 
             _ = try OpalCrypto.Communication.Ciphertext(
-                rawRepresentation: ciphertext.rawRepresentation
+                rawRepresentation: ciphertext.rawRepresentation,
+                maximumCiphertextByteCount: 81
             )
 
             let successRecord = try #require(
@@ -122,7 +138,10 @@ extension DiagnosticsIntegrationValidator {
                 count: CommunicationBoxModel.minimumCiphertextLength - 1
             )
             #expect(throws: OpalCrypto.Communication.Error.self) {
-                _ = try OpalCrypto.Communication.Ciphertext(rawRepresentation: shortCiphertext)
+                _ = try OpalCrypto.Communication.Ciphertext(
+                    rawRepresentation: shortCiphertext,
+                    maximumCiphertextByteCount: 81
+                )
             }
 
             let failureRecord = try #require(
@@ -158,7 +177,8 @@ extension DiagnosticsIntegrationValidator {
 
             _ = try OpalCrypto.Communication.encrypt(
                 message: Data("abc".utf8),
-                recipientPublicKey: publicKey
+                recipientPublicKey: publicKey,
+                maximumCiphertextByteCount: 65
             )
 
             let record = try #require(diagnosticRecord(named: OpalDiagnostics.Event.communicationEncryptSucceeded))
@@ -180,7 +200,8 @@ extension DiagnosticsIntegrationValidator {
                 _ = try OpalCrypto.Communication.encrypt(
                     message: Data("abcd".utf8),
                     recipientPublicKey: publicKey,
-                    paddedPlaintextLength: 5
+                    paddedPlaintextLength: 5,
+                    maximumCiphertextByteCount: 65
                 )
             }
 
@@ -190,6 +211,40 @@ extension DiagnosticsIntegrationValidator {
             #expect(field("padded_plaintext_length", in: record)?.value == "5")
             #expect(field("has_explicit_padding", in: record)?.value == "true")
             #expect(field("error_code", in: record)?.value == "invalid_padded_plaintext_length")
+        }
+    }
+
+    @Test("Communication ciphertext budget failures record a stable public error code")
+    func validateCommunicationCiphertextBudgetFailuresRecordStablePublicErrorCode() throws {
+        try withDiagnosticsCapture {
+            let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(41)
+            let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
+
+            OpalDiagnostics.clearRecentRecords()
+
+            #expect(
+                throws: OpalCrypto.Communication.Error
+                    .ciphertextByteCountExceedsMaximum(maximum: 64, actual: 65)
+            ) {
+                _ = try OpalCrypto.Communication.encrypt(
+                    message: Data(),
+                    recipientPublicKey: publicKey,
+                    maximumCiphertextByteCount: 64
+                )
+            }
+
+            let record = try #require(
+                diagnosticRecord(named: OpalDiagnostics.Event.communicationEncryptFailed)
+            )
+            expectPublicField(
+                "maximum_ciphertext_byte_count",
+                in: record,
+                equals: "64"
+            )
+            #expect(
+                field("error_code", in: record)?.value
+                    == "ciphertext_byte_count_exceeds_maximum"
+            )
         }
     }
 }

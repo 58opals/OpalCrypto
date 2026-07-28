@@ -7,8 +7,14 @@ enum CommunicationBoxModel {
     static func encrypt(
         message: Data,
         recipientPublicKey: Data,
-        paddedPlaintextLength: Int?
+        paddedPlaintextLength: Int?,
+        maximumCiphertextByteCount: Int
     ) throws -> Data {
+        let byteCounts = try preflightCiphertextByteCount(
+            messageByteCount: message.count,
+            paddedPlaintextLength: paddedPlaintextLength,
+            maximumCiphertextByteCount: maximumCiphertextByteCount
+        )
         try validateSecp256k1PublicKey(recipientPublicKey)
 
         let ephemeralPrivateKey: Data
@@ -38,26 +44,33 @@ enum CommunicationBoxModel {
         )
         let plaintext = try makePlaintext(
             message: message,
-            paddedPlaintextLength: paddedPlaintextLength
+            resolvedPlaintextLength: byteCounts.plaintextByteCount
         )
-        let ciphertext = try crypt(
+        var envelope = try crypt(
             plaintext,
             key: symmetricKey,
             operation: CCOperation(kCCEncrypt)
         )
+        envelope.reserveCapacity(byteCounts.ciphertextByteCount)
+        envelope.insert(contentsOf: ephemeralPublicKey, at: envelope.startIndex)
         let authenticationCode = Data(
             HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
-                .hash(ephemeralPublicKey + ciphertext, key: symmetricKey)
+                .hash(envelope, key: symmetricKey)
                 .prefix(16)
         )
-        return ephemeralPublicKey + ciphertext + authenticationCode
+        envelope.append(authenticationCode)
+        return envelope
     }
     static func decrypt(
         _ ciphertext: Data,
-        privateKey: Data
+        privateKey: Data,
+        maximumCiphertextByteCount: Int
     ) throws -> DecryptionResult {
+        try validateCiphertextEnvelope(
+            ciphertext,
+            maximumCiphertextByteCount: maximumCiphertextByteCount
+        )
         try validatePrivateKey(privateKey)
-        try validateCiphertextEnvelope(ciphertext)
         let ephemeralPublicKey = Data(ciphertext.prefix(33))
         let symmetricKey: Data
         do {
@@ -76,12 +89,16 @@ enum CommunicationBoxModel {
 
     static func decrypt(
         _ ciphertext: Data,
-        symmetricKey: Data
+        symmetricKey: Data,
+        maximumCiphertextByteCount: Int
     ) throws -> Data {
+        try validateCiphertextEnvelope(
+            ciphertext,
+            maximumCiphertextByteCount: maximumCiphertextByteCount
+        )
         guard symmetricKey.count == 32 else {
             throw Error.invalidSymmetricKeyLength(actual: symmetricKey.count)
         }
-        try validateCiphertextEnvelope(ciphertext)
 
         return try decryptValidatedCiphertext(ciphertext, symmetricKey: symmetricKey)
     }
@@ -91,10 +108,9 @@ enum CommunicationBoxModel {
         symmetricKey: Data
     ) throws -> Data {
         let encryptedPayload = ciphertext.dropFirst(33).dropLast(16)
-        let authenticatedPayload = Data(ciphertext.dropLast(16))
         let expectedAuthenticationCode = Data(
             HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
-                .hash(authenticatedPayload, key: symmetricKey)
+                .hash(ciphertext.dropLast(16), key: symmetricKey)
                 .prefix(16)
         )
         let actualAuthenticationCode = Data(ciphertext.suffix(16))

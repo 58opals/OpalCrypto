@@ -1,4 +1,4 @@
-// OpalDiagnostics.Category+OpalCrypto.swift
+// OpalDiagnostics.Category~OpalCrypto.swift
 
 import OpalDiagnostics
 

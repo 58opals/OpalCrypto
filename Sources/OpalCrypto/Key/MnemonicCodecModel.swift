@@ -32,7 +32,8 @@ internal enum MnemonicCodecModel {
             password: Data(normalizedPhrase.utf8),
             salt: Data(salt.utf8),
             iterationCount: 2048,
-            derivedKeyLength: 64
+            derivedKeyLength: 64,
+            maximumWorkUnitCount: 2048
         ).deriveKey()
     }
 }

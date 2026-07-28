@@ -8,6 +8,7 @@ extension OpalCrypto.Key.ExtendedPublic {
         case invalidChecksum
         case invalidVersion(actual: UInt32)
         case invalidPayloadLength(expected: Int, actual: Int)
+        case payloadLengthExceedsMaximum(maximum: Int)
         case invalidParentFingerprintLength(expected: Int, actual: Int)
         case invalidChainCodeLength(expected: Int, actual: Int)
         case invalidPublicKeyLength(expected: Int, actual: Int)

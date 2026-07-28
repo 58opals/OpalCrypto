@@ -5,6 +5,7 @@ extension WalletImportFormatCodec {
         case invalidBase58
         case invalidChecksum
         case invalidPayloadLength(actual: Int)
+        case payloadLengthExceedsMaximum(maximum: Int)
         case invalidVersion(actual: UInt8)
         case invalidCompressionMarker(actual: UInt8)
         case invalidPrivateKeyLength(actual: Int)

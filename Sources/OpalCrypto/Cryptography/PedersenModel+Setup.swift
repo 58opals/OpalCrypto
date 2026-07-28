@@ -4,8 +4,17 @@ import Foundation
 
 extension PedersenModel {
     struct Setup: Sendable, Equatable {
+        static let canonicalAlternateBasePointData =
+            Data([0x02]) + Data("CashFusion gives us fungibility.".utf8)
+
         let alternateBasePointModel: ParsedPublicKeyModel
         let alternatePlusGenerator: AffinePointModel
+
+        init() throws {
+            try self.init(
+                alternateBasePoint: Self.canonicalAlternateBasePointData
+            )
+        }
 
         init(alternateBasePoint: Data) throws {
             let alternateBasePointModel: ParsedPublicKeyModel
@@ -23,6 +32,12 @@ extension PedersenModel {
         }
 
         init(alternateBasePointModel: ParsedPublicKeyModel) throws {
+            guard alternateBasePointModel.compressedPublicKeyData
+                == Self.canonicalAlternateBasePointData
+            else {
+                throw Error.insecureAlternateBasePoint
+            }
+
             self.alternateBasePointModel = alternateBasePointModel
 
             guard alternateBasePointModel.affinePoint != ScalarMultiplicationModel.generator else {

@@ -1,4 +1,4 @@
-// OpalDiagnostics.Field+OpalCrypto.swift
+// OpalDiagnostics.Field~OpalCrypto.swift
 
 import OpalDiagnostics
 
@@ -8,11 +8,11 @@ extension OpalDiagnostics.Field {
     }
 
     static func publicField(_ name: String, _ value: Int) -> OpalDiagnostics.Field {
-        OpalDiagnostics.Field(name: name, value: value)
+        OpalDiagnostics.Field(name: name, value: value, privacy: .public)
     }
 
     static func publicField(_ name: String, _ value: Bool) -> OpalDiagnostics.Field {
-        OpalDiagnostics.Field(name: name, value: value)
+        OpalDiagnostics.Field(name: name, value: value, privacy: .public)
     }
 
     static func privateField(_ name: String, _ value: String) -> OpalDiagnostics.Field {
@@ -96,7 +96,11 @@ extension OpalDiagnostics.Field {
     static func makeSchnorrBatchTotalDurationField(
         _ totalDuration: Duration
     ) -> OpalDiagnostics.Field {
-        OpalDiagnostics.Field(name: "total_duration", value: totalDuration)
+        OpalDiagnostics.Field(
+            name: "total_duration",
+            value: totalDuration,
+            privacy: .public
+        )
     }
 
     static func makeSchnorrBatchPreparationDurationField(
@@ -104,20 +108,29 @@ extension OpalDiagnostics.Field {
     ) -> OpalDiagnostics.Field {
         OpalDiagnostics.Field(
             name: "cpu_preparation_duration",
-            value: preparationDuration
+            value: preparationDuration,
+            privacy: .public
         )
     }
 
     static func makeSchnorrBatchExecutionDurationField(
         _ executionDuration: Duration
     ) -> OpalDiagnostics.Field {
-        OpalDiagnostics.Field(name: "gpu_execution_duration", value: executionDuration)
+        OpalDiagnostics.Field(
+            name: "gpu_execution_duration",
+            value: executionDuration,
+            privacy: .public
+        )
     }
 
     static func makeSchnorrBatchReadbackDurationField(
         _ readbackDuration: Duration
     ) -> OpalDiagnostics.Field {
-        OpalDiagnostics.Field(name: "readback_duration", value: readbackDuration)
+        OpalDiagnostics.Field(
+            name: "readback_duration",
+            value: readbackDuration,
+            privacy: .public
+        )
     }
 
     static func makeSchnorrBatchFallbackReasonField(

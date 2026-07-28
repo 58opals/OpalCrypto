@@ -98,7 +98,7 @@ extension OpalCryptoBenchmarks {
             let schnorrSignature = try OpalCrypto.Signature.Schnorr.sign(
                 digest: schnorrDigest,
                 privateKey: singlePrivateKey,
-                noncePolicy: .bip340Deterministic
+                noncePolicy: .bchDeterministic
             )
             let metalSchnorrVerificationInput = try PerformanceBenchmarkOperations
                 .makeMetalSchnorrVerificationInput(

@@ -119,7 +119,10 @@ extension PublicAPIByteValueValidator {
     @Test("Communication byte values reject malformed raw representations")
     func communicationByteValuesRejectMalformedRawRepresentations() throws {
         do {
-            _ = try OpalCrypto.Communication.Ciphertext(rawRepresentation: Data())
+            _ = try OpalCrypto.Communication.Ciphertext(
+                rawRepresentation: Data(),
+                maximumCiphertextByteCount: 65
+            )
             Issue.record("Expected ciphertext error.")
         } catch let error as OpalCrypto.Communication.Error {
             #expect(error == .invalidCiphertext)

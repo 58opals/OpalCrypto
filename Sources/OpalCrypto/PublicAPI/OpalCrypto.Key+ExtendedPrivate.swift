@@ -204,6 +204,8 @@ extension OpalCrypto.Key {
                 return .invalidVersion(actual: actual)
             case .invalidPayloadLength(let actual):
                 return .invalidPayloadLength(expected: 78, actual: actual)
+            case .payloadLengthExceedsMaximum(let maximum):
+                return .payloadLengthExceedsMaximum(maximum: maximum)
             case .invalidChainCodeLength(let actual):
                 return .invalidChainCodeLength(expected: 32, actual: actual)
             case .invalidDepthMetadata:

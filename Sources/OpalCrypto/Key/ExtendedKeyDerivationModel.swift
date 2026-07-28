@@ -14,14 +14,18 @@ internal enum ExtendedKeyDerivationModel {
             key: Data("Bitcoin seed".utf8)
         )
         let chainCodeStartIndex = digest.index(digest.startIndex, offsetBy: 32)
-        return try ExtendedKeyPayloadModel(
-            kind: .privateKey,
-            depth: 0,
-            parentFingerprintUInt32BigEndian: 0,
-            childIndex: 0,
-            chainCode: Data(digest[chainCodeStartIndex..<digest.endIndex]),
-            keyData: Data(digest[digest.startIndex..<chainCodeStartIndex])
-        )
+        do {
+            return try ExtendedKeyPayloadModel(
+                kind: .privateKey,
+                depth: 0,
+                parentFingerprintUInt32BigEndian: 0,
+                childIndex: 0,
+                chainCode: Data(digest[chainCodeStartIndex..<digest.endIndex]),
+                keyData: Data(digest[digest.startIndex..<chainCodeStartIndex])
+            )
+        } catch is ExtendedKeyPayloadModel.Error {
+            throw Error.invalidDerivedKey
+        }
     }
 
     internal static func makePublicKey(

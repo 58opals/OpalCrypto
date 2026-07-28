@@ -11,20 +11,30 @@ extension OpalCrypto.Communication {
 
         /// Validates and imports a serialized ciphertext envelope.
         ///
-        /// - Throws: ``OpalCrypto/Communication/Error/invalidCiphertext`` when the envelope is shorter than the authenticated format requires.
-        public init(rawRepresentation: Data) throws {
+        /// - Throws: ``OpalCrypto/Communication/Error/ciphertextByteCountExceedsMaximum(maximum:actual:)`` before copying an envelope that exceeds `maximumCiphertextByteCount`, or ``OpalCrypto/Communication/Error/invalidCiphertext`` when the envelope is malformed.
+        public init(
+            rawRepresentation: Data,
+            maximumCiphertextByteCount: Int
+        ) throws {
             let fields = [
                 OpalDiagnostics.Field.operationField("ciphertext_parse"),
                 OpalDiagnostics.Field.ciphertextLengthField(rawRepresentation.count),
                 OpalDiagnostics.Field.publicField(
                     "minimum_ciphertext_byte_count",
                     CommunicationBoxModel.minimumCiphertextLength
+                ),
+                OpalDiagnostics.Field.publicField(
+                    "maximum_ciphertext_byte_count",
+                    maximumCiphertextByteCount
                 )
             ]
             do {
-                try CommunicationBoxModel.validateCiphertextEnvelope(rawRepresentation)
-            } catch {
-                let mappedError = Error.invalidCiphertext
+                try CommunicationBoxModel.validateCiphertextEnvelope(
+                    rawRepresentation,
+                    maximumCiphertextByteCount: maximumCiphertextByteCount
+                )
+            } catch let error as CommunicationBoxModel.Error {
+                let mappedError = OpalCrypto.Communication.mapError(error)
                 Self.recordParseFailed(mappedError, fields: fields)
                 throw mappedError
             }

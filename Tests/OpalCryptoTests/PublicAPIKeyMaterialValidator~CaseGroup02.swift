@@ -80,7 +80,11 @@ extension PublicAPIKeyMaterialValidator {
 
     @Test("Extended private-key parsing reports malformed private-key prefix as key material")
     func extendedPrivateKeyParsingReportsMalformedPrivateKeyPrefixAsKeyMaterial() throws {
-        var payload = try Base58CheckCodec.decode(rootPrivateKeyString, minimumPayloadLength: 78)
+        var payload = try Base58CheckCodec.decode(
+            rootPrivateKeyString,
+            minimumPayloadLength: 78,
+            maximumPayloadLength: 78
+        )
         payload[45] = 0x01
         let serialized = Base58CheckCodec.encode(payload: payload)
 

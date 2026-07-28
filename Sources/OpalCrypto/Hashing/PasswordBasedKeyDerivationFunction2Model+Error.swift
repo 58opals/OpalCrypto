@@ -9,5 +9,10 @@ extension PasswordBasedKeyDerivationFunction2Model {
         case emptySalt
         case invalidDerivedKeyLength(actual: Int)
         case keyLengthExceedsLimit(actual: Int)
+        case workBudgetExceeded(
+            requiredWorkUnitCount: UInt64,
+            maximumWorkUnitCount: UInt64
+        )
+        case workUnitCountOverflow
     }
 }

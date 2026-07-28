@@ -136,7 +136,7 @@ extension PerformanceOptimizationKeyCacheValidator {
         let schnorrSignature = try OpalCrypto.Signature.Schnorr.sign(
             digest: digest,
             privateKey: privateKey,
-            noncePolicy: .bip340Deterministic
+            noncePolicy: .bchDeterministic
         ).rawRepresentation
 
         let rawEcdsaResult = try EllipticCurveDigitalSignatureAlgorithmModel.verify(
