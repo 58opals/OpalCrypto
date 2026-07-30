@@ -125,6 +125,62 @@ extension DiagnosticsIntegrationValidator {
         }
     }
 
+    @Test("Shared-point x derivation records only public-safe lengths")
+    func validateSharedPointXDerivationRecordsOnlyPublicSafeLengths() throws {
+        try withDiagnosticsCapture {
+            let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(29)
+            let peerPrivateKey =
+                try OpalCryptoTestSupport.makeTypedPrivateKey(30)
+            let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(
+                from: peerPrivateKey
+            )
+
+            OpalDiagnostics.clearRecentRecords()
+
+            let coordinate =
+                OpalCrypto.Secp256k1.deriveSharedPointXCoordinate(
+                    signingKey: privateKey.makeSigningKey(),
+                    publicKey: publicKey
+                )
+
+            let record = try #require(
+                diagnosticRecord(
+                    named: OpalDiagnostics.Event
+                        .sharedPointXDeriveSucceeded
+                )
+            )
+            #expect(record.category == OpalDiagnostics.Category.key)
+            #expect(record.level == .debug)
+            #expect(
+                field("operation", in: record)?.value
+                    == "shared_point_x_derive"
+            )
+            #expect(field("algorithm", in: record)?.value == "secp256k1")
+            expectPublicField(
+                "private_key_byte_count",
+                in: record,
+                equals: "32"
+            )
+            expectPublicField(
+                "public_key_byte_count",
+                in: record,
+                equals: "33"
+            )
+            #expect(field("output_byte_count", in: record)?.value == "32")
+            #expect(field("private_key", in: record) == nil)
+            #expect(field("public_key", in: record) == nil)
+            #expect(field("shared_point_x", in: record) == nil)
+            let coordinateHex = coordinate.rawRepresentation
+                .map { String(format: "%02x", $0) }
+                .joined()
+            #expect(
+                record.fields.contains {
+                    $0.value.contains(coordinateHex)
+                } == false
+            )
+        }
+    }
+
     @Test("Uncompressed verification-key parsing records normalized output length")
     func validateUncompressedVerificationKeyParsingRecordsNormalizedOutputLength() throws {
         try withDiagnosticsCapture {

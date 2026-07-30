@@ -26,6 +26,11 @@ extension DiagnosticsIntegrationValidator {
                 privateKey: privateKey,
                 publicKey: publicKey
             )
+            let sharedPointX =
+                OpalCrypto.Secp256k1.deriveSharedPointXCoordinate(
+                    signingKey: privateKey.makeSigningKey(),
+                    publicKey: publicKey
+                )
             _ = try OpalCrypto.Secp256k1.SharedSecret(
                 rawRepresentation: sharedSecret.rawRepresentation
             )
@@ -49,6 +54,7 @@ extension DiagnosticsIntegrationValidator {
                 walletImportFormatText,
                 hex(privateKey.rawRepresentation),
                 hex(sharedSecret.rawRepresentation),
+                hex(sharedPointX.rawRepresentation),
                 hex(symmetricKey.rawRepresentation),
                 hex(derivedKey.rawRepresentation)
             ]
@@ -60,6 +66,7 @@ extension DiagnosticsIntegrationValidator {
                 "private_key",
                 "wif",
                 "shared_secret",
+                "shared_point_x",
                 "symmetric_key",
                 "password",
                 "derived_key"

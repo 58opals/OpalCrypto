@@ -44,6 +44,7 @@ extension OpalDiagnostics.Event {
     static let sharedSecretsDeriveFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key.shared_secret.batch_derive.failed")
     static let sharedSecretParseSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.shared_secret.parse.succeeded")
     static let sharedSecretParseFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key.shared_secret.parse.failed")
+    static let sharedPointXDeriveSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.shared_point_x.derive.succeeded")
     static let wifParseSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.parse.succeeded")
     static let wifParseFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.parse.failed")
     static let wifSerializeSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.serialize.succeeded")

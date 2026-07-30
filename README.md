@@ -58,8 +58,8 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 ## Key Capabilities
 
 - `Signature`: typed ECDSA and Schnorr signatures, 32-byte digests, verification keys, facade-owned formats, nonce policies, and immutable BCH Schnorr verification batches.
-- `Secp256k1`: typed private keys, public keys, scalars, shared secrets, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
-- `Key`: WIF, BIP-39 mnemonics, and extended private/public keys.
+- `Secp256k1`: typed private keys, public keys, scalars, legacy shared-secret digests, hardened shared-point x-coordinate derivation, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
+- `Key`: WIF, BIP-39 mnemonics, extended private/public keys, and focused non-hardened BIP-32 child derivation from an explicit key and chain code.
 - `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
 - `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives, with explicit decoded-byte budgets.
 - `KeyDerivation`: PBKDF2-HMAC-SHA-512 key derivation with a 64-byte default output and an explicit HMAC-work budget.
@@ -108,7 +108,7 @@ Current benchmark smoke command:
 swift run -c release OpalCryptoBenchmarks -- --suite smoke
 ```
 
-Correctness result: Passed on 2026-07-28 with 320 tests in 41 suites.
+Correctness result: Passed on 2026-07-30 with 332 tests in 42 suites under both the normal and opt-in performance configurations.
 
 ## Further Context
 

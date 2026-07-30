@@ -21,7 +21,7 @@ Free-form payloads remain `Data`: messages, passwords, arbitrary encoding bytes,
 
 Constrained cryptographic or protocol-shaped byte strings use facade-owned value types with validating initializers and `rawRepresentation` accessors:
 
-- `Secp256k1.PrivateKey`, `Secp256k1.PublicKey`, `Secp256k1.Scalar`, `Secp256k1.SharedSecret`
+- `Secp256k1.PrivateKey`, `Secp256k1.PublicKey`, `Secp256k1.Scalar`, `Secp256k1.SharedSecret`, `Secp256k1.SharedPointXCoordinate`
 - `Signature.Digest`, `Signature.ECDSA`, `Signature.Schnorr`, `Signature.VerificationKey`
 - `Communication.Ciphertext`, `Communication.SymmetricKey`
 - `Pedersen.Nonce`, `Pedersen.CommitmentPoint`, `Pedersen.Commitment`
@@ -132,6 +132,20 @@ Batch diagnostics are aggregate and privacy-safe: policy, selected backend, cach
 Use `OpalCrypto.Secp256k1.deriveSharedSecrets(privateKey:publicKeys:)` when a higher-level package needs ordered secp256k1 ECDH-style computation across many candidate public keys. Each `SharedSecret` matches the single-key `deriveSharedSecret(privateKey:publicKey:)` representation: SHA-256 of the compressed shared EC point.
 
 This is intentionally not an RPA address-management API. Opal Base owns reusable payment address parsing, scan policy, output matching, address derivation, persistence, and indexer integration; Opal Crypto supplies the cryptographic batch primitive.
+
+## Shared-Point Profiles
+
+Use `OpalCrypto.Secp256k1.deriveSharedPointXCoordinate(signingKey:publicKey:)` when a consuming protocol needs the exact 32-byte affine x-coordinate of the shared secp256k1 point while retaining an opaque signing capability. A `privateKey:publicKey:` overload is available at an explicit raw-key boundary. Neither operation adds a prefix or hashes the coordinate. The consuming profile owns that domain construction.
+
+`SharedPointXCoordinate` is secret-bearing. Its `description` and `debugDescription` are redacted; access `rawRepresentation` only at the explicit profile boundary that consumes the coordinate.
+
+This operation has a dedicated fixed 256-round scalar-multiplication path. Every round performs one complete point doubling and addition and selects by mask; it does not use the variable-time wNAF path behind the source-compatible `deriveSharedSecret` and `deriveSharedSecrets` operations. The legacy operations continue to return SHA-256 of the compressed shared EC point, so their output is not interchangeable with an x-coordinate profile.
+
+## Explicit-Chain-Code Child Derivation
+
+Use `OpalCrypto.Key.deriveNonHardenedChildPublicKey(from:chainCode:at:)` to derive a BIP-32 child public key directly from a validated secp256k1 public key and 32-byte `Key.ChainCode`. Use `deriveNonHardenedChildSigningKey(from:chainCode:at:)` for the symmetric private operation. The latter accepts and returns opaque `Secp256k1.SigningKey` capabilities; it does not export child private-key bytes.
+
+These focused operations derive exactly one non-hardened child. They do not fabricate extended-key depth, parent fingerprint, or child metadata. An index with the hardened bit set throws `Key.ChildDerivationError.hardenedIndex(_:)`. Both paths use fixed-schedule point multiplication for chain-code-derived tweak material.
 
 ## Secret Export Boundaries
 

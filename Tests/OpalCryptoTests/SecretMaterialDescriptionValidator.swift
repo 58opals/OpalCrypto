@@ -25,6 +25,11 @@ struct SecretMaterialDescriptionValidator {
             privateKey: privateKey,
             publicKey: publicKey
         )
+        let sharedPointX =
+            OpalCrypto.Secp256k1.deriveSharedPointXCoordinate(
+                signingKey: signingKey,
+                publicKey: publicKey
+            )
         let symmetricKey = try OpalCrypto.Communication.SymmetricKey(
             rawRepresentation: Data(repeating: 0x42, count: 32)
         )
@@ -79,6 +84,15 @@ struct SecretMaterialDescriptionValidator {
                 describing: String(describing: sharedSecret),
                 reflecting: String(reflecting: sharedSecret),
                 forbiddenFragments: [hex(sharedSecret.rawRepresentation), "rawRepresentation"]
+            ),
+            DescriptionCase(
+                label: "sharedPointX",
+                describing: String(describing: sharedPointX),
+                reflecting: String(reflecting: sharedPointX),
+                forbiddenFragments: [
+                    hex(sharedPointX.rawRepresentation),
+                    "rawRepresentation"
+                ]
             ),
             DescriptionCase(
                 label: "symmetricKey",

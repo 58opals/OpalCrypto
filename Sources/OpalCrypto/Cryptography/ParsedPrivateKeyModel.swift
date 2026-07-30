@@ -52,4 +52,18 @@ struct ParsedPrivateKeyModel: Sendable, Equatable {
         self.scalar = validatedPrivateKeyScalar
         self.parsedPublicKeyModel = ParsedPublicKeyModel(affinePoint: publicAffine)
     }
+
+    /// Creates private-key material when the corresponding public point was
+    /// derived independently from the same trusted operation.
+    ///
+    /// This avoids repeating variable-time generator multiplication for an
+    /// already validated secret scalar.
+    init(
+        validatedPrivateKeyScalar: ScalarModel,
+        correspondingParsedPublicKeyModel: ParsedPublicKeyModel
+    ) {
+        precondition(!validatedPrivateKeyScalar.isZero)
+        self.scalar = validatedPrivateKeyScalar
+        self.parsedPublicKeyModel = correspondingParsedPublicKeyModel
+    }
 }
