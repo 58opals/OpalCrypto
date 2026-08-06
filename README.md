@@ -2,11 +2,11 @@
 
 Status: Developer Preview. The latest tag is `v0.2.0`. Secret-scalar operations have not completed constant-time hardening and security review; do not use this preview for production key handling.
 
-Opal Crypto is the lowest-level BCH cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, secp256k1 signatures, hashing, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
+Opal Crypto is the lowest-level secp256k1 cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, BCH and BIP340 signatures, hashing, secure random bytes, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
 ## Audience
 
-Use Opal Crypto when you are building or testing Swift BCH software and need typed cryptographic capabilities behind one public facade. Downstream code should integrate through `OpalCrypto` instead of depending on internal implementation types or source layout.
+Use Opal Crypto when you are building or testing Swift software that needs typed BCH or BIP340 cryptographic capabilities behind one public facade. Downstream code should integrate through `OpalCrypto` instead of depending on internal implementation types or source layout.
 
 ## Requirements
 
@@ -53,12 +53,13 @@ let isValid = try signature.verifySHA256(
 )
 ```
 
-The explicit ECDSA message operations hash once with SHA-256. To supply a precomputed 32-byte digest without hashing it again, use `ECDSA.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`. For Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schnorr.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`; hashing remains the caller's responsibility.
+The explicit ECDSA message operations hash once with SHA-256. To supply a precomputed 32-byte digest without hashing it again, use `ECDSA.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`. For Bitcoin Cash Schnorr signatures, construct a `Signature.Digest`, then use `Signature.Schnorr.sign(digest:privateKey:)` and `signature.verify(digest:publicKey:)`; hashing remains the caller's responsibility. Genuine BIP340 is a separate `Signature.BIP340` API with a validated 32-byte x-only verification key and explicit 32-byte `AuxiliaryRandomness` supplied to `SigningKey.signBIP340(digest:auxiliaryRandomness:)`.
 
 ## Key Capabilities
 
-- `Signature`: typed ECDSA and Schnorr signatures, 32-byte digests, verification keys, facade-owned formats, nonce policies, and immutable BCH Schnorr verification batches.
+- `Signature`: typed ECDSA, Bitcoin Cash Schnorr, and BIP340 signatures; 32-byte digests; SEC1 and x-only verification keys; facade-owned formats; nonce policies; and immutable BCH Schnorr verification batches.
 - `Secp256k1`: typed private keys, public keys, scalars, legacy shared-secret digests, hardened shared-point x-coordinate derivation, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
+- `SecureRandom`: operating-system secure random bytes behind an explicit `1...1024` allocation-safety boundary. This bound is an OpalCrypto resource limit, not a protocol constant.
 - `Key`: WIF, BIP-39 mnemonics, extended private/public keys, and focused non-hardened BIP-32 child derivation from an explicit key and chain code.
 - `Hashing`: SHA-256, Hash256, Hash160, HMAC-SHA256, and HMAC-SHA512 helpers.
 - `Encoding`: Base58 plus Bech32-style Base32 and polymod checksum primitives, with explicit decoded-byte budgets.
@@ -71,8 +72,8 @@ See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 
 ## Boundaries
 
-- In scope: facade-first BCH cryptography for keys, secp256k1, hashing, encoding, key derivation, and numeric primitives.
-- Out of scope: wallet or app-domain orchestration, address management, RPA scan policy, network or protocol/runtime responsibilities, non-BCH features, non-Swift expansion, or reliance on internal implementation details as public API. Higher-level packages such as Opal Base own wallet-facing reusable payment address behavior; Opal Crypto only supplies the cryptographic computation primitives they need.
+- In scope: facade-first cryptography for BCH operations, genuine BIP340 signatures over typed 32-byte digests, secp256k1 keys, hashing, bounded secure randomness, encoding, key derivation, and numeric primitives.
+- Out of scope: wallet or app-domain orchestration, address management, RPA scan policy, mailbox or NIP-44 behavior, network or protocol/runtime responsibilities, non-Swift expansion, or reliance on internal implementation details as public API. Higher-level packages own their protocol construction; Opal Crypto only supplies the cryptographic computation primitives they need.
 
 See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal qualification boundary.
 

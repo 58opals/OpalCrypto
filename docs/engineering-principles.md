@@ -1,6 +1,6 @@
 # Engineering Principles
 
-Opal Crypto is a Swift-first BCH cryptography package. The implementation should stay readable, auditable, portable across the supported Apple platform set, and backed by correctness tests before performance claims are trusted.
+Opal Crypto is a Swift-first secp256k1 cryptography package with BCH primitives and a focused BIP340 surface. The implementation should stay readable, auditable, portable across the supported Apple platform set, and backed by correctness tests before performance claims are trusted.
 
 ## Implementation Boundary
 

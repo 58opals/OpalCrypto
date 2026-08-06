@@ -1,8 +1,35 @@
 // HardenedScalarArithmeticModel.swift
 
+import Foundation
+
 /// Fixed-schedule scalar arithmetic for operations that retain private-key
 /// material behind an opaque capability.
 enum HardenedScalarArithmeticModel {
+    static func reduceData32BytesModuloCurveOrder(
+        _ data: Data
+    ) -> ScalarModel {
+        precondition(data.count == 32)
+        guard let value = try? Unsigned256BitIntegerModel(
+            contiguousBytes32: data
+        ) else {
+            preconditionFailure("A 32-byte value must parse as UInt256.")
+        }
+        let subtraction = subtractLimbs(
+            value.limbs,
+            StandardsForEfficientCryptography256k1CurveModel.Constant.n.limbs
+        )
+        let useReducedValue = subtraction.borrow ^ 1
+        return ScalarModel(
+            unchecked: Unsigned256BitIntegerModel(
+                limbs: selectLimbs(
+                    value.limbs,
+                    subtraction.value,
+                    bit: useReducedValue
+                )
+            )
+        )
+    }
+
     static func addModN(
         _ left: ScalarModel,
         _ right: ScalarModel
@@ -13,16 +40,87 @@ enum HardenedScalarArithmeticModel {
             StandardsForEfficientCryptography256k1CurveModel.Constant.n.limbs
         )
         let useReducedValue = addition.carry | (subtraction.borrow ^ 1)
-        let mask = UInt64.zero &- (useReducedValue & 1)
+        return ScalarModel(
+            unchecked: Unsigned256BitIntegerModel(
+                limbs: selectLimbs(
+                    addition.value,
+                    subtraction.value,
+                    bit: useReducedValue
+                )
+            )
+        )
+    }
+
+    static func multiplyModuloCurveOrder(
+        _ left: ScalarModel,
+        _ right: ScalarModel
+    ) -> ScalarModel {
+        var product = ScalarModel.zero
+        var addend = left
+        for bitIndex in 0..<256 {
+            let sum = addModN(product, addend)
+            let limbIndex = bitIndex / 64
+            let limbBitIndex = bitIndex % 64
+            let bit = (right.limbs[limbIndex] >> limbBitIndex) & 1
+            product = select(product, sum, bit: bit)
+            addend = addModN(addend, addend)
+        }
+        return product
+    }
+
+    static func negateModuloCurveOrder(
+        _ scalar: ScalarModel
+    ) -> ScalarModel {
+        let negated = subtractLimbs(
+            StandardsForEfficientCryptography256k1CurveModel.Constant.n.limbs,
+            scalar.limbs
+        ).value
+        let combined =
+            scalar.limbs[0]
+            | scalar.limbs[1]
+            | scalar.limbs[2]
+            | scalar.limbs[3]
+        let isNonzero = (combined | (UInt64.zero &- combined)) >> 63
+        return ScalarModel(
+            unchecked: Unsigned256BitIntegerModel(
+                limbs: selectLimbs(
+                    .init(repeating: 0),
+                    negated,
+                    bit: isNonzero
+                )
+            )
+        )
+    }
+
+    private static func select(
+        _ zeroValue: ScalarModel,
+        _ oneValue: ScalarModel,
+        bit: UInt64
+    ) -> ScalarModel {
+        ScalarModel(
+            unchecked: Unsigned256BitIntegerModel(
+                limbs: selectLimbs(
+                    zeroValue.limbs,
+                    oneValue.limbs,
+                    bit: bit
+                )
+            )
+        )
+    }
+
+    private static func selectLimbs(
+        _ zeroValue: InlineArray<4, UInt64>,
+        _ oneValue: InlineArray<4, UInt64>,
+        bit: UInt64
+    ) -> InlineArray<4, UInt64> {
+        let mask = UInt64.zero &- (bit & 1)
         var selected: InlineArray<4, UInt64> = .init(repeating: 0)
         for index in 0..<4 {
             selected[index] =
-                (addition.value[index] & ~mask)
-                | (subtraction.value[index] & mask)
+                (zeroValue[index] & ~mask)
+                | (oneValue[index] & mask)
         }
-        return ScalarModel(
-            unchecked: Unsigned256BitIntegerModel(limbs: selected)
-        )
+        return selected
     }
 
     private static func addLimbs(

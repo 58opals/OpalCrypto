@@ -12,6 +12,7 @@
 - `OpalCrypto.BlindSignature`
 - `OpalCrypto.Communication`
 - `OpalCrypto.Numeric`
+- `OpalCrypto.SecureRandom`
 
 The split files in `Sources/OpalCrypto/PublicAPI` are the source of truth. This page is a compact integration guide for the breaking typed-byte facade.
 
@@ -22,7 +23,7 @@ Free-form payloads remain `Data`: messages, passwords, arbitrary encoding bytes,
 Constrained cryptographic or protocol-shaped byte strings use facade-owned value types with validating initializers and `rawRepresentation` accessors:
 
 - `Secp256k1.PrivateKey`, `Secp256k1.PublicKey`, `Secp256k1.Scalar`, `Secp256k1.SharedSecret`, `Secp256k1.SharedPointXCoordinate`
-- `Signature.Digest`, `Signature.ECDSA`, `Signature.Schnorr`, `Signature.VerificationKey`
+- `Signature.Digest`, `Signature.ECDSA`, `Signature.Schnorr`, `Signature.VerificationKey`, `Signature.BIP340`, `Signature.BIP340.VerificationKey`, `Signature.BIP340.AuxiliaryRandomness`
 - `Communication.Ciphertext`, `Communication.SymmetricKey`
 - `Pedersen.Nonce`, `Pedersen.CommitmentPoint`, `Pedersen.Commitment`
 - `Key.Seed`, `Key.WIF`, `Key.ChainCode`, `Key.Fingerprint`, `Key.ExtendedPrivate`, `Key.ExtendedPublic`
@@ -35,6 +36,8 @@ Constrained cryptographic or protocol-shaped byte strings use facade-owned value
 Secret-bearing signing workflows should prefer `Secp256k1.SigningKey`. It is an opaque signing capability that can be imported from raw private-key bytes, `Secp256k1.PrivateKey`, `Key.WIF`, or `Key.ExtendedPrivate`, but it does not expose raw private-key bytes or serialization APIs.
 
 Use `SigningKey.signECDSASHA256(message:)` when the operation should hash arbitrary message bytes once with SHA-256. Use `SigningKey.signECDSA(digest:)` for an already computed 32-byte digest; the source-compatible `signECDSA(message:)` operation also hashes once with SHA-256.
+
+Use `SigningKey.signBIP340(digest:auxiliaryRandomness:)` for genuine BIP340. The auxiliary randomness argument is a required, validated 32-byte value with redacted string descriptions; there is no default that silently chooses signing-time entropy policy.
 
 ## Common Calls
 
@@ -73,6 +76,31 @@ let ecdsaIsValid = try ecdsa.verifySHA256(message: message, publicKey: publicKey
 Use the `digest:` overloads for an already computed 32-byte digest; they do not hash it again.
 
 Schnorr signing defaults to `.bchDeterministic`, the Bitcoin Cash RFC 6979 variant with `Schnorr+SHA256` additional data. The deprecated `.bip340Deterministic` case preserves its historical `SHA256(privateKey || digest)` behavior for source compatibility; despite its legacy name, it does not implement BIP 340.
+
+## BIP340 Signatures
+
+`Signature.BIP340` is separate from the Bitcoin Cash `Signature.Schnorr` type. It implements BIP340 tagged hashes, 32-byte x-only verification keys with implicit even Y, and 64-byte `r || s` signatures. OpalCrypto intentionally accepts the existing 32-byte `Signature.Digest` as BIP340's message `m`; callers own prehashing and application-level domain separation.
+
+```swift
+let auxiliaryBytes = try OpalCrypto.SecureRandom.makeBytes(count: 32)
+let auxiliaryRandomness = try OpalCrypto.Signature.BIP340.AuxiliaryRandomness(
+    rawRepresentation: auxiliaryBytes
+)
+let bip340Signature = try signingKey.signBIP340(
+    digest: digest,
+    auxiliaryRandomness: auxiliaryRandomness
+)
+let bip340IsValid = bip340Signature.verify(
+    digest: digest,
+    verificationKey: signingKey.bip340VerificationKey
+)
+```
+
+The signing path uses fixed-schedule hardened scalar multiplication and scalar arithmetic, verifies the completed signature before returning it, and never exports the private scalar from `Secp256k1.SigningKey`.
+
+## Secure Random Bytes
+
+`OpalCrypto.SecureRandom.makeBytes(count:)` uses the operating system secure random generator and accepts `1...1024` bytes. That range is an OpalCrypto allocation-safety boundary, not a Mosaic or BIP340 protocol constant. Protocol-shaped outputs should immediately cross into their validating facade value, as shown for BIP340's exactly 32-byte `AuxiliaryRandomness` above.
 
 ## Pedersen Commitments
 
