@@ -10,18 +10,6 @@ enum NostrImplementationPossibility44Model {
     static let minimumEncodedPayloadByteCount = 132
     static let standardMaximumPlaintextByteCount = Int(UInt32.max)
 
-    struct MessageKeys: Sendable, Equatable {
-        let chachaKey: Data
-        let chachaNonce: Data
-        let authenticationKey: Data
-    }
-
-    struct ParsedPayload: Sendable, Equatable {
-        let nonce: Data
-        let ciphertext: Data
-        let authenticationCode: Data
-    }
-
     static func deriveConversationKey(
         sharedPointXCoordinate: Data
     ) -> Data {
