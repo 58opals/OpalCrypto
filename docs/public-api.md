@@ -13,6 +13,7 @@
 - `OpalCrypto.Communication`
 - `OpalCrypto.Numeric`
 - `OpalCrypto.SecureRandom`
+- `OpalCrypto.Nostr.NIP44`
 
 The split files in `Sources/OpalCrypto/PublicAPI` are the source of truth. This page is a compact integration guide for the breaking typed-byte facade.
 
@@ -30,6 +31,7 @@ Constrained cryptographic or protocol-shaped byte strings use facade-owned value
 - `KeyDerivation.Salt`, `KeyDerivation.DerivedKey`
 - `Encoding.FiveBitValues`
 - `Numeric.UInt256`, `Numeric.UInt512`, `Numeric.BigUnsignedInteger`
+- `Nostr.NIP44.ConversationKey`, `Nostr.NIP44.Nonce`, `Nostr.NIP44.Payload`
 
 `Secp256k1.PublicKey` and `Signature.VerificationKey` accept compressed or uncompressed SEC1 input, while `rawRepresentation` is always the canonical compressed 33-byte form. `Pedersen.CommitmentPoint` accepts either SEC1 form, but its `rawRepresentation` is the canonical uncompressed 65-byte form; use `compressedRepresentation` when a compressed point is required.
 
@@ -97,6 +99,26 @@ let bip340IsValid = bip340Signature.verify(
 ```
 
 The signing path uses fixed-schedule hardened scalar multiplication and scalar arithmetic, verifies the completed signature before returning it, and never exports the private scalar from `Secp256k1.SigningKey`.
+
+## NIP-44 Version 2
+
+`Nostr.NIP44` implements the version 2 encrypted-payload construction: the unhashed secp256k1 shared-point x-coordinate, HKDF with SHA-256, NIP-44 padding, RFC 8439 ChaCha20 with counter zero, HMAC-SHA256 authentication, and canonical padded base64. It does not define Nostr event kinds, relay behavior, fixed outer protocol sizes, anonymous transport, or a messaging protocol.
+
+```swift
+let recipientKey = try OpalCrypto.Secp256k1.PrivateKey.generate()
+    .makeSigningKey()
+let conversationKey = OpalCrypto.Nostr.NIP44.deriveConversationKey(
+    signingKey: signingKey,
+    publicKey: recipientKey.bip340VerificationKey
+)
+let payload = try OpalCrypto.Nostr.NIP44.encrypt(
+    "encrypted payload",
+    conversationKey: conversationKey,
+    maximumPlaintextByteCount: 4_096
+)
+```
+
+Every encryption call generates a 32-byte nonce unless the explicit-nonce conformance entry point is used. Callers must never reuse an explicit nonce with the same conversation key. Imported payloads and decrypt operations require caller-owned encoded-payload and plaintext limits so untrusted base64 cannot cause an unbounded allocation. Before decrypting, callers must validate the identifier, public key, and BIP340 signature of the NIP-01 event containing the payload; NIP-44 alone does not authenticate which peer sent it. `ConversationKey` and `Nonce` descriptions are redacted.
 
 ## Secure Random Bytes
 
