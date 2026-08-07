@@ -2,7 +2,7 @@
 
 Status: Developer Preview. The latest tag is `v0.2.0`. Secret-scalar operations have not completed constant-time hardening and security review; do not use this preview for production key handling.
 
-Opal Crypto is the lowest-level secp256k1 cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, BCH and BIP340 signatures, NIP-44 v2 encrypted payloads, hashing, secure random bytes, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
+Opal Crypto is the lowest-level cryptography package in the Swift stack. It exposes a strict, facade-first `OpalCrypto` namespace for keys, BCH and BIP340 signatures, bounded RSA blind signatures, NIP-44 v2 encrypted payloads, hashing, secure random bytes, encoding, derivation, and numeric helpers without leaking implementation details into downstream code.
 
 ## Audience
 
@@ -58,6 +58,7 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 ## Key Capabilities
 
 - `Signature`: typed ECDSA, Bitcoin Cash Schnorr, and BIP340 signatures; 32-byte digests; SEC1 and x-only verification keys; facade-owned formats; nonce policies; and immutable BCH Schnorr verification batches.
+- `RSABSSA`: RFC 9474 randomized RSA blind-signature preparation, blind signing, finalization, and verification for one strict RSA-2048/SHA-384/PSS profile, with opaque nonpersistent signing keys and RFC 9578-style public-key encoding.
 - `Secp256k1`: typed private keys, public keys, scalars, legacy shared-secret digests, hardened shared-point x-coordinate derivation, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
 - `SecureRandom`: operating-system secure random bytes behind an explicit `1...1024` allocation-safety boundary. This bound is an OpalCrypto resource limit, not a protocol constant.
 - `Nostr.NIP44`: NIP-44 v2 conversation-key derivation, ChaCha20 encryption, HMAC-SHA256 authentication, standard padding, and canonical base64 payloads with explicit caller-owned resource limits.
@@ -73,7 +74,7 @@ See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 
 ## Boundaries
 
-- In scope: facade-first cryptography for BCH operations, genuine BIP340 signatures over typed 32-byte digests, NIP-44 v2 encrypted payloads, secp256k1 keys, hashing, bounded secure randomness, encoding, key derivation, and numeric primitives.
+- In scope: facade-first cryptography for BCH operations, genuine BIP340 signatures over typed 32-byte digests, bounded RFC 9474 RSA blind signatures, NIP-44 v2 encrypted payloads, secp256k1 keys, hashing, bounded secure randomness, encoding, key derivation, and numeric primitives.
 - Out of scope: wallet or app-domain orchestration, address management, RPA scan policy, mailbox routing, Nostr event kinds or codecs, network or protocol/runtime responsibilities, non-Swift expansion, or reliance on internal implementation details as public API. Higher-level packages own their protocol construction; Opal Crypto only supplies the cryptographic computation primitives they need.
 
 See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal qualification boundary.
@@ -110,7 +111,7 @@ Current benchmark smoke command:
 swift run -c release OpalCryptoBenchmarks -- --suite smoke
 ```
 
-Correctness result: Passed on 2026-07-30 with 332 tests in 42 suites under both the normal and opt-in performance configurations.
+Correctness result: Passed on 2026-08-08 with 368 tests in 50 suites under the normal configuration.
 
 ## Further Context
 

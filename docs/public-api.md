@@ -10,6 +10,7 @@
 - `OpalCrypto.KeyDerivation`
 - `OpalCrypto.Pedersen`
 - `OpalCrypto.BlindSignature`
+- `OpalCrypto.RSABSSA`
 - `OpalCrypto.Communication`
 - `OpalCrypto.Numeric`
 - `OpalCrypto.SecureRandom`
@@ -32,6 +33,7 @@ Constrained cryptographic or protocol-shaped byte strings use facade-owned value
 - `Encoding.FiveBitValues`
 - `Numeric.UInt256`, `Numeric.UInt512`, `Numeric.BigUnsignedInteger`
 - `Nostr.NIP44.ConversationKey`, `Nostr.NIP44.Nonce`, `Nostr.NIP44.Payload`
+- `RSABSSA.MessageRandomizer`, `RSABSSA.BlindedMessage`, `RSABSSA.BlindSignature`, `RSABSSA.Signature`, `RSABSSA.VerificationKey`
 
 `Secp256k1.PublicKey` and `Signature.VerificationKey` accept compressed or uncompressed SEC1 input, while `rawRepresentation` is always the canonical compressed 33-byte form. `Pedersen.CommitmentPoint` accepts either SEC1 form, but its `rawRepresentation` is the canonical uncompressed 65-byte form; use `compressedRepresentation` when a compressed point is required.
 
@@ -133,6 +135,30 @@ Create `Pedersen.Setup` with `try OpalCrypto.Pedersen.Setup()`. The setup uses t
 `BlindSignature.Signer` owns exactly one nonce. Call `signOnce(privateKey:requestScalar:)` to make nonce consumption explicit. Every alias of the actor shares that state, and any signing attempt after the first successful response throws `BlindSignature.Error.nonceAlreadyUsed`.
 
 `BlindSignature.Request.finalize(responseScalar:)` verifies the completed signature. When verification is deliberately handled elsewhere, call the explicitly named `finalizeWithoutVerification(responseScalar:)`; structural signature validation still applies.
+
+## RSA Blind Signatures
+
+`RSABSSA` implements the randomized RFC 9474 flow for one strict profile: RSA-2048, exponent 65,537, SHA-384, MGF1-SHA384, a 48-byte PSS salt, and a 32-byte randomized message prefix. `SigningKey.generate()` creates an opaque, nonpersistent key that must be scoped to one higher-level protocol attempt and never reused for another protocol or parameter set. Its verification key uses the explicit RSA-PSS SubjectPublicKeyInfo form described by RFC 9578, and `keyIdentifier` is SHA-256 of that canonical DER document.
+
+```swift
+let signingKey = try OpalCrypto.RSABSSA.SigningKey.generate()
+let request = try OpalCrypto.RSABSSA.makeBlindRequest(
+    message: message,
+    using: signingKey.verificationKey
+)
+let blindSignature = try signingKey.blindSign(request.blindedMessage)
+let signature = try request.finalize(
+    blindSignature,
+    using: signingKey.verificationKey
+)
+let isValid = signature.verify(
+    message: message,
+    messageRandomizer: request.messageRandomizer,
+    using: signingKey.verificationKey
+)
+```
+
+Only `request.blindedMessage` crosses to the signer. Keep the `BlindRequest` local until finalization because it contains the hidden inverse. The implementation uses the operating-system random generator, serializes Security.framework key operations, checks the raw RSA signing result before returning it, and verifies every finalized PSS signature. Its conformance suite includes the published RFC 9474 randomized SHA-384/PSS vector. This developer-preview implementation has not completed independent cryptographic review and is not a production-readiness claim.
 
 ## Schnorr Verification Batches
 
