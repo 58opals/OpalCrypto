@@ -125,6 +125,47 @@ struct PublicAPIRSABSSAOperationValidator {
         )
     }
 
+    @Test(
+        "Complete one maximum-size Mosaic authorization batch",
+        .timeLimit(.minutes(2))
+    )
+    func completeMaximumMosaicAuthorizationBatch() throws {
+        let signingKey = try RSABSSA.SigningKey.generate()
+
+        for index in 0 ..< 184 {
+            let message = Data([
+                UInt8(truncatingIfNeeded: index >> 8),
+                UInt8(truncatingIfNeeded: index),
+            ])
+            let request = try RSABSSA.makeBlindRequest(
+                message: message,
+                using: signingKey.verificationKey
+            )
+            let blindSignature: RSABSSA.BlindSignature
+            do {
+                blindSignature = try signingKey.blindSign(
+                    request.blindedMessage
+                )
+            } catch {
+                Issue.record(
+                    "Blind signing failed at batch member \(index): \(error)"
+                )
+                throw error
+            }
+            let signature = try request.finalize(
+                blindSignature,
+                using: signingKey.verificationKey
+            )
+            #expect(
+                signature.verify(
+                    message: message,
+                    messageRandomizer: request.messageRandomizer,
+                    using: signingKey.verificationKey
+                )
+            )
+        }
+    }
+
     @Test("Bind finalization to the request verification key")
     func bindFinalizationToVerificationKey() throws {
         let signingKey = try RSABSSA.SigningKey.generate()

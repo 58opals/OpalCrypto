@@ -115,10 +115,6 @@ internal struct RSABSSAVerificationKeyModel: Sendable {
             ) && SecKeyIsAlgorithmSupported(
                 key,
                 .verify,
-                .rsaSignatureRaw
-            ) && SecKeyIsAlgorithmSupported(
-                key,
-                .verify,
                 .rsaSignatureMessagePSSSHA384
             )
         }) else {
@@ -171,8 +167,8 @@ internal struct RSABSSASigningKeyModel: Sendable {
                 == OpalCrypto.RSABSSA.Variant.sha384PSSRandomized.modulusByteCount,
                   SecKeyIsAlgorithmSupported(
                     key,
-                    .sign,
-                    .rsaSignatureRaw
+                    .decrypt,
+                    .rsaEncryptionRaw
                   ) else {
                 return nil
             }

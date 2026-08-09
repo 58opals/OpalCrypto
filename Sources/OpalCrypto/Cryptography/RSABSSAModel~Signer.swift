@@ -17,11 +17,14 @@ extension RSABSSAModel {
             throw OpalCrypto.RSABSSA.Error.messageRepresentativeOutOfRange
         }
 
+        // RFC 9474 BlindSign is the raw RSA private operation over a blinded,
+        // already encoded representative. Security's raw encryption primitive
+        // exposes that exact operation without imposing signature formatting.
         guard let signature = signingKey.securityKey.perform({ key in
             var platformError: Unmanaged<CFError>?
-            return SecKeyCreateSignature(
+            return SecKeyCreateDecryptedData(
                 key,
-                .rsaSignatureRaw,
+                .rsaEncryptionRaw,
                 blindedMessage as CFData,
                 &platformError
             ) as Data?
@@ -29,16 +32,16 @@ extension RSABSSAModel {
             throw OpalCrypto.RSABSSA.Error.signingFailed
         }
 
-        guard verificationKey.securityKey.perform({ key in
+        guard let recoveredMessage = verificationKey.securityKey.perform({ key in
             var platformError: Unmanaged<CFError>?
-            return SecKeyVerifySignature(
+            return SecKeyCreateEncryptedData(
                 key,
-                .rsaSignatureRaw,
-                blindedMessage as CFData,
+                .rsaEncryptionRaw,
                 signature as CFData,
                 &platformError
-            )
-        }) else {
+            ) as Data?
+        }), recoveredMessage.count == verificationKey.modulusByteCount,
+            recoveredMessage == blindedMessage else {
             throw OpalCrypto.RSABSSA.Error.signingFailed
         }
         return signature
