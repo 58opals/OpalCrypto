@@ -126,43 +126,53 @@ struct PublicAPIRSABSSAOperationValidator {
     }
 
     @Test(
-        "Complete one maximum-size Mosaic authorization batch",
-        .timeLimit(.minutes(2))
+        "Complete two purpose-separated maximum-size Mosaic authorization batches",
+        .timeLimit(.minutes(5))
     )
     func completeMaximumMosaicAuthorizationBatch() throws {
-        let signingKey = try RSABSSA.SigningKey.generate()
+        let signingKeys = [
+            try RSABSSA.SigningKey.generate(),
+            try RSABSSA.SigningKey.generate(),
+        ]
+        #expect(
+            signingKeys[0].verificationKey.keyIdentifier
+                != signingKeys[1].verificationKey.keyIdentifier
+        )
 
-        for index in 0 ..< 184 {
-            let message = Data([
-                UInt8(truncatingIfNeeded: index >> 8),
-                UInt8(truncatingIfNeeded: index),
-            ])
-            let request = try RSABSSA.makeBlindRequest(
-                message: message,
-                using: signingKey.verificationKey
-            )
-            let blindSignature: RSABSSA.BlindSignature
-            do {
-                blindSignature = try signingKey.blindSign(
-                    request.blindedMessage
-                )
-            } catch {
-                Issue.record(
-                    "Blind signing failed at batch member \(index): \(error)"
-                )
-                throw error
-            }
-            let signature = try request.finalize(
-                blindSignature,
-                using: signingKey.verificationKey
-            )
-            #expect(
-                signature.verify(
+        for (purposeIndex, signingKey) in signingKeys.enumerated() {
+            for memberIndex in 0 ..< 184 {
+                let message = Data([
+                    UInt8(purposeIndex),
+                    UInt8(truncatingIfNeeded: memberIndex >> 8),
+                    UInt8(truncatingIfNeeded: memberIndex),
+                ])
+                let request = try RSABSSA.makeBlindRequest(
                     message: message,
-                    messageRandomizer: request.messageRandomizer,
                     using: signingKey.verificationKey
                 )
-            )
+                let blindSignature: RSABSSA.BlindSignature
+                do {
+                    blindSignature = try signingKey.blindSign(
+                        request.blindedMessage
+                    )
+                } catch {
+                    Issue.record(
+                        "Blind signing failed for purpose \(purposeIndex), member \(memberIndex): \(error)"
+                    )
+                    throw error
+                }
+                let signature = try request.finalize(
+                    blindSignature,
+                    using: signingKey.verificationKey
+                )
+                #expect(
+                    signature.verify(
+                        message: message,
+                        messageRandomizer: request.messageRandomizer,
+                        using: signingKey.verificationKey
+                    )
+                )
+            }
         }
     }
 
