@@ -20,7 +20,7 @@ extension OpalCryptoBenchmarks {
         }
 
         static func configuration() throws -> Configuration {
-            #if canImport(Metal)
+            #if canImport(Metal) && canImport(OpalCryptoMetal)
             try MetalSchnorrVerificationRuntime.instance().configuration
             #else
             throw MetalVerificationProbeError.unavailable
@@ -32,7 +32,7 @@ extension OpalCryptoBenchmarks {
             count: Int,
             threadgroupWidth: Int? = nil
         ) throws -> Int {
-            #if canImport(Metal)
+            #if canImport(Metal) && canImport(OpalCryptoMetal)
             let preparationStart = DispatchTime.now().uptimeNanoseconds
             let recordWords = makeRecordWords(input: input, count: count)
             let packedDigits = makePackedDigits(input: input, count: count)
@@ -57,7 +57,7 @@ extension OpalCryptoBenchmarks {
             threadgroupWidth: Int? = nil,
             cpuPreparationNanoseconds: UInt64 = 0
         ) throws -> Int {
-            #if canImport(Metal)
+            #if canImport(Metal) && canImport(OpalCryptoMetal)
             try MetalSchnorrVerificationRuntime.instance().run(
                 recordWords: batchInput.signatureXWords,
                 packedDigits: batchInput.windowedNonAdjacentFormDigits,
@@ -77,7 +77,7 @@ extension OpalCryptoBenchmarks {
             threadgroupWidth: Int? = nil,
             cpuPreparationNanoseconds: UInt64 = 0
         ) throws -> Int {
-            #if canImport(Metal)
+            #if canImport(Metal) && canImport(OpalCryptoMetal)
             try MetalSchnorrVerificationRuntime.instance().run(
                 varyingKeyRecordWords: varyingKeyBatchInput.signatureXWords,
                 packedDigits: varyingKeyBatchInput.windowedNonAdjacentFormDigits,
@@ -98,7 +98,7 @@ extension OpalCryptoBenchmarks {
         static func validateFieldOperations(
             _ cases: [MetalFieldValidationBenchmarkCase]
         ) throws -> Int {
-            #if canImport(Metal)
+            #if canImport(Metal) && canImport(OpalCryptoMetal)
             try MetalSchnorrVerificationRuntime.instance().validateFieldOperations(cases)
             #else
             throw MetalVerificationProbeError.unavailable

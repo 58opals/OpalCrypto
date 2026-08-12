@@ -86,10 +86,12 @@ extension OpalCrypto.Secp256k1 {
             noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy = .rfc6979
         ) throws -> OpalCrypto.Signature.ECDSA {
             try OpalCrypto.Signature.ECDSA.sign(
-                message: message,
-                parsedPrivateKeyModel: parsedPrivateKeyModel,
+                digestData32Bytes: SecureHashAlgorithm256Model.hash(message),
+                privateKeyScalar: parsedPrivateKeyModel.scalar,
                 format: format,
-                noncePolicy: noncePolicy
+                noncePolicy: noncePolicy,
+                privateKeyByteCount: Self.privateKeyByteCount,
+                payloadLengthField: OpalDiagnostics.Field.messageLengthField(message.count)
             )
         }
 
@@ -100,10 +102,15 @@ extension OpalCrypto.Secp256k1 {
             noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy = .rfc6979
         ) throws -> OpalCrypto.Signature.ECDSA {
             try OpalCrypto.Signature.ECDSA.sign(
-                digest: digest,
-                parsedPrivateKeyModel: parsedPrivateKeyModel,
+                digestData32Bytes: digest.rawRepresentation,
+                privateKeyScalar: parsedPrivateKeyModel.scalar,
                 format: format,
-                noncePolicy: noncePolicy
+                noncePolicy: noncePolicy,
+                privateKeyByteCount: Self.privateKeyByteCount,
+                payloadLengthField: OpalDiagnostics.Field.publicField(
+                    "digest_byte_count",
+                    digest.rawRepresentation.count
+                )
             )
         }
 

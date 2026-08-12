@@ -63,7 +63,13 @@ let package = Package(
         ),
         .executableTarget(
             name: "OpalCryptoBenchmarks",
-            dependencies: ["OpalCrypto"]
+            dependencies: [
+                "OpalCrypto",
+                .target(
+                    name: "OpalCryptoMetal",
+                    condition: .when(platforms: [.macOS, .iOS, .tvOS, .visionOS])
+                )
+            ]
         ),
         .testTarget(
             name: "OpalCryptoTests",

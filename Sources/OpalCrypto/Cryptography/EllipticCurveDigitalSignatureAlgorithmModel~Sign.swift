@@ -70,31 +70,6 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         }
     }
 
-    internal static func sign(
-        message: Data,
-        with parsedPrivateKeyModel: ParsedPrivateKeyModel,
-        in format: SignatureFormat,
-        nonceFunction: NonceGenerationPolicy = .requestForComments6979BitcoinCashDefault
-    ) throws -> Data {
-        switch format {
-        case .ecdsa(let ecdsaFormat):
-            let digestData32Bytes = SecureHashAlgorithm256Model.hash(message)
-            return try signEllipticCurveDigitalSignatureAlgorithm(
-                digestData32Bytes: digestData32Bytes,
-                privateKeyScalar: parsedPrivateKeyModel.scalar,
-                format: ecdsaFormat,
-                nonce: makeEcdsaNonce(from: nonceFunction)
-            )
-        case .schnorr:
-            guard message.count == 32 else { throw Error.invalidDigestLength(expected: 32, actual: message.count) }
-            let signature = try SchnorrSignatureModel.sign(
-                digestData32Bytes: message,
-                parsedPrivateKeyModel: parsedPrivateKeyModel,
-                nonce: nonceFunction
-            )
-            return signature.raw64ByteSignatureData
-        }
-    }
 }
 
 private extension EllipticCurveDigitalSignatureAlgorithmModel {
@@ -107,25 +82,6 @@ private extension EllipticCurveDigitalSignatureAlgorithmModel {
         let ecdsaSignature = try StandardsForEfficientCryptography256k1CurveModel.sign(
             digestData32Bytes: digestData32Bytes,
             privateKeyData32Bytes: privateKeyData32Bytes,
-            nonce: nonce
-        )
-        switch format {
-        case .raw:
-            return ecdsaSignature.raw64ByteSignatureData
-        case .distinguishedEncodingRules:
-            return try ecdsaSignature.encodeDistinguishedEncodingRules()
-        }
-    }
-
-    static func signEllipticCurveDigitalSignatureAlgorithm(
-        digestData32Bytes: Data,
-        privateKeyScalar: ScalarModel,
-        format: SignatureFormat.EllipticCurveDigitalSignatureAlgorithm,
-        nonce: NonceGenerationPolicy.EllipticCurveDigitalSignatureAlgorithmModel
-    ) throws -> Data {
-        let ecdsaSignature = try StandardsForEfficientCryptography256k1CurveModel.sign(
-            digestData32Bytes: digestData32Bytes,
-            privateKeyScalar: privateKeyScalar,
             nonce: nonce
         )
         switch format {

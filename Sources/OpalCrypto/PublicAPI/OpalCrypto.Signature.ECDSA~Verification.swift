@@ -47,49 +47,11 @@ extension OpalCrypto.Signature.ECDSA {
         message: Data,
         verificationKey: OpalCrypto.Signature.VerificationKey
     ) throws -> Bool {
-        let fields = verifyFields(
+        try verify(
+            digestData32Bytes: SecureHashAlgorithm256Model.hash(message),
             payloadLengthField: OpalDiagnostics.Field.messageLengthField(message.count),
             verificationKey: verificationKey
         )
-        OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-            event: OpalDiagnostics.Event.ecdsaVerifyBegin,
-            level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyBegin),
-            fields: fields
-        )
-        do {
-            let digestData32Bytes = SecureHashAlgorithm256Model.hash(message)
-            let result = try StandardsForEfficientCryptography256k1CurveModel.verify(
-                signature: signatureModel,
-                digestData32Bytes: digestData32Bytes,
-                verificationKeyModel: verificationKey.verificationKeyModel
-            )
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-                event: result
-                    ? OpalDiagnostics.Event.ecdsaVerifySucceeded
-                    : OpalDiagnostics.Event.ecdsaVerifyFailed,
-                level: .opalCryptoDefault(for: result
-                    ? OpalDiagnostics.Event.ecdsaVerifySucceeded
-                    : OpalDiagnostics.Event.ecdsaVerifyFailed),
-                fields: fields + [OpalDiagnostics.Field.resultField(result)]
-            )
-            return result
-        } catch {
-            if OpalCrypto.Signature.isInvalidVerificationSignatureError(error) {
-                OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-                    event: OpalDiagnostics.Event.ecdsaVerifyFailed,
-                    level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyFailed),
-                    fields: fields + [OpalDiagnostics.Field.resultField(false)]
-                )
-                return false
-            }
-            let mappedError = OpalCrypto.Signature.mapCryptographyError(error)
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-                event: OpalDiagnostics.Event.ecdsaVerifyFailed,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaVerifyFailed),
-                fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-            )
-            throw mappedError
-        }
     }
 
     /// Verifies this ECDSA signature against an already computed 32-byte digest.
@@ -109,11 +71,23 @@ extension OpalCrypto.Signature.ECDSA {
         digest: OpalCrypto.Signature.Digest,
         verificationKey: OpalCrypto.Signature.VerificationKey
     ) throws -> Bool {
-        let fields = verifyFields(
+        try verify(
+            digestData32Bytes: digest.rawRepresentation,
             payloadLengthField: OpalDiagnostics.Field.publicField(
                 "digest_byte_count",
                 digest.rawRepresentation.count
             ),
+            verificationKey: verificationKey
+        )
+    }
+
+    private func verify(
+        digestData32Bytes: Data,
+        payloadLengthField: OpalDiagnostics.Field,
+        verificationKey: OpalCrypto.Signature.VerificationKey
+    ) throws -> Bool {
+        let fields = verifyFields(
+            payloadLengthField: payloadLengthField,
             verificationKey: verificationKey
         )
         OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
@@ -124,7 +98,7 @@ extension OpalCrypto.Signature.ECDSA {
         do {
             let result = try StandardsForEfficientCryptography256k1CurveModel.verify(
                 signature: signatureModel,
-                digestData32Bytes: digest.rawRepresentation,
+                digestData32Bytes: digestData32Bytes,
                 verificationKeyModel: verificationKey.verificationKeyModel
             )
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(

@@ -1,6 +1,6 @@
 # Metal Readiness
 
-This document records the July 11, 2026 Apple Silicon Metal performance spike for public Schnorr verification and its production qualification. The benchmark kernel and packaged production path passed their cached-key and varying-key evidence gates on the available M1 Max. The Swift CPU verifier remains the correctness source and portable fallback. Automatic Metal selection is qualified only for the exact M1 Max profile recorded below.
+This document records the July 11, 2026 Apple Silicon Metal performance spike for public Schnorr verification and its production qualification. The benchmark host and packaged production path passed their cached-key and varying-key evidence gates on the available M1 Max; both now load the same packaged shader library. The Swift CPU verifier remains the correctness source and portable fallback. Automatic Metal selection is qualified only for the exact M1 Max profile recorded below.
 
 ## Current Decision
 
@@ -38,7 +38,7 @@ The requested 512-thread candidate exceeded the pipeline's valid maximum and was
 
 ## Implementation Under Test
 
-The optimized benchmark kernel uses fixed eight-limb, 32-bit Comba multiplication; bounded secp256k1 pseudo-Mersenne reduction; symmetry-specialized squaring; and a fixed addition chain for the `(p + 1) / 4` quadratic-residue exponent. The implementation was derived independently; no code was copied from UltrafastSecp256k1.
+The optimized packaged shader uses fixed eight-limb, 32-bit Comba multiplication; bounded secp256k1 pseudo-Mersenne reduction; symmetry-specialized squaring; and a fixed addition chain for the `(p + 1) / 4` quadratic-residue exponent. The implementation was derived independently; no code was copied from UltrafastSecp256k1.
 
 CPU-prepared signed WNAF digits use component/index-major `Int8` structure-of-arrays storage so adjacent GPU threads read adjacent records. Cached generator/key tables are immutable uploads. Varying-key verification uses width-3 key WNAF, shares one generator table, and stores per-record public-key tables slot-major. Preparation batches affine conversion across each parallel chunk and derives the endomorphism table from the converted base table. Shared Metal buffers grow to bounded capacities and are reused across warm dispatches.
 
@@ -52,7 +52,7 @@ For `.automatic`, a non-cancellation Metal failure discards every GPU result and
 
 Production diagnostics emit only aggregate policy, backend, input-shape, count, timing, and stable failure-reason fields. Stable Metal reasons are `metal_unavailable`, `metal_resource_missing`, `metal_pipeline_initialization_failed`, `metal_allocation_failed`, `metal_command_failed`, and `metal_invalid_output`. Signatures, digests, public keys, device names, driver strings, record indices, and per-record results are never diagnostic fields. A mixed valid/invalid batch is a successful operation, not a backend failure.
 
-The production qualification is **passed for the exact recorded M1 Max profile**. Benchmark-kernel evidence alone did not enable routing; the separate public production-API gate below did.
+The production qualification is **passed for the exact recorded M1 Max profile**. Benchmark-host evidence alone did not enable routing; the separate public production-API gate below did.
 
 ## Commands
 
@@ -97,7 +97,7 @@ for run in 1 2 3 4 5; do
 done
 ```
 
-Every production process must pass the same per-shape gate: Metal at least 2x CPU end-to-end throughput at 8,192 records and no slower than CPU at 4,096, with exact ordered result parity. Any mismatch, command failure, unexpected forced-Metal fallback, unbounded allocation, or regression against the retained kernel fails qualification. All five recorded processes passed.
+Every production process must pass the same per-shape gate: Metal at least 2x CPU end-to-end throughput at 8,192 records and no slower than CPU at 4,096, with exact ordered result parity. Any mismatch, command failure, unexpected forced-Metal fallback, or unbounded allocation fails qualification. The full Metal suite and `--validate-metal` own benchmark-host regression coverage. All five recorded processes passed.
 
 Signing-disabled generic Xcode builds also passed for iOS, tvOS, visionOS, and watchOS. The first three compile the conditionally linked Metal target; watchOS compiles the same public batch API through the CPU-only library graph with no `OpalCryptoMetal` dependency. These compile checks do not certify non-macOS Metal profiles; that still requires real-device correctness and performance evidence.
 

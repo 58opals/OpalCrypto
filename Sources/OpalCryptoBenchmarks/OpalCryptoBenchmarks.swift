@@ -4,7 +4,8 @@ import Darwin
 
 @main
 enum OpalCryptoBenchmarks {
-    nonisolated static func main() async {
+    @MainActor
+    static func main() async {
         do {
             try await run()
         } catch let error as BenchmarkCommandError {

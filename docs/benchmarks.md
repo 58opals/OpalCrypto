@@ -111,7 +111,7 @@ Keep JSONL and Instruments traces under `.build/opalcrypto-benchmarks/`. They ar
 
 ## Production Schnorr Batch Qualification
 
-The public `OpalCrypto.Signature.Schnorr.VerificationBatch` API and its multicore Swift backend are separate from the benchmark kernel. The packaged production path passed its five-process gate on the exact M1 Max profile recorded in [metal-readiness.md](metal-readiness.md). Prototype benchmark cases alone do not qualify `.automatic` to select Metal on any profile.
+The public `OpalCrypto.Signature.Schnorr.VerificationBatch` runtime and its multicore Swift backend remain separate from the benchmark host, but both Metal paths load the same packaged shader library. The packaged production path passed its five-process gate on the exact M1 Max profile recorded in [metal-readiness.md](metal-readiness.md). Benchmark cases alone do not qualify `.automatic` to select Metal on any profile.
 
 Run the focused API, CPU-operation, and aggregate-diagnostics checks first:
 
@@ -129,7 +129,7 @@ for run in 1 2 3 4 5; do
 done
 ```
 
-Every process must show, for both input shapes, at least 2x CPU/Metal end-to-end throughput at 8,192 records and Metal no slower than CPU at 4,096. The run also fails qualification on any CPU/Metal result mismatch, command failure, fallback during forced `.metal`, unbounded allocation, or regression against the retained benchmark kernel. All five July 11, 2026 production-path processes passed on macOS with the exact `Apple M1 Max` device name and Apple GPU family 7. That profile is qualified; all other profiles remain unqualified.
+Every process must show, for both input shapes, at least 2x CPU/Metal end-to-end throughput at 8,192 records and Metal no slower than CPU at 4,096. The run also fails qualification on any CPU/Metal result mismatch, command failure, fallback during forced `.metal`, or unbounded allocation. Host regression coverage belongs to the full Metal suite and `--validate-metal`. All five July 11, 2026 production-path processes passed on macOS with the exact `Apple M1 Max` device name and Apple GPU family 7. That profile is qualified; all other profiles remain unqualified.
 
 The exclusive `--validate-metal` run is still required for arithmetic, shader, and generated-corpus differential coverage. It complements rather than replaces the production-API gate. Neither gate authorizes a README claim or a general Apple Silicon performance claim; [metal-readiness.md](metal-readiness.md) records the narrow evidence and release decision.
 

@@ -38,45 +38,14 @@ extension OpalCrypto.Signature.ECDSA {
         format: OpalCrypto.Signature.ECDSAFormat = .der,
         noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy = .rfc6979
     ) throws -> OpalCrypto.Signature.ECDSA {
-        let fields = signFields(
+        try sign(
+            digestData32Bytes: SecureHashAlgorithm256Model.hash(message),
+            privateKeyScalar: privateKey.scalarModel,
             format: format,
             noncePolicy: noncePolicy,
             privateKeyByteCount: privateKey.rawRepresentation.count,
             payloadLengthField: OpalDiagnostics.Field.messageLengthField(message.count)
         )
-        OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-            event: OpalDiagnostics.Event.ecdsaSignBegin,
-            level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaSignBegin),
-            fields: fields
-        )
-        do {
-            let digestData32Bytes = SecureHashAlgorithm256Model.hash(message)
-            let signatureModel = try StandardsForEfficientCryptography256k1CurveModel.sign(
-                digestData32Bytes: digestData32Bytes,
-                privateKeyScalar: privateKey.scalarModel,
-                nonce: noncePolicy.internalECDSANoncePolicy
-            )
-            let signature = try OpalCrypto.Signature.ECDSA(
-                signatureModel: signatureModel,
-                format: format
-            )
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-                event: OpalDiagnostics.Event.ecdsaSignSucceeded,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaSignSucceeded),
-                fields: fields + [
-                    OpalDiagnostics.Field.signatureLengthField(signature.rawRepresentation.count)
-                ]
-            )
-            return signature
-        } catch {
-            let mappedError = OpalCrypto.Signature.mapDiagnosticsError(error)
-            OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
-                event: OpalDiagnostics.Event.ecdsaSignFailed,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.ecdsaSignFailed),
-                fields: fields + OpalDiagnostics.Field.errorFields(mappedError)
-            )
-            throw mappedError
-        }
     }
 
     /// Signs an already computed 32-byte digest without hashing it again.
@@ -86,7 +55,9 @@ extension OpalCrypto.Signature.ECDSA {
         format: OpalCrypto.Signature.ECDSAFormat = .der,
         noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy = .rfc6979
     ) throws -> OpalCrypto.Signature.ECDSA {
-        let fields = signFields(
+        try sign(
+            digestData32Bytes: digest.rawRepresentation,
+            privateKeyScalar: privateKey.scalarModel,
             format: format,
             noncePolicy: noncePolicy,
             privateKeyByteCount: privateKey.rawRepresentation.count,
@@ -94,6 +65,22 @@ extension OpalCrypto.Signature.ECDSA {
                 "digest_byte_count",
                 digest.rawRepresentation.count
             )
+        )
+    }
+
+    internal static func sign(
+        digestData32Bytes: Data,
+        privateKeyScalar: ScalarModel,
+        format: OpalCrypto.Signature.ECDSAFormat,
+        noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy,
+        privateKeyByteCount: Int,
+        payloadLengthField: OpalDiagnostics.Field
+    ) throws -> OpalCrypto.Signature.ECDSA {
+        let fields = signFields(
+            format: format,
+            noncePolicy: noncePolicy,
+            privateKeyByteCount: privateKeyByteCount,
+            payloadLengthField: payloadLengthField
         )
         OpalDiagnostics.logger(category: OpalDiagnostics.Category.signature).record(
             event: OpalDiagnostics.Event.ecdsaSignBegin,
@@ -103,8 +90,8 @@ extension OpalCrypto.Signature.ECDSA {
         do {
             let signatureModel = try StandardsForEfficientCryptography256k1CurveModel
                 .sign(
-                    digestData32Bytes: digest.rawRepresentation,
-                    privateKeyScalar: privateKey.scalarModel,
+                    digestData32Bytes: digestData32Bytes,
+                    privateKeyScalar: privateKeyScalar,
                     nonce: noncePolicy.internalECDSANoncePolicy
                 )
             let signature = try OpalCrypto.Signature.ECDSA(signatureModel: signatureModel, format: format)
@@ -127,4 +114,19 @@ extension OpalCrypto.Signature.ECDSA {
         }
     }
 
+    private static func signFields(
+        format: OpalCrypto.Signature.ECDSAFormat,
+        noncePolicy: OpalCrypto.Signature.ECDSANoncePolicy,
+        privateKeyByteCount: Int,
+        payloadLengthField: OpalDiagnostics.Field
+    ) -> [OpalDiagnostics.Field] {
+        [
+            OpalDiagnostics.Field.operationField("sign"),
+            OpalDiagnostics.Field.algorithmField("ecdsa"),
+            OpalDiagnostics.Field.formatField(format.diagnosticsName),
+            OpalDiagnostics.Field.publicField("nonce_policy", noncePolicy.diagnosticsName),
+            OpalDiagnostics.Field.publicField("private_key_byte_count", privateKeyByteCount),
+            payloadLengthField
+        ]
+    }
 }

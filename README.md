@@ -77,7 +77,7 @@ See [docs/public-api.md](docs/public-api.md) for the typed public facade shape.
 - In scope: facade-first cryptography for BCH operations, genuine BIP340 signatures over typed 32-byte digests, bounded RFC 9474 RSA blind signatures, NIP-44 v2 encrypted payloads, secp256k1 keys, hashing, bounded secure randomness, encoding, key derivation, and numeric primitives.
 - Out of scope: wallet or app-domain orchestration, address management, RPA scan policy, mailbox routing, Nostr event kinds or codecs, network or protocol/runtime responsibilities, non-Swift expansion, or reliance on internal implementation details as public API. Higher-level packages own their protocol construction; Opal Crypto only supplies the cryptographic computation primitives they need.
 
-See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal qualification boundary.
+See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [docs/architecture-complexity-audit.md](docs/architecture-complexity-audit.md) for the current ownership map and bounded cleanup backlog, [docs/performance-roadmap.md](docs/performance-roadmap.md) for the CPU-to-Metal optimization stages, and [docs/metal-readiness.md](docs/metal-readiness.md) for the current Metal qualification boundary.
 
 ## Testing
 
@@ -96,22 +96,6 @@ See [docs/benchmarks.md](docs/benchmarks.md) for benchmark suites, JSONL artifac
 ## License
 
 Opal Crypto is available under the [Apache License 2.0](LICENSE). Copyright 2026 58 Opals.
-
-## Validation
-
-Current correctness validation command:
-
-```bash
-swift test
-```
-
-Current benchmark smoke command:
-
-```bash
-swift run -c release OpalCryptoBenchmarks -- --suite smoke
-```
-
-Correctness result: Passed on 2026-08-08 with 368 tests in 50 suites under the normal configuration.
 
 ## Further Context
 
