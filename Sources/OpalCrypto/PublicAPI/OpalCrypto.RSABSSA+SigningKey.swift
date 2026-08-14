@@ -1,5 +1,7 @@
 // OpalCrypto.RSABSSA+SigningKey.swift
 
+import Security
+
 extension OpalCrypto.RSABSSA {
     /// An opaque RSA-2048 capability for one RSABSSA attempt.
     ///
@@ -14,6 +16,24 @@ extension OpalCrypto.RSABSSA {
         /// Generates a fresh, nonpersistent RSA-2048 signing key.
         public static func generate() throws -> Self {
             Self(model: try RSABSSASigningKeyModel.generate())
+        }
+
+        /// Restores an app-owned RSA signing capability for the exact
+        /// verification key published by an existing Mosaic attempt.
+        ///
+        /// The private key remains inside `SecKey`; this initializer neither
+        /// exports private material nor generates replacement material.
+        @_spi(MosaicPrivateAlpha)
+        public init(
+            restoring securityKey: SecKey,
+            matching expectedVerificationKey: VerificationKey
+        ) throws {
+            let model = try RSABSSASigningKeyModel(privateKey: securityKey)
+            guard model.verificationKey.subjectPublicKeyInfo
+                == expectedVerificationKey.subjectPublicKeyInfo else {
+                throw Error.verificationKeyMismatch
+            }
+            self.init(model: model)
         }
 
         /// Performs RFC 9474 BlindSign and verifies the raw RSA result as a

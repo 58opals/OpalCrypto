@@ -163,7 +163,13 @@ internal struct RSABSSASigningKeyModel: Sendable {
     internal init(privateKey: SecKey) throws {
         let securityKey = RSABSSASecurityKey(privateKey)
         guard let publicKey = securityKey.perform({ key -> SecKey? in
-            guard SecKeyGetBlockSize(key)
+            guard let attributes = SecKeyCopyAttributes(key)
+                    as? [CFString: Any],
+                  attributes[kSecAttrKeyType] as? String
+                    == kSecAttrKeyTypeRSA as String,
+                  attributes[kSecAttrKeyClass] as? String
+                    == kSecAttrKeyClassPrivate as String,
+                  SecKeyGetBlockSize(key)
                 == OpalCrypto.RSABSSA.Variant.sha384PSSRandomized.modulusByteCount,
                   SecKeyIsAlgorithmSupported(
                     key,
