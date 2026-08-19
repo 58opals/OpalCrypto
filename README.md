@@ -10,27 +10,35 @@ Use Opal Crypto when you are building or testing Swift software that needs typed
 
 ## Requirements
 
-- Swift tools version: `6.2`
+- Swift tools version: `6.4`
 - Platforms:
   - `macOS 26`
   - `iOS 26`
   - `watchOS 26`
   - `tvOS 26`
   - `visionOS 26`
+- Xcode's Metal Toolchain component. Install and verify it with:
+
+  ```sh
+  xcodebuild -downloadComponent MetalToolchain
+  metal_path="$(/usr/bin/xcrun --toolchain MetalToolchain --find metal)"
+  test -x "$metal_path"
+  test -x "$(dirname "$metal_path")/metallib"
+  ```
 
 ## Installation
 
-The current public facade surface is available from the `v0.2.0` release.
+Use the public `develop` branch for the current Swift 6.4 package stack:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", from: "0.2.0")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "develop")
 ]
 ```
 
 Then add `"OpalCrypto"` to the target dependency list where you need it.
 
-The `v0.2.0` release uses the stable `OpalDiagnostics` `v0.2.0` release, restoring version-based package installation. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement.
+The published `v0.2.0` release remains available to version-based consumers and uses the stable `OpalDiagnostics` `v0.2.0` release. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement. The current `develop` manifest instead follows `OpalDiagnostics` on `develop`; no new SemVer tag is implied.
 
 ## Quick Start
 

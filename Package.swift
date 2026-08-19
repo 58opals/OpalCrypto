@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 
 import PackageDescription
 
@@ -22,7 +22,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/58opals/OpalDiagnostics.git", from: "0.2.0")
+        .package(url: "https://github.com/58opals/OpalDiagnostics.git", branch: "develop")
     ],
     targets: [
         .target(
@@ -53,6 +53,10 @@ let package = Package(
         .executableTarget(
             name: "MetalLibraryCompilerTool",
             path: "Tools/MetalLibraryCompilerTool"
+        ),
+        .testTarget(
+            name: "MetalLibraryCompilerToolTests",
+            dependencies: ["MetalLibraryCompilerTool"]
         ),
         .plugin(
             name: "MetalLibraryBuildPlugin",

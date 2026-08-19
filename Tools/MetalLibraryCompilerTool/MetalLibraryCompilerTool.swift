@@ -14,10 +14,10 @@ struct MetalLibraryCompilerTool {
         let moduleCache = URL(fileURLWithPath: arguments[3], isDirectory: true)
         let providedMetalCompiler = URL(fileURLWithPath: arguments[4])
         let providedMetalLibraryCompiler = URL(fileURLWithPath: arguments[5])
-        let metalCompiler = mountedMetalCompiler() ?? providedMetalCompiler
-        let metalLibraryCompiler = metalCompiler == providedMetalCompiler
-            ? providedMetalLibraryCompiler
-            : metalCompiler.deletingLastPathComponent().appendingPathComponent("metallib")
+        let toolchain = try MetalToolchainResolver().resolve(
+            pluginMetalCompiler: providedMetalCompiler,
+            pluginMetalLibraryCompiler: providedMetalLibraryCompiler
+        )
         let workDirectory = output.deletingLastPathComponent()
         let airOutput = workDirectory.appendingPathComponent(
             "OpalCryptoSchnorrBatchVerification.air"
@@ -42,32 +42,12 @@ struct MetalLibraryCompilerTool {
            !systemRoot.isEmpty {
             compileArguments.append(contentsOf: ["-isysroot", systemRoot])
         }
-        try run(metalCompiler, arguments: compileArguments)
+        try run(toolchain.metalCompiler, arguments: compileArguments)
         defer { try? FileManager.default.removeItem(at: airOutput) }
         try run(
-            metalLibraryCompiler,
+            toolchain.metalLibraryCompiler,
             arguments: [airOutput.path, "-o", output.path]
         )
-    }
-
-    private static func mountedMetalCompiler() -> URL? {
-        let mountRoot = URL(
-            fileURLWithPath: "/var/run/com.apple.security.cryptexd/mnt",
-            isDirectory: true
-        )
-        guard let entries = try? FileManager.default.contentsOfDirectory(
-            at: mountRoot,
-            includingPropertiesForKeys: nil
-        ) else {
-            return nil
-        }
-        return entries
-            .filter { $0.lastPathComponent.hasPrefix("com.apple.MobileAsset.MetalToolchain-") }
-            .sorted { $0.lastPathComponent > $1.lastPathComponent }
-            .map {
-                $0.appendingPathComponent("Metal.xctoolchain/usr/bin/metal")
-            }
-            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
     }
 
     private static func run(

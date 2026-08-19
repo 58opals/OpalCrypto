@@ -13,13 +13,22 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v6
-      - name: Select Xcode
-        run: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
-      - name: Show Swift version
-        run: swift --version
+      - name: Install and verify Metal Toolchain
+        run: |
+          xcodebuild -downloadComponent MetalToolchain
+          metal_path="$(/usr/bin/xcrun --toolchain MetalToolchain --find metal)"
+          if ! metallib_path="$(/usr/bin/xcrun --toolchain MetalToolchain --find metallib 2>/dev/null)"; then
+            metallib_path="$(dirname "$metal_path")/metallib"
+          fi
+          test -x "$metal_path"
+          test -x "$metallib_path"
+      - name: Show toolchain versions
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Run tests
         run: swift test
       - name: Run release smoke benchmarks
