@@ -113,7 +113,10 @@ extension RSABSSAModel {
 
         return BlindRequestMaterial(
             preparedMessage: preparedMessage,
+            messageDigest: OpalCrypto.Hashing.sha256(message),
             messageRandomizer: Data(messageRandomizer),
+            salt: Data(salt),
+            blindingFactor: Data(blindingFactor),
             blindedMessage: blindedMessage,
             blindInverse: blindInverse,
             verificationKeyIdentifier: verificationKey.keyIdentifier

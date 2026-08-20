@@ -17,6 +17,14 @@ struct MosaicPrivateAlphaRSABSSASigningKeyValidator {
             model: generatedModel.verificationKey
         )
 
+        let initiallyValidatedKey = try RSABSSA.SigningKey(
+            appOwnedSecurityKey: securityKey
+        )
+        #expect(
+            initiallyValidatedKey.verificationKey
+                == expectedVerificationKey
+        )
+
         let restoredKey = try RSABSSA.SigningKey(
             restoring: securityKey,
             matching: expectedVerificationKey
@@ -70,6 +78,11 @@ struct MosaicPrivateAlphaRSABSSASigningKeyValidator {
             model: generatedModel.verificationKey
         )
 
+        #expect(throws: RSABSSA.Error.unsupportedKeyOperation) {
+            _ = try RSABSSA.SigningKey(
+                appOwnedSecurityKey: publicKey
+            )
+        }
         #expect(throws: RSABSSA.Error.unsupportedKeyOperation) {
             _ = try RSABSSA.SigningKey(
                 restoring: publicKey,

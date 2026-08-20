@@ -18,6 +18,18 @@ extension OpalCrypto.RSABSSA {
             Self(model: try RSABSSASigningKeyModel.generate())
         }
 
+        /// Validates a newly created app-owned RSA signing capability before its public key is
+        /// bound into a Mosaic attempt document.
+        ///
+        /// The application owns persistence and access control for `securityKey`. Use the
+        /// matching initializer below when restoring a key whose identity is already frozen.
+        @_spi(MosaicPrivateAlpha)
+        public init(appOwnedSecurityKey securityKey: SecKey) throws {
+            self.init(
+                model: try RSABSSASigningKeyModel(privateKey: securityKey)
+            )
+        }
+
         /// Restores an app-owned RSA signing capability for the exact
         /// verification key published by an existing Mosaic attempt.
         ///

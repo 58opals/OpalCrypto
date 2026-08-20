@@ -91,10 +91,61 @@ struct PublicAPIRSABSSAOperationValidator {
             message: message,
             using: signingKey.verificationKey
         )
+        #expect(
+            request.recoveryState.rawRepresentation.count
+                == RSABSSA.BlindRequest.RecoveryState
+                    .rawRepresentationByteCount
+        )
+        let decodedRecoveryState = try RSABSSA.BlindRequest.RecoveryState(
+            rawRepresentation: request.recoveryState.rawRepresentation
+        )
+        let restoredRequest = try RSABSSA.restoreBlindRequest(
+            message: message,
+            using: signingKey.verificationKey,
+            from: decodedRecoveryState
+        )
+        #expect(restoredRequest.blindedMessage == request.blindedMessage)
+        #expect(restoredRequest.messageRandomizer == request.messageRandomizer)
+        #expect(restoredRequest.recoveryState == request.recoveryState)
+
+        #expect(throws: RSABSSA.Error.blindRequestMessageMismatch) {
+            _ = try RSABSSA.restoreBlindRequest(
+                message: Data("altered".utf8),
+                using: signingKey.verificationKey,
+                from: decodedRecoveryState
+            )
+        }
+        var wrongKeyState = request.recoveryState.rawRepresentation
+        wrongKeyState[1] ^= 0x01
+        #expect(throws: RSABSSA.Error.verificationKeyMismatch) {
+            _ = try RSABSSA.restoreBlindRequest(
+                message: message,
+                using: signingKey.verificationKey,
+                from: try .init(rawRepresentation: wrongKeyState)
+            )
+        }
+        var invalidFactorState = request.recoveryState.rawRepresentation
+        invalidFactorState.replaceSubrange(
+            (invalidFactorState.count - 256) ..< invalidFactorState.count,
+            with: repeatElement(UInt8.zero, count: 256)
+        )
+        #expect(throws: RSABSSA.Error.blindingFailed) {
+            _ = try RSABSSA.restoreBlindRequest(
+                message: message,
+                using: signingKey.verificationKey,
+                from: try .init(rawRepresentation: invalidFactorState)
+            )
+        }
         let blindSignature = try signingKey.blindSign(request.blindedMessage)
         let signature = try request.finalize(
             blindSignature,
             using: signingKey.verificationKey
+        )
+        #expect(
+            try restoredRequest.finalize(
+                blindSignature,
+                using: signingKey.verificationKey
+            ) == signature
         )
 
         #expect(

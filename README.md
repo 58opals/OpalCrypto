@@ -66,7 +66,7 @@ The explicit ECDSA message operations hash once with SHA-256. To supply a precom
 ## Key Capabilities
 
 - `Signature`: typed ECDSA, Bitcoin Cash Schnorr, and BIP340 signatures; 32-byte digests; SEC1 and x-only verification keys; facade-owned formats; nonce policies; and immutable BCH Schnorr verification batches.
-- `RSABSSA`: RFC 9474 randomized RSA blind-signature preparation, blind signing, finalization, and verification for one strict RSA-2048/SHA-384/PSS profile, with opaque nonpersistent signing keys and RFC 9578-style public-key encoding.
+- `RSABSSA`: RFC 9474 randomized RSA blind-signature preparation, exact client-state recovery for app-owned authenticated encryption, blind signing, finalization, and verification for one strict RSA-2048/SHA-384/PSS profile, with opaque nonpersistent signing keys and RFC 9578-style public-key encoding.
 - `Secp256k1`: typed private keys, public keys, scalars, legacy shared-secret digests, hardened shared-point x-coordinate derivation, tweak-add, batch public-key derivation, and batch shared-secret derivation for higher-level scan workloads.
 - `SecureRandom`: operating-system secure random bytes behind an explicit `1...1024` allocation-safety boundary. This bound is an OpalCrypto resource limit, not a protocol constant.
 - `Nostr.NIP44`: NIP-44 v2 conversation-key derivation, ChaCha20 encryption, HMAC-SHA256 authentication, standard padding, and canonical base64 payloads with explicit caller-owned resource limits.

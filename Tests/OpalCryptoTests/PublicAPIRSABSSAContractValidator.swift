@@ -23,6 +23,8 @@ struct PublicAPIRSABSSAContractValidator {
     func acceptExactWidthValues() throws {
         let randomizerBytes = Data(repeating: 0x11, count: 32)
         let rsaBytes = Data(repeating: 0x22, count: 256)
+        let recoveryBytes = Data([0x01])
+            + Data(repeating: 0x33, count: 400)
 
         let randomizer = try OpalCrypto.RSABSSA.MessageRandomizer(
             rawRepresentation: randomizerBytes
@@ -36,15 +38,29 @@ struct PublicAPIRSABSSAContractValidator {
         let signature = try OpalCrypto.RSABSSA.Signature(
             rawRepresentation: rsaBytes
         )
+        let recoveryState = try OpalCrypto.RSABSSA.BlindRequest
+            .RecoveryState(rawRepresentation: recoveryBytes)
 
         #expect(randomizer.rawRepresentation == randomizerBytes)
         #expect(blindedMessage.rawRepresentation == rsaBytes)
         #expect(blindSignature.rawRepresentation == rsaBytes)
         #expect(signature.rawRepresentation == rsaBytes)
+        #expect(
+            OpalCrypto.RSABSSA.BlindRequest.RecoveryState
+                .rawRepresentationByteCount == 401
+        )
+        #expect(recoveryState.rawRepresentation == recoveryBytes)
+        let framedRecoveryState = Data([0xFF]) + recoveryBytes + Data([0xEE])
+        #expect(
+            try OpalCrypto.RSABSSA.BlindRequest.RecoveryState(
+                rawRepresentation: framedRecoveryState.dropFirst().dropLast()
+            ) == recoveryState
+        )
         requireSendable(randomizer)
         requireSendable(blindedMessage)
         requireSendable(blindSignature)
         requireSendable(signature)
+        requireSendable(recoveryState)
     }
 
     @Test("Reject every invalid RSABSSA width")
@@ -78,6 +94,27 @@ struct PublicAPIRSABSSAContractValidator {
             actual: 0
         )) {
             try OpalCrypto.RSABSSA.Signature(rawRepresentation: Data())
+        }
+        #expect(
+            throws: OpalCrypto.RSABSSA.Error
+                .invalidBlindRequestRecoveryStateLength(
+                    expected: 401,
+                    actual: 400
+                )
+        ) {
+            _ = try OpalCrypto.RSABSSA.BlindRequest.RecoveryState(
+                rawRepresentation: Data(repeating: 0, count: 400)
+            )
+        }
+        var unsupportedRecoveryState = Data(repeating: 0, count: 401)
+        unsupportedRecoveryState[0] = 2
+        #expect(
+            throws: OpalCrypto.RSABSSA.Error
+                .unsupportedBlindRequestRecoveryStateVersion(2)
+        ) {
+            _ = try OpalCrypto.RSABSSA.BlindRequest.RecoveryState(
+                rawRepresentation: unsupportedRecoveryState
+            )
         }
     }
 

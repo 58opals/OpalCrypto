@@ -16,6 +16,12 @@ extension OpalCrypto.RSABSSA {
         /// The randomized prefix that accompanies the finalized signature.
         public let messageRandomizer: MessageRandomizer
 
+        /// Sensitive one-request state for exact encrypted recovery.
+        ///
+        /// Store this value only inside application-owned authenticated encryption. Reuse for
+        /// another message, key, attempt, or successful finalization is outside this contract.
+        public let recoveryState: RecoveryState
+
         /// Validates and unblinds the signer's response, then verifies the
         /// resulting RSA-PSS signature before returning it.
         public func finalize(
@@ -39,6 +45,7 @@ extension OpalCrypto.RSABSSA {
             self.messageRandomizer = try MessageRandomizer(
                 rawRepresentation: material.messageRandomizer
             )
+            self.recoveryState = RecoveryState(material: material)
         }
     }
 }

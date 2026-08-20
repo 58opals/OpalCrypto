@@ -4,6 +4,9 @@ extension OpalCrypto.RSABSSA {
     /// Validation and operation failures for the bounded RSABSSA profile.
     public enum Error: Swift.Error, Sendable, Equatable {
         case invalidMessageRandomizerLength(expected: Int, actual: Int)
+        case invalidBlindRequestRecoveryStateLength(expected: Int, actual: Int)
+        case unsupportedBlindRequestRecoveryStateVersion(UInt8)
+        case blindRequestMessageMismatch
         case invalidBlindedMessageLength(expected: Int, actual: Int)
         case invalidBlindSignatureLength(expected: Int, actual: Int)
         case invalidSignatureLength(expected: Int, actual: Int)
