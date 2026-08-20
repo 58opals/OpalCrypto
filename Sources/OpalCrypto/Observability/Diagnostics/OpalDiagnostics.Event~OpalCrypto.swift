@@ -64,6 +64,8 @@ extension OpalDiagnostics.Event {
 
     static let pbkdf2DeriveSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key_derivation.pbkdf2.derive.succeeded")
     static let pbkdf2DeriveFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key_derivation.pbkdf2.derive.failed")
+    static let hkdfSHA256DeriveSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key_derivation.hkdf_sha256.derive.succeeded")
+    static let hkdfSHA256DeriveFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key_derivation.hkdf_sha256.derive.failed")
 
     static let communicationEncryptBegin = OpalDiagnostics.Event(rawValue: "opalcrypto.communication.encrypt.begin")
     static let communicationEncryptSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.communication.encrypt.succeeded")

@@ -8,6 +8,7 @@
 - `OpalCrypto.Hashing`
 - `OpalCrypto.Encoding`
 - `OpalCrypto.KeyDerivation`
+- `OpalCrypto.AuthenticatedEncryption`
 - `OpalCrypto.Pedersen`
 - `OpalCrypto.BlindSignature`
 - `OpalCrypto.RSABSSA`
@@ -30,6 +31,7 @@ Constrained cryptographic or protocol-shaped byte strings use facade-owned value
 - `Pedersen.Nonce`, `Pedersen.CommitmentPoint`, `Pedersen.Commitment`
 - `Key.Seed`, `Key.WIF`, `Key.ChainCode`, `Key.Fingerprint`, `Key.ExtendedPrivate`, `Key.ExtendedPublic`
 - `KeyDerivation.Salt`, `KeyDerivation.DerivedKey`
+- `AuthenticatedEncryption.AES256GCM.Key`, `AuthenticatedEncryption.AES256GCM.Nonce`, `AuthenticatedEncryption.AES256GCM.SealedBox`
 - `Encoding.FiveBitValues`
 - `Numeric.UInt256`, `Numeric.UInt512`, `Numeric.BigUnsignedInteger`
 - `Nostr.NIP44.ConversationKey`, `Nostr.NIP44.Nonce`, `Nostr.NIP44.Payload`
@@ -121,6 +123,29 @@ let payload = try OpalCrypto.Nostr.NIP44.encrypt(
 ```
 
 Every encryption call generates a 32-byte nonce unless the explicit-nonce conformance entry point is used. Callers must never reuse an explicit nonce with the same conversation key. Imported payloads and decrypt operations require caller-owned encoded-payload and plaintext limits so untrusted base64 cannot cause an unbounded allocation. Before decrypting, callers must validate the identifier, public key, and BIP340 signature of the NIP-01 event containing the payload; NIP-44 alone does not authenticate which peer sent it. `ConversationKey` and `Nonce` descriptions are redacted.
+
+## AES-256-GCM Authenticated Encryption
+
+`AuthenticatedEncryption.AES256GCM` seals arbitrary bytes with exact 32-byte keys, standard 12-byte nonces, a 16-byte authentication tag, and explicit authenticated data. The generated-nonce operation uses OpalCrypto's operating-system random boundary; the explicit-nonce overload exists for conformance vectors and injected secure-random dependencies. Never reuse a nonce with the same key.
+
+```swift
+let derivedKey = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
+    inputKeyMaterial: rootKeyMaterial,
+    salt: Data("application/key/v1".utf8),
+    information: scopeData,
+    outputByteCount: 32
+)
+let encryptionKey = try OpalCrypto.AuthenticatedEncryption.AES256GCM.Key(
+    derivedKey: derivedKey
+)
+let sealedBox = try OpalCrypto.AuthenticatedEncryption.AES256GCM.seal(
+    plaintext,
+    using: encryptionKey,
+    authenticating: contextData
+)
+```
+
+`SealedBox.combinedRepresentation` is the standard nonce-ciphertext-tag ordering used by the Apple implementation. Imported combined representations require a caller-owned maximum byte count before validation and copying. Key and nonce descriptions are redacted. The facade exposes no CryptoKit type.
 
 ## Secure Random Bytes
 
@@ -261,6 +286,8 @@ let checksum = OpalCrypto.Encoding.computePolymodChecksum(values)
 Generic Base58 and byte-mode Base32 decoding require an explicit maximum decoded byte count and stop when the result would cross it. Base58 decoding has explicit failure shapes: `decodeBase58IfValid(_:maximumDecodedByteCount:)` returns `nil`, while `decodeBase58Validating(_:maximumDecodedByteCount:)` distinguishes invalid text, an invalid limit, and a result that exceeds the limit. Fixed-format WIF and extended-key imports apply their exact protocol bounds internally and report `payloadLengthExceedsMaximum(maximum:)` when conversion stops before an exact oversized length is known.
 
 ## Key Derivation
+
+`KeyDerivation.deriveHKDFSHA256Key(inputKeyMaterial:salt:information:outputByteCount:)` implements RFC 5869 extract-and-expand with HMAC-SHA-256. It accepts the RFC-defined empty salt and information cases and limits output to `1...8160` bytes. HKDF binds existing key entropy to a context; it is not a password-hardening function.
 
 `KeyDerivation.derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:maximumWorkUnitCount:)` uses PBKDF2 with HMAC-SHA-512. Omitting `derivedKeyLength` produces 64 bytes. One work unit is one HMAC evaluation, so the required work is the number of 64-byte output blocks multiplied by `iterationCount`. The operation validates that multiplication and the caller's budget before retaining the password or allocating the result. Salt values must be nonempty, iteration counts must be positive, and invalid lengths, work overflow, or insufficient budgets throw facade-owned `KeyDerivation.Error` values.
 

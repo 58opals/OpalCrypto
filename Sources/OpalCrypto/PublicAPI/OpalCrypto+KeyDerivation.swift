@@ -83,25 +83,108 @@ extension OpalCrypto {
                     maximumWorkUnitCount: maximumWorkUnitCount
                 ).deriveKey()
                 let parsedDerivedKey = try DerivedKey(rawRepresentation: derivedKey)
-                recordDeriveSucceeded(parsedDerivedKey, fields: fields)
+                recordDeriveSucceeded(
+                    parsedDerivedKey,
+                    event: OpalDiagnostics.Event.pbkdf2DeriveSucceeded,
+                    fields: fields
+                )
                 return parsedDerivedKey
             } catch let error as PasswordBasedKeyDerivationFunction2Model.Error {
                 let mappedError = mapError(error)
-                recordDeriveFailed(mappedError, fields: fields)
+                recordDeriveFailed(
+                    mappedError,
+                    event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
+                    fields: fields
+                )
                 throw mappedError
             } catch let error as Error {
-                recordDeriveFailed(error, fields: fields)
+                recordDeriveFailed(
+                    error,
+                    event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
+                    fields: fields
+                )
+                throw error
+            }
+        }
+
+        /// Derives key material with RFC 5869 HKDF using HMAC-SHA-256.
+        ///
+        /// Empty salt and information values are valid. An empty salt uses the
+        /// RFC-defined all-zero SHA-256 salt. HKDF does not add work-factor
+        /// hardening and must not be used directly as a password KDF.
+        ///
+        /// - Parameters:
+        ///   - inputKeyMaterial: Source keying material. Diagnostics record only
+        ///     its byte count.
+        ///   - salt: Independent, non-secret salt bytes, or an empty value for
+        ///     the RFC-defined default.
+        ///   - information: Context-specific information independent of the
+        ///     input keying material.
+        ///   - outputByteCount: Requested output length in `1...8160` bytes.
+        /// - Returns: The requested derived key material.
+        /// - Throws: ``OpalCrypto/KeyDerivation/Error`` when the requested
+        ///   output length is invalid or exceeds RFC 5869's SHA-256 limit.
+        public static func deriveHKDFSHA256Key(
+            inputKeyMaterial: Data,
+            salt: Data,
+            information: Data,
+            outputByteCount: Int
+        ) throws -> DerivedKey {
+            let fields = [
+                OpalDiagnostics.Field.operationField("hkdf_sha256_derive"),
+                OpalDiagnostics.Field.publicField(
+                    "input_key_material_byte_count",
+                    inputKeyMaterial.count
+                ),
+                OpalDiagnostics.Field.publicField("salt_byte_count", salt.count),
+                OpalDiagnostics.Field.publicField("information_byte_count", information.count),
+                OpalDiagnostics.Field.publicField(
+                    "requested_derived_key_byte_count",
+                    outputByteCount
+                )
+            ]
+            do {
+                let rawDerivedKey = try
+                    HMACBasedKeyDerivationFunctionSecureHashAlgorithm256Model
+                        .deriveKey(
+                            inputKeyMaterial: inputKeyMaterial,
+                            salt: salt,
+                            information: information,
+                            outputByteCount: outputByteCount
+                        )
+                let derivedKey = try DerivedKey(rawRepresentation: rawDerivedKey)
+                recordDeriveSucceeded(
+                    derivedKey,
+                    event: OpalDiagnostics.Event.hkdfSHA256DeriveSucceeded,
+                    fields: fields
+                )
+                return derivedKey
+            } catch let error as HMACBasedKeyDerivationFunctionSecureHashAlgorithm256Model.Error {
+                let mappedError = mapError(error)
+                recordDeriveFailed(
+                    mappedError,
+                    event: OpalDiagnostics.Event.hkdfSHA256DeriveFailed,
+                    fields: fields
+                )
+                throw mappedError
+            } catch let error as Error {
+                recordDeriveFailed(
+                    error,
+                    event: OpalDiagnostics.Event.hkdfSHA256DeriveFailed,
+                    fields: fields
+                )
                 throw error
             }
         }
 
         private static func recordDeriveSucceeded(
             _ derivedKey: DerivedKey,
+            event: OpalDiagnostics.Event,
             fields: [OpalDiagnostics.Field]
         ) {
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
-                event: OpalDiagnostics.Event.pbkdf2DeriveSucceeded,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveSucceeded),
+                event: event,
+                level: .opalCryptoDefault(for: event),
                 fields: fields + [
                     OpalDiagnostics.Field.outputLengthField(derivedKey.rawRepresentation.count),
                     OpalDiagnostics.Field.publicField(
@@ -114,11 +197,12 @@ extension OpalCrypto {
 
         private static func recordDeriveFailed(
             _ error: Swift.Error,
+            event: OpalDiagnostics.Event,
             fields: [OpalDiagnostics.Field]
         ) {
             OpalDiagnostics.logger(category: OpalDiagnostics.Category.keyDerivation).record(
-                event: OpalDiagnostics.Event.pbkdf2DeriveFailed,
-                level: .opalCryptoDefault(for: OpalDiagnostics.Event.pbkdf2DeriveFailed),
+                event: event,
+                level: .opalCryptoDefault(for: event),
                 fields: fields + OpalDiagnostics.Field.errorFields(error)
             )
         }
@@ -143,6 +227,17 @@ extension OpalCrypto {
                 )
             case .workUnitCountOverflow:
                 return .workUnitCountOverflow
+            }
+        }
+
+        private static func mapError(
+            _ error: HMACBasedKeyDerivationFunctionSecureHashAlgorithm256Model.Error
+        ) -> Error {
+            switch error {
+            case .invalidDerivedKeyLength(let actual):
+                return .invalidDerivedKeyLength(actual: actual)
+            case .derivedKeyLengthExceedsLimit(let actual):
+                return .derivedKeyLengthExceedsLimit(actual: actual)
             }
         }
     }

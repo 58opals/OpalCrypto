@@ -4,7 +4,7 @@ This document keeps the durable, repo-owned context for Opal Crypto inside the p
 
 ## Purpose and Role
 
-Opal Crypto is the lowest-level cryptography package in the Swift stack. It exists so higher-level packages and apps can depend on one stable facade instead of coupling themselves to hashing, encoding, BCH, BIP340, or bounded RSA blind signatures, NIP-44 encrypted payloads, secure randomness, mnemonic, derivation, or large-integer implementation details.
+Opal Crypto is the lowest-level cryptography package in the Swift stack. It exists so higher-level packages and apps can depend on one stable facade instead of coupling themselves to hashing, encoding, BCH, BIP340, bounded RSA blind signatures, NIP-44 encrypted payloads, AES-GCM authenticated encryption, secure randomness, mnemonic, derivation, or large-integer implementation details.
 
 The supported public contract is the `OpalCrypto` namespace. The package is intentionally narrow: it provides reusable low-level BCH primitives, focused BIP340 signing, and standards-bound NIP-44 encrypted payloads without absorbing app-domain or protocol/runtime concerns.
 
@@ -16,7 +16,7 @@ The supported public contract is the `OpalCrypto` namespace. The package is inte
 
 ## Boundaries and Non-Goals
 
-- In scope: facade-owned BCH cryptography, genuine BIP340 signing over typed 32-byte digests, bounded RFC 9474 RSA blind signatures, NIP-44 v2 encrypted payloads, secp256k1 keys, bounded secure randomness, batch shared-secret computation, hashing, encoding, PBKDF2 key derivation, and numeric helpers.
+- In scope: facade-owned BCH cryptography, genuine BIP340 signing over typed 32-byte digests, bounded RFC 9474 RSA blind signatures, NIP-44 v2 encrypted payloads, AES-256-GCM authenticated encryption, secp256k1 keys, bounded secure randomness, batch shared-secret computation, hashing, encoding, HKDF and PBKDF2 key derivation, and numeric helpers.
 - Out of scope: wallet account orchestration, application-state management, reusable payment address policy, address management, mailbox routing, Nostr event schemas, protocol/runtime behavior, network transport, non-Swift scope, and exposing internal implementation models as supported API.
 - Downstream code should depend on the public facade surface rather than internal source layout, implementation folders, or internal model names.
 
@@ -32,7 +32,7 @@ See [engineering-principles.md](engineering-principles.md) for the Swift-first i
 ## Integration Expectations
 
 - Use Opal Crypto directly when you need low-level BCH or BIP340 cryptographic primitives or related serialization helpers.
-- Prefer the facade surface such as `OpalCrypto.Signature`, `OpalCrypto.RSABSSA`, `OpalCrypto.Nostr.NIP44`, `OpalCrypto.Key`, `OpalCrypto.Hashing`, `OpalCrypto.SecureRandom`, `OpalCrypto.Encoding`, `OpalCrypto.KeyDerivation`, `OpalCrypto.Numeric`, and `OpalCrypto.Secp256k1`.
+- Prefer the facade surface such as `OpalCrypto.Signature`, `OpalCrypto.RSABSSA`, `OpalCrypto.Nostr.NIP44`, `OpalCrypto.AuthenticatedEncryption`, `OpalCrypto.Key`, `OpalCrypto.Hashing`, `OpalCrypto.SecureRandom`, `OpalCrypto.Encoding`, `OpalCrypto.KeyDerivation`, `OpalCrypto.Numeric`, and `OpalCrypto.Secp256k1`.
 - Move to higher-layer packages for wallet models, policy, history, transport, or protocol/runtime behavior.
 - Do not rely on internal file names or internal model types remaining stable across package evolution.
 
