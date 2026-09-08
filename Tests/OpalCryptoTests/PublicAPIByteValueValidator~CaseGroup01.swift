@@ -7,99 +7,63 @@ import OpalCrypto
 extension PublicAPIByteValueValidator {
     @Test("Secp256k1 byte values reject malformed raw representations")
     func rejectMalformedSecp256k1ByteValueRawRepresentations() throws {
-        do {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidPrivateKeyLength(expected: 32, actual: 31)) {
             _ = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: Data(repeating: 0x01, count: 31))
-            Issue.record("Expected private-key length error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidPrivateKey) {
             _ = try OpalCrypto.Secp256k1.PrivateKey(rawRepresentation: Data(repeating: 0x00, count: 32))
-            Issue.record("Expected invalid private-key error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPrivateKey)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidPublicKeyPrefix(actual: 0x05)) {
             _ = try OpalCrypto.Secp256k1.PublicKey(
                 rawRepresentation: Data([0x05]) + Data(repeating: 0x01, count: 32)
             )
-            Issue.record("Expected public-key prefix error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPublicKeyPrefix(actual: 0x05))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidTweakLength(expected: 32, actual: 31)) {
             _ = try OpalCrypto.Secp256k1.Scalar(rawRepresentation: Data(repeating: 0x01, count: 31))
-            Issue.record("Expected scalar length error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidTweakLength(expected: 32, actual: 31))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidTweak) {
             _ = try OpalCrypto.Secp256k1.Scalar(rawRepresentation: Data(repeating: 0xff, count: 32))
-            Issue.record("Expected invalid scalar error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidTweak)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidDerivedKey) {
             _ = try OpalCrypto.Secp256k1.SharedSecret(rawRepresentation: Data(repeating: 0x01, count: 31))
-            Issue.record("Expected shared-secret length error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidDerivedKey)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("Public keys reject incorrect widths and invalid curve points")
+    func rejectPublicKeyWidthAndCurvePointFailures() {
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidPublicKeyLength(expected: 33, actual: 32)) {
+            _ = try OpalCrypto.Secp256k1.PublicKey(
+                rawRepresentation: Data(repeating: 0x02, count: 32)
+            )
+        }
+        #expect(throws: OpalCrypto.Secp256k1.Error.invalidPublicKey) {
+            _ = try OpalCrypto.Secp256k1.PublicKey(
+                rawRepresentation: Data([0x02] + Array(repeating: 0x00, count: 32))
+            )
         }
     }
 
     @Test("Signature byte values reject malformed raw representations")
     func signatureByteValuesRejectMalformedRawRepresentations() throws {
-        do {
+        #expect(throws: OpalCrypto.Signature.Error.invalidDigestLength(expected: 32, actual: 31)) {
             _ = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0x01, count: 31))
-            Issue.record("Expected digest length error.")
-        } catch let error as OpalCrypto.Signature.Error {
-            #expect(error == .invalidDigestLength(expected: 32, actual: 31))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Signature.Error.invalidSignatureLength(expected: 64, actual: 63)) {
             _ = try OpalCrypto.Signature.ECDSA(rawRepresentation: Data(repeating: 0x01, count: 63), format: .raw)
-            Issue.record("Expected ECDSA signature length error.")
-        } catch let error as OpalCrypto.Signature.Error {
-            #expect(error == .invalidSignatureLength(expected: 64, actual: 63))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Signature.Error.invalidDER) {
             _ = try OpalCrypto.Signature.ECDSA(rawRepresentation: Data([0x30, 0x01, 0x00]), format: .der)
-            Issue.record("Expected DER signature error.")
-        } catch let error as OpalCrypto.Signature.Error {
-            #expect(error == .invalidDER)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Signature.Error.invalidSignatureLength(expected: 64, actual: 63)) {
             _ = try OpalCrypto.Signature.Schnorr(rawRepresentation: Data(repeating: 0x01, count: 63))
-            Issue.record("Expected Schnorr signature length error.")
-        } catch let error as OpalCrypto.Signature.Error {
-            #expect(error == .invalidSignatureLength(expected: 64, actual: 63))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -118,25 +82,15 @@ extension PublicAPIByteValueValidator {
 
     @Test("Communication byte values reject malformed raw representations")
     func communicationByteValuesRejectMalformedRawRepresentations() throws {
-        do {
+        #expect(throws: OpalCrypto.Communication.Error.invalidCiphertext) {
             _ = try OpalCrypto.Communication.Ciphertext(
                 rawRepresentation: Data(),
                 maximumCiphertextByteCount: 65
             )
-            Issue.record("Expected ciphertext error.")
-        } catch let error as OpalCrypto.Communication.Error {
-            #expect(error == .invalidCiphertext)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
 
-        do {
+        #expect(throws: OpalCrypto.Communication.Error.invalidSymmetricKeyLength(expected: 32, actual: 31)) {
             _ = try OpalCrypto.Communication.SymmetricKey(rawRepresentation: Data(repeating: 0x01, count: 31))
-            Issue.record("Expected symmetric-key length error.")
-        } catch let error as OpalCrypto.Communication.Error {
-            #expect(error == .invalidSymmetricKeyLength(expected: 32, actual: 31))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
         }
     }
 

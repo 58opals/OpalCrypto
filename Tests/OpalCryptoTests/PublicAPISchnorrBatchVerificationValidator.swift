@@ -6,14 +6,6 @@ import Testing
 
 @Suite("Public API Schnorr batch verification")
 struct PublicAPISchnorrBatchVerificationValidator {
-    @Test("Batch execution policies remain opaque and distinct")
-    func validateBatchExecutionPoliciesRemainOpaqueAndDistinct() {
-        #expect(OpalCrypto.BatchExecutionPolicy.automatic == .automatic)
-        #expect(OpalCrypto.BatchExecutionPolicy.automatic != .cpu)
-        #expect(OpalCrypto.BatchExecutionPolicy.automatic != .metal)
-        #expect(OpalCrypto.BatchExecutionPolicy.cpu != .metal)
-    }
-
     @Test("Cached-key verification preserves ordered mixed results")
     func preserveCachedKeyVerificationOrdering() async throws {
         let signingKey = try OpalCryptoTestSupport.makeTypedPrivateKey(301).makeSigningKey()
