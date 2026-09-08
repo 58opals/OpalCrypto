@@ -20,7 +20,7 @@ The supported public contract is the `OpalCrypto` namespace. The package is inte
 - Out of scope: wallet account orchestration, application-state management, reusable payment address policy, address management, mailbox routing, Nostr event schemas, protocol/runtime behavior, network transport, non-Swift scope, and exposing internal implementation models as supported API.
 - Downstream code should depend on the public facade surface rather than internal source layout, implementation folders, or internal model names.
 
-See [engineering-principles.md](engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. See [architecture-complexity-audit.md](architecture-complexity-audit.md) for the current ownership map and bounded cleanup backlog, [performance-roadmap.md](performance-roadmap.md) for staged CPU optimization, and [metal-readiness.md](metal-readiness.md) for the current Metal qualification boundary.
+See [engineering-principles.md](engineering-principles.md) for the Swift-first implementation boundary, Apple-native acceleration policy, and benchmark-backed performance expectations. Ownership and security invariants are documented there. See [performance-roadmap.md](performance-roadmap.md) for staged CPU optimization, and [metal-readiness.md](metal-readiness.md) for the current Metal qualification boundary.
 
 ## Package Surfaces
 
