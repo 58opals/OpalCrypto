@@ -12,11 +12,11 @@ Use Opal Crypto when you are building or testing Swift software that needs typed
 
 - Swift tools version: `6.4`
 - Platforms:
-  - `macOS 26`
-  - `iOS 26`
-  - `watchOS 26`
-  - `tvOS 26`
-  - `visionOS 26`
+  - `macOS 27`
+  - `iOS 27`
+  - `watchOS 27`
+  - `tvOS 27`
+  - `visionOS 27`
 - Xcode's Metal Toolchain component. Install and verify it with:
 
   ```sh

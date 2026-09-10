@@ -1,5 +1,5 @@
 {
-  "originHash" : "71e85bf2214e78efa454a4fe5937e428925d3927a3882dbf1efc6bbb78dbcb9a",
+  "originHash" : "bc17b3a6b56f35db448e29548aad82a2d86675bd3d4d8ea8c99e23a1487b839c",
   "pins" : [
     {
       "identity" : "opaldiagnostics",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/58opals/OpalDiagnostics.git",
       "state" : {
         "branch" : "develop",
-        "revision" : "7cd2e383309821e01903077c1e534174f9c8a964"
+        "revision" : "97dfa7674ea3a25147a025b9c66fd65bff74fb0e"
       }
     }
   ],
