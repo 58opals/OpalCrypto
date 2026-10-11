@@ -16,7 +16,7 @@ Opal Crypto is a Swift-first secp256k1 cryptography package with BCH primitives 
 | --- | --- |
 | Public cryptographic contract | `Sources/OpalCrypto/PublicAPI` owns typed validation, error mapping, and operation diagnostics; downstream callers depend on the facade. |
 | Computation and representation | Internal models own parsed keys, canonical scalars, curve points, encodings, and algorithms. Public wrappers validate before computation; raw secret material never enters diagnostics. |
-| Blind-signature lifecycle | Blind-signature and RSABSSA state values preserve one-attempt consumption and exact key/request binding. |
+| Blind-signature lifecycle | Schnorr blind-signature actors enforce one-attempt nonce consumption. RSABSSA values preserve exact key/request binding; the application enforces one-attempt request use, authenticated encrypted recovery-state storage, access control, and terminal erasure as described in the [public API guide](public-api.md). |
 | Schnorr batch correctness | The Swift CPU verifier remains authoritative; Metal qualification, self-test, cancellation-aware execution leasing, and CPU fallback retain separate responsibilities. |
 | Metal artifact | `Sources/OpalCryptoMetal/MetalSchnorrBatchVerification.metal`, packaged through `MetalLibraryBuildPlugin`, is shared by production and benchmark hosts. Their routing policies remain separate. |
 
