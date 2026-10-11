@@ -59,9 +59,9 @@ Status: passed on July 11, 2026 for the exact recorded M1 Max profile. Five fres
 
 ### Stage 6: RPA-Shaped Benchmark Gate
 
-Before any receiver-scan Metal work, measure the real reusable payment address workload in Opal Base. The Opal Crypto benchmark target may keep a generic shared-secret and fingerprint proxy, but it must not encode scan-window policy, address derivation, transaction output matching, wallet state, persistence, or indexer behavior.
+Before any receiver-scan Metal work, qualify the real Cash Code restoration workload in Opal Base through the [RPA and Metal decision gate](benchmarks.md#rpa-and-metal-decision-gate) and its linked Base benchmark contract. The Opal Crypto benchmark target may keep a generic legacy shared-secret and fingerprint proxy, but its timings do not qualify the current shared-point profile and it must not encode scan-window policy, address derivation, transaction output matching, wallet state, persistence, or indexer behavior.
 
-Success bar: Opal Base reports an end-to-end local scan benchmark with stage timings and shows that Opal Crypto shared-secret derivation remains the dominant cost at bulk historical restore scale after ordinary CPU batching and pipeline improvements. If that bar is not met, continue CPU and pipeline tuning before starting a secret-bearing Metal path.
+Success bar: a qualifying Opal Base restoration benchmark shows that the profile-compatible shared-point and child-key stage meets Base's dominance criterion at bulk historical restore scale after ordinary CPU and pipeline improvements. If that bar is not met, continue CPU and pipeline tuning before starting a secret-bearing Metal path.
 
 ### Stage 7: Apple Silicon Bulk Historical Scan Prototype
 
@@ -119,7 +119,7 @@ Benchmark-only Metal work starts only when all of the following are true:
 
 - The CPU implementation has two consecutive CPU-only stages below the 10% targeted improvement bar.
 - A specific public batched benchmark remains expensive after accepted CPU work.
-- For receiver scanning, an Opal Base reusable payment address benchmark shows that Opal Crypto shared-secret derivation dominates bulk historical restore cost.
+- For receiver scanning, the qualifying Opal Base Cash Code restoration benchmark meets the [Stage 6](#stage-6-rpa-shaped-benchmark-gate) dominance criterion for profile-compatible shared-point and child-key work.
 - The GPU candidate has a clear end-to-end acceptance target against the improved Swift CPU path.
 - The workload is public data or has passed a separate review for secret-handling risk.
 - The Swift CPU path remains the default fallback.
