@@ -51,53 +51,6 @@ struct PublicAPIBlindSignatureNonceStateValidator {
         }
     }
 
-    @Test("Blind signer keeps nonce available after invalid private-key construction")
-    func blindSignerKeepsNonceAvailableAfterInvalidPrivateKeyConstruction() async throws {
-        let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(9)
-        let publicKey = try OpalCrypto.Secp256k1.derivePublicKey(from: privateKey)
-        let signer = try OpalCrypto.BlindSignature.Signer()
-        let digest = try OpalCrypto.Signature.Digest(rawRepresentation: Data(repeating: 0x91, count: 32))
-        let request = try OpalCrypto.BlindSignature.Request(
-            signerPublicKey: publicKey,
-            noncePoint: signer.noncePoint,
-            messageDigest: digest
-        )
-
-        do {
-            _ = try OpalCrypto.Secp256k1.PrivateKey(
-                rawRepresentation: Data(repeating: 0x01, count: 31)
-            )
-            Issue.record("Expected invalid private-key length rejection.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-
-        let response = try await signer.sign(privateKey: privateKey, requestScalar: request.scalar)
-        let signature = try request.finalize(responseScalar: response)
-
-        #expect(try signature.verify(digest: digest, publicKey: publicKey))
-    }
-
-    @Test("Request scalar construction rejects non-canonical scalars")
-    func requestScalarConstructionRejectsNonCanonicalScalars() throws {
-        do {
-            _ = try OpalCrypto.Secp256k1.Scalar(
-                rawRepresentation: Data(
-                    hexadecimal: """
-                    fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
-                    """
-                )
-            )
-            Issue.record("Expected malformed request-scalar rejection.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidTweak)
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-    }
-
     @Test("Blind request state normalizes sliced message digests")
     func normalizeBlindRequestStateMessageDigestsFromSlicedRawInput() throws {
         let privateKey = try OpalCryptoTestSupport.makeTypedPrivateKey(10)

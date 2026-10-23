@@ -152,10 +152,7 @@ struct PublicAPICommunicationCiphertextValidator {
 
         do {
             _ = try OpalCrypto.Communication.decrypt(
-                try OpalCrypto.Communication.Ciphertext(
-                    rawRepresentation: tamperedCiphertext,
-                    maximumCiphertextByteCount: 81
-                ),
+                OpalCrypto.Communication.Ciphertext(unchecked: tamperedCiphertext),
                 symmetricKey: decrypted.symmetricKey,
                 maximumCiphertextByteCount: 81
             )

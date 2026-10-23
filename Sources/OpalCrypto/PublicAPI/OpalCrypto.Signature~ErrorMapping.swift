@@ -90,17 +90,4 @@ extension OpalCrypto.Signature {
 
         return mapCryptographyError(error)
     }
-
-    static func mapVerificationKeyError(
-        _ error: VerificationKey.Error
-    ) -> Error {
-        switch error {
-        case .invalidPublicKeyLength(let actual):
-            return .invalidPublicKeyLength(expected: 33, actual: actual)
-        case .invalidPublicKeyPrefix(let actual):
-            return .invalidPublicKeyPrefix(actual: actual)
-        case .invalidPublicKey:
-            return .invalidPublicKey
-        }
-    }
 }

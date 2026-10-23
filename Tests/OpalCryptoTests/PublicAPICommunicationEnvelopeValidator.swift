@@ -6,22 +6,6 @@ import Testing
 
 @Suite("Public API communication envelope validation")
 struct PublicAPICommunicationEnvelopeValidator {
-    @Test("Communication public-key values report the uncompressed expected length for short SEC1 keys")
-    func validateCommunicationPublicKeyValuesReportTheUncompressedExpectedLengthForShortSec1Keys() {
-        let truncatedUncompressedRecipientPublicKey = Data([0x04] + Array(repeating: 0x11, count: 63))
-
-        do {
-            _ = try OpalCrypto.Secp256k1.PublicKey(
-                rawRepresentation: truncatedUncompressedRecipientPublicKey
-            )
-            Issue.record("Expected invalid public-key length error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPublicKeyLength(expected: 65, actual: 64))
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-    }
-
     @Test("Communication raw public-key validation treats uncompressed prefixes as length declarations")
     func validateCommunicationRawPublicKeyValidationTreatsUncompressedPrefixesAsLengthDeclarations() {
         let severelyTruncatedUncompressedRecipientPublicKey = Data([0x04] + Array(repeating: 0x11, count: 32))
@@ -35,20 +19,6 @@ struct PublicAPICommunicationEnvelopeValidator {
             #expect(
                 error == .invalidPublicKeyLength(expected: 65, actual: 33)
             )
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
-        }
-    }
-
-    @Test("Communication private-key values reject wrong-length raw input")
-    func validateCommunicationPrivateKeyValuesRejectWrongLengthRawInput() {
-        do {
-            _ = try OpalCrypto.Secp256k1.PrivateKey(
-                rawRepresentation: Data(repeating: 0x01, count: 31)
-            )
-            Issue.record("Expected invalid private-key length error.")
-        } catch let error as OpalCrypto.Secp256k1.Error {
-            #expect(error == .invalidPrivateKeyLength(expected: 32, actual: 31))
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }

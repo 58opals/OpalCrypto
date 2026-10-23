@@ -6,7 +6,7 @@ import Testing
 
 extension MetalSchnorrBatchVerificationClientValidator {
     @Test(
-        "Cancellation discards Metal output and releases the client",
+        "Cancellation preserves Metal client usability",
         .enabled(if: MetalSchnorrBatchVerificationClient.isCertifiedDeviceAvailable)
     )
     func discardMetalOutputAndReleaseClientAfterCancellation() async throws {
