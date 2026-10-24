@@ -26,6 +26,8 @@ Use Opal Crypto when you are building or testing Swift software that needs typed
   test -x "$(dirname "$metal_path")/metallib"
   ```
 
+Use the Xcode 27 family with a compiler supporting Swift tools 6.4 and Swift 6 language mode. The supported platform versions above are 27.0 deployment minimums; a newer selected 27.x SDK does not raise them. Before validation, record the active developer-directory selection and overrides, Xcode build, effective Swift compiler and each selected SDK version/path. Record the Metal compiler version and both tool paths separately. After any of these inputs changes, use a new external scratch or derived-data lane and rerun the affected builds and tests with the existing dependency lock. Preserve earlier receipts and normal compiler/plugin security settings. Previous CPU/Metal correctness and performance evidence retains its original hardware and toolchain bindings; an IDE update does not requalify it.
+
 ## Installation
 
 Use the public `develop` branch for the current Swift 6.4 package stack:
@@ -106,7 +108,7 @@ See [docs/benchmarks.md](docs/benchmarks.md) for benchmark suites, JSONL artifac
 
 ## License
 
-Opal Crypto is available under the [Apache License 2.0](LICENSE). Copyright 2026 58 Opals.
+Opal Crypto is available under the [Apache License 2.0](LICENSE). Copyright 2026 58 Opals. Bundled wordlists and attributed test data retain their [upstream provenance and notices](docs/standards-data-notices.md).
 
 ## Further Context
 
