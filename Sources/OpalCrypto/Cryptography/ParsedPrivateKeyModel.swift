@@ -15,10 +15,6 @@ struct ParsedPrivateKeyModel: Sendable, Equatable {
         parsedPublicKeyModel.fingerprintUInt32BigEndian
     }
 
-    var compressedPublicKeyFingerprintData4Bytes: Data {
-        parsedPublicKeyModel.fingerprintData4Bytes
-    }
-
     init(privateKeyData32Bytes: Data) throws {
         let scalar: ScalarModel
         do {

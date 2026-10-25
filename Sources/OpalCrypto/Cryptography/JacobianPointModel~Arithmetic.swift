@@ -22,30 +22,6 @@ extension JacobianPointModel {
     }
 
     @inlinable
-    func doubleFourTimes() -> JacobianPointModel {
-        var result = self
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        return result
-    }
-
-    @inlinable
-    func doubleEightTimes() -> JacobianPointModel {
-        var result = self
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        result = result.double()
-        return result
-    }
-
-    @inlinable
     func add(_ other: JacobianPointModel) -> JacobianPointModel {
         guard !isInfinity else {
             return other

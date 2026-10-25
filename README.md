@@ -40,7 +40,7 @@ dependencies: [
 
 Then add `"OpalCrypto"` to the target dependency list where you need it.
 
-The published `v0.2.0` release remains available to version-based consumers and uses the stable `OpalDiagnostics` `v0.2.0` release. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement. The current `develop` manifest instead follows `OpalDiagnostics` on `develop`; no new SemVer tag is implied.
+The published `v0.2.0` release remains available to version-based consumers and uses the stable `OpalDiagnostics` `v0.2.0` release. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement. The current integration manifest pins `OpalDiagnostics` to public revision `aa56dec5d6c8581beb2b3cef43b03dd577ccd9f1`; no new SemVer tag is implied.
 
 ## Quick Start
 
@@ -94,7 +94,11 @@ See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swi
 
 Tests own cryptographic vectors, malformed-input rejection, typed byte-value construction, secret handling, and CPU/Metal equivalence. Keep shared constructor validation in the byte-value suites and signature suites focused on signing, verification, and signature-specific failures. Canonical vectors and distinct rejection boundaries remain required when consolidating repeated setup.
 
+Resolve the published dependency graph and require the tracked lock to remain unchanged before compilation. CI runs this check before Metal setup and tests.
+
 ```bash
+swift package resolve
+git diff --exit-code -- Package.resolved
 swift test
 ```
 

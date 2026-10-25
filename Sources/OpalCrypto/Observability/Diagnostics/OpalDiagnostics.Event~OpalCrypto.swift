@@ -48,7 +48,6 @@ extension OpalDiagnostics.Event {
     static let wifParseSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.parse.succeeded")
     static let wifParseFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.parse.failed")
     static let wifSerializeSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.serialize.succeeded")
-    static let wifSerializeFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key.wif.serialize.failed")
     static let mnemonicParseSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.mnemonic.parse.succeeded")
     static let mnemonicParseFailed = OpalDiagnostics.Event(rawValue: "opalcrypto.key.mnemonic.parse.failed")
     static let mnemonicGenerateSucceeded = OpalDiagnostics.Event(rawValue: "opalcrypto.key.mnemonic.generate.succeeded")

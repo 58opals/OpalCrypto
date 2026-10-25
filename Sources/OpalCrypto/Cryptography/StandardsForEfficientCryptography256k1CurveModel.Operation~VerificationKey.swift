@@ -25,15 +25,4 @@ extension StandardsForEfficientCryptography256k1CurveModel.Operation {
         return VerificationKeyModel(affinePoint: publicAffine)
     }
 
-    static func tweakAddVerificationKey(
-        _ verificationKeyModel: VerificationKeyModel,
-        tweakScalar: ScalarModel
-    ) throws -> VerificationKeyModel {
-        VerificationKeyModel(
-            parsedPublicKeyModel: try tweakAddParsedPublicKey(
-                verificationKeyModel.parsedPublicKeyModel,
-                tweakScalar: tweakScalar
-            )
-        )
-    }
 }

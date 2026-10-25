@@ -4,23 +4,6 @@ import Foundation
 import CryptoKit
 
 extension EllipticCurveDigitalSignatureAlgorithmModel.Message {
-    internal static func makeRaw(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
-        .init(representation: .payload(data: data, hashRounds: 0))
-    }
-    
-    internal static func makeSingleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
-        .init(representation: .payload(data: data, hashRounds: 1))
-    }
-    
-    internal static func makeDoubleSecureHashAlgorithm256(_ data: Data) -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
-        .init(representation: .payload(data: data, hashRounds: 2))
-    }
-    
-    internal static func makeHashing(_ data: Data, rounds: UInt8) throws -> EllipticCurveDigitalSignatureAlgorithmModel.Message {
-        guard rounds > 0 else { throw Error.hashCountMustBeGreaterThanZero }
-        return .init(representation: .payload(data: data, hashRounds: rounds))
-    }
-    
     internal static func makeDigest(
         _ digest: CryptoKit.SHA256.Digest,
         hashCount: UInt8 = 1

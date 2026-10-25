@@ -70,17 +70,6 @@ extension EllipticCurveDigitalSignatureAlgorithmModel {
         }
     }
 
-    internal static func detectFormat(signatureCore: Data) -> SignatureFormat? {
-        if signatureCore.count == 64 { return .schnorr }
-        do {
-            _ = try StandardsForEfficientCryptography256k1CurveModel.Signature(
-                distinguishedEncodingRulesEncoded: signatureCore
-            )
-            return .ecdsa(.distinguishedEncodingRules)
-        } catch {
-            return nil
-        }
-    }
 }
 
 private extension EllipticCurveDigitalSignatureAlgorithmModel {

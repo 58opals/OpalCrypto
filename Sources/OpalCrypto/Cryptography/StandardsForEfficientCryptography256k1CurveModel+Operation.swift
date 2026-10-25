@@ -5,10 +5,6 @@ import Foundation
 extension StandardsForEfficientCryptography256k1CurveModel {
     internal enum Operation {
 
-        internal static var curveOrderN: Data {
-            StandardsForEfficientCryptography256k1CurveModel.Constant.n.data32Bytes
-        }
-
         internal static func isPrivateKeyData32BytesValid(_ privateKeyData32Bytes: Data) -> Bool {
             (try? ScalarModel(data32: privateKeyData32Bytes, requireNonZero: true)) != nil
         }
@@ -46,18 +42,6 @@ extension StandardsForEfficientCryptography256k1CurveModel {
                 throw Error.invalidDerivedPublicKey
             }
             return ParsedPublicKeyModel(affinePoint: publicAffine)
-        }
-
-        internal static func tweakAddPrivateKeyData32Bytes(
-            _ privateKeyData32Bytes: Data,
-            tweakData32Bytes: Data
-        ) throws -> Data {
-            let privateKeyScalar = try parsePrivateKeyScalar(privateKeyData32Bytes, requireNonZero: true)
-            let tweakScalar = try parseTweakScalar(tweakData32Bytes, requireNonZero: false)
-            return try tweakAddPrivateKey(
-                privateKeyScalar,
-                tweakScalar: tweakScalar
-            ).data32Bytes
         }
 
         internal static func tweakAddPrivateKey(

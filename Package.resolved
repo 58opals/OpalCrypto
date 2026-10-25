@@ -1,12 +1,11 @@
 {
-  "originHash" : "bc17b3a6b56f35db448e29548aad82a2d86675bd3d4d8ea8c99e23a1487b839c",
+  "originHash" : "8748ca9ebec6aaf48b5607f912c4ca5d33da38d34819424f6c737ed1da68def6",
   "pins" : [
     {
       "identity" : "opaldiagnostics",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/58opals/OpalDiagnostics.git",
       "state" : {
-        "branch" : "develop",
         "revision" : "aa56dec5d6c8581beb2b3cef43b03dd577ccd9f1"
       }
     }

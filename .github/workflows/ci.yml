@@ -52,6 +52,11 @@ jobs:
           [[ "$(git rev-parse 'FETCH_HEAD^{commit}')" == "$CI_SHA" ]] || exit 1
           git -c core.hooksPath=/dev/null checkout --quiet --force --detach "$CI_SHA"
           [[ "$(git rev-parse HEAD)" == "$CI_SHA" ]] || exit 1
+      - name: Resolve the published dependency graph before compilation
+        run: |
+          git ls-files --error-unmatch -- Package.resolved > /dev/null
+          env -u SDKROOT /usr/bin/xcrun swift package resolve
+          git diff --exit-code -- Package.resolved
       - name: Install and verify Metal Toolchain
         run: |
           xcodebuild -downloadComponent MetalToolchain
