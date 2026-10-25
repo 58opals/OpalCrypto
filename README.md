@@ -94,12 +94,30 @@ See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swi
 
 Tests own cryptographic vectors, malformed-input rejection, typed byte-value construction, secret handling, and CPU/Metal equivalence. Keep shared constructor validation in the byte-value suites and signature suites focused on signing, verification, and signature-specific failures. Canonical vectors and distinct rejection boundaries remain required when consolidating repeated setup.
 
-Resolve the published dependency graph and require the tracked lock to remain unchanged before compilation. CI runs this check before Metal setup and tests.
+The default development command builds the tests once, checks a small set of byte-value, hashing/encoding, secure-random, canonical BIP340 and Metal-toolchain contracts, and executes them from that same build. It prints the selected definition count; it is not complete cryptographic or CPU/Metal assurance.
+
+```sh
+sh scripts/validate.sh
+sh scripts/validate.sh focused PublicAPIBitcoinImprovementProposal340Validator
+sh scripts/validate.sh --list assurance
+```
+
+`focused` accepts a literal substring of a discovered suite or test identifier, including a complete identifier. Empty, malformed or unmatched selections fail. Successful discovery alone is insufficient: execution must produce a native result containing non-skipped tests. `--list` builds/discovers and prints the exact selection without executing it. Set `OPAL_VALIDATION_SCRATCH_PATH` to a per-repository, toolchain-compatible cache when needed; the default is `.build/validation`. Only the current invocation uses `--skip-build`, immediately after discovery has built the same path and options. No persistent receipt can bypass a later build.
+
+Run complete normal assurance explicitly before publishing a cryptographic candidate or accepting performance-sensitive changes:
+
+```sh
+sh scripts/validate.sh assurance
+```
+
+Both lanes use only the tracked resolved versions and reject lock drift. CI additionally resolves and verifies the unchanged published graph before compilation. Pull requests and branch pushes run development checks; `main`, tags and an explicit `workflow_dispatch` assurance selection run complete normal assurance and the release smoke benchmarks. Hardware-specific Metal qualification and existing opt-in performance checks remain separate requirements in the documents below.
+
+For a raw SwiftPM invocation, preserve the published graph:
 
 ```bash
 swift package resolve
 git diff --exit-code -- Package.resolved
-swift test
+swift test --force-resolved-versions
 ```
 
 For a quick release-mode performance smoke run:
