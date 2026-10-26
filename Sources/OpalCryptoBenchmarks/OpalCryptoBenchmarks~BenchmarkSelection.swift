@@ -5,6 +5,7 @@ extension OpalCryptoBenchmarks {
         publicKeyBenchmarks()
             + sharedSecretBenchmarks()
             + signatureBenchmarks()
+            + rsabssaBenchmarks()
             + keyDerivationBenchmarks()
             + encodingBenchmarks()
     }

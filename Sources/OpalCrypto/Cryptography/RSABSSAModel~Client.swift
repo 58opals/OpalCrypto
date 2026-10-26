@@ -18,12 +18,10 @@ extension RSABSSAModel {
             let candidateBytes = try secureRandomBytes(
                 count: verificationKey.modulusByteCount
             )
-            let candidate = RSABSSAInteger(
-                bigEndianRepresentation: candidateBytes
-            )
-            guard !candidate.isZero,
-                  candidate < verificationKey.modulus,
-                  candidate.inverseModulo(verificationKey.modulus) != nil else {
+            guard let factor = ValidatedBlindingFactor(
+                rawRepresentation: candidateBytes,
+                modulus: verificationKey.modulus
+            ) else {
                 continue
             }
             return try makeBlindRequest(
@@ -31,7 +29,7 @@ extension RSABSSAModel {
                 verificationKey: verificationKey,
                 messageRandomizer: messageRandomizer,
                 salt: salt,
-                blindingFactor: candidateBytes
+                makeValidatedFactor: { factor }
             )
         }
     }
@@ -42,6 +40,30 @@ extension RSABSSAModel {
         messageRandomizer: Data,
         salt: Data,
         blindingFactor: Data
+    ) throws -> BlindRequestMaterial {
+        try makeBlindRequest(
+            message: message,
+            verificationKey: verificationKey,
+            messageRandomizer: messageRandomizer,
+            salt: salt,
+            makeValidatedFactor: {
+                guard let factor = ValidatedBlindingFactor(
+                    rawRepresentation: blindingFactor,
+                    modulus: verificationKey.modulus
+                ) else {
+                    throw OpalCrypto.RSABSSA.Error.blindingFailed
+                }
+                return factor
+            }
+        )
+    }
+
+    private static func makeBlindRequest(
+        message: Data,
+        verificationKey: RSABSSAVerificationKeyModel,
+        messageRandomizer: Data,
+        salt: Data,
+        makeValidatedFactor: () throws -> ValidatedBlindingFactor
     ) throws -> BlindRequestMaterial {
         let variant = OpalCrypto.RSABSSA.Variant.sha384PSSRandomized
         guard messageRandomizer.count == variant.messageRandomizerByteCount else {
@@ -66,15 +88,9 @@ extension RSABSSAModel {
             throw OpalCrypto.RSABSSA.Error.invalidMessageRepresentative
         }
 
-        let blindingFactorValue = RSABSSAInteger(
-            bigEndianRepresentation: blindingFactor
-        )
-        guard !blindingFactorValue.isZero,
-              blindingFactorValue < verificationKey.modulus,
-              let inverse = blindingFactorValue.inverseModulo(
-                verificationKey.modulus
-              ),
-              let fixedBlindingFactor = blindingFactorValue
+        let factor = try makeValidatedFactor()
+        guard factor.modulus == verificationKey.modulus,
+              let fixedBlindingFactor = factor.value
                 .bigEndianRepresentation(
                     paddedTo: verificationKey.modulusByteCount
                 ) else {
@@ -105,7 +121,7 @@ extension RSABSSAModel {
         )
         guard let blindedMessage = blindedMessageValue.bigEndianRepresentation(
             paddedTo: verificationKey.modulusByteCount
-        ), let blindInverse = inverse.bigEndianRepresentation(
+        ), let blindInverse = factor.inverse.bigEndianRepresentation(
             paddedTo: verificationKey.modulusByteCount
         ) else {
             throw OpalCrypto.RSABSSA.Error.blindingFailed
@@ -116,7 +132,7 @@ extension RSABSSAModel {
             messageDigest: OpalCrypto.Hashing.sha256(message),
             messageRandomizer: Data(messageRandomizer),
             salt: Data(salt),
-            blindingFactor: Data(blindingFactor),
+            blindingFactor: Data(factor.rawRepresentation),
             blindedMessage: blindedMessage,
             blindInverse: blindInverse,
             verificationKeyIdentifier: verificationKey.keyIdentifier
@@ -187,6 +203,28 @@ extension RSABSSAModel {
             return try OpalCrypto.SecureRandom.makeBytes(count: count)
         } catch {
             throw OpalCrypto.RSABSSA.Error.randomGenerationFailed
+        }
+    }
+
+    private struct ValidatedBlindingFactor {
+        let rawRepresentation: Data
+        let value: RSABSSAInteger
+        let modulus: RSABSSAInteger
+        let inverse: RSABSSAInteger
+
+        init?(rawRepresentation: Data, modulus: RSABSSAInteger) {
+            let value = RSABSSAInteger(
+                bigEndianRepresentation: rawRepresentation
+            )
+            guard !value.isZero,
+                  value < modulus,
+                  let inverse = value.inverseModulo(modulus) else {
+                return nil
+            }
+            self.rawRepresentation = Data(rawRepresentation)
+            self.value = value
+            self.modulus = modulus
+            self.inverse = inverse
         }
     }
 }

@@ -81,6 +81,31 @@ struct PublicAPIRSABSSAOperationValidator {
                 modulusBitCount: 512
             )
         }
+
+        #expect(
+            throws: RSABSSA.Error.invalidMessageRandomizerLength(
+                expected: 32,
+                actual: 31
+            )
+        ) {
+            _ = try RSABSSAModel.makeBlindRequest(
+                message: Data(),
+                verificationKey: verificationKey,
+                messageRandomizer: Data(repeating: 0, count: 31),
+                salt: Data(repeating: 0, count: 48),
+                blindingFactor: Data(repeating: 0, count: 256)
+            )
+        }
+
+        #expect(throws: RSABSSA.Error.invalidMessageRepresentative) {
+            _ = try RSABSSAModel.makeBlindRequest(
+                message: Data(),
+                verificationKey: verificationKey,
+                messageRandomizer: Data(repeating: 0, count: 32),
+                salt: Data(repeating: 0, count: 47),
+                blindingFactor: Data(repeating: 0, count: 256)
+            )
+        }
     }
 
     @Test("Complete randomized blind signing and reject altered token inputs")

@@ -58,6 +58,25 @@ Filter by benchmark name with a case-insensitive substring:
 swift run -c release OpalCryptoBenchmarks -- --suite hot --filter Schnorr
 ```
 
+Measure public RSA-2048 blind-request preparation and a complete blind-signing round trip with:
+
+```bash
+swift run -c release OpalCryptoBenchmarks -- --suite hot --filter RSABSSA --warmups 2 --samples 7 --output .build/opalcrypto-benchmarks/rsabssa.jsonl
+```
+
+Both cases use the same fixed message and 32 operations per measured sample. The first unmeasured warmup acquires a process-local attempt key; every operation still creates a fresh randomized request. Request preparation includes typed-width checks and recovery-state serialization. The round trip also signs, finalizes and verifies the resulting signature, failing on a verification error. Checksums contain sizes only and are not cryptographic equivalence evidence; retain the conformance and restoration tests as correctness gates.
+
+Compare multiple fresh processes with unchanged benchmark source, options, build configuration and machine conditions. Keys are regenerated between processes, so keep that variation explicit when reporting per-process medians and ranges. These measurements do not qualify a protocol runtime or live Fusion execution.
+
+On October 26, 2026, reusing the accepted blinding factor's inverse was measured on an Apple M1 Max with macOS 27.0.1, Xcode 27.2 and Swift 6.4.2. Three fresh Release processes per implementation used the command settings above. The table reports medians of the three process medians; all recorded thermal states were nominal and Low Power Mode was disabled.
+
+| Public operation | Before | After | Time reduction |
+| --- | ---: | ---: | ---: |
+| RSA-2048 request preparation | 7.145 ms | 5.224 ms | 26.9% |
+| RSA-2048 blind-signing round trip | 13.980 ms | 11.842 ms | 15.3% |
+
+These same-host observations include regenerated-key variation and do not predict other hardware, configurations or complete application workloads. The optimization keeps the accepted factor and its inverse together only within that request. Deterministic construction and restoration still validate their supplied factor and compute its inverse; message validation, rejection sampling and request/signature binding remain unchanged.
+
 Capture a JSONL artifact under the ignored SwiftPM build directory:
 
 ```bash
