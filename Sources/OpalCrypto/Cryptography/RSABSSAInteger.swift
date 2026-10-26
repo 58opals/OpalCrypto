@@ -35,7 +35,7 @@ internal struct RSABSSAInteger: Comparable, Sendable {
     }
 
     internal var isZero: Bool { words.isEmpty }
-    internal var isOne: Bool { words == [1] }
+    internal var isOne: Bool { words.count == 1 && words[0] == 1 }
     internal var isEven: Bool { words.first.map { $0 & 1 == 0 } ?? true }
 
     internal var bitCount: Int {
@@ -152,35 +152,21 @@ internal struct RSABSSAInteger: Comparable, Sendable {
             guard !leftValue.isZero, !rightValue.isZero else { return nil }
 
             while !leftValue.isZero && leftValue.isEven {
-                leftValue = leftValue.shiftedRightOneBit()
-                leftCoefficient = Self.halvedModulo(
-                    leftCoefficient,
-                    modulus: modulus
-                )
+                leftValue.shiftRightOneBitInPlace()
+                leftCoefficient.halveModuloInPlace(modulus)
             }
             while !rightValue.isZero && rightValue.isEven {
-                rightValue = rightValue.shiftedRightOneBit()
-                rightCoefficient = Self.halvedModulo(
-                    rightCoefficient,
-                    modulus: modulus
-                )
+                rightValue.shiftRightOneBitInPlace()
+                rightCoefficient.halveModuloInPlace(modulus)
             }
 
             guard !leftValue.isZero, !rightValue.isZero else { return nil }
             if leftValue >= rightValue {
-                leftValue = leftValue.subtracting(rightValue)
-                leftCoefficient = Self.subtractingModulo(
-                    leftCoefficient,
-                    rightCoefficient,
-                    modulus: modulus
-                )
+                leftValue.subtractInPlace(rightValue)
+                leftCoefficient.subtractModuloInPlace(rightCoefficient, modulus: modulus)
             } else {
-                rightValue = rightValue.subtracting(leftValue)
-                rightCoefficient = Self.subtractingModulo(
-                    rightCoefficient,
-                    leftCoefficient,
-                    modulus: modulus
-                )
+                rightValue.subtractInPlace(leftValue)
+                rightCoefficient.subtractModuloInPlace(leftCoefficient, modulus: modulus)
             }
         }
 
@@ -219,22 +205,66 @@ internal struct RSABSSAInteger: Comparable, Sendable {
         return sum >= modulus ? sum.subtracting(modulus) : sum
     }
 
-    private static func subtractingModulo(
-        _ left: Self,
-        _ right: Self,
-        modulus: Self
-    ) -> Self {
-        if left >= right {
-            return left.subtracting(right)
+    private mutating func addInPlace(_ other: Self) {
+        let resultCount = max(words.count, other.words.count)
+        if words.count < resultCount {
+            words.append(contentsOf: repeatElement(0, count: resultCount - words.count))
         }
-        return modulus.subtracting(right.subtracting(left))
+
+        var carry: UInt64 = 0
+        for index in 0 ..< resultCount {
+            let right = index < other.words.count ? UInt64(other.words[index]) : 0
+            let sum = UInt64(words[index]) + right + carry
+            words[index] = UInt32(truncatingIfNeeded: sum)
+            carry = sum >> 32
+        }
+        if carry != 0 {
+            words.append(UInt32(carry))
+        }
     }
 
-    private static func halvedModulo(_ value: Self, modulus: Self) -> Self {
-        if value.isEven {
-            return value.shiftedRightOneBit()
+    private mutating func subtractInPlace(_ other: Self) {
+        precondition(self >= other)
+        var borrow: UInt32 = 0
+        for index in words.indices {
+            let right = index < other.words.count ? other.words[index] : 0
+            let first = words[index].subtractingReportingOverflow(right)
+            let second = first.partialValue.subtractingReportingOverflow(borrow)
+            words[index] = second.partialValue
+            borrow = first.overflow || second.overflow ? 1 : 0
         }
-        return value.adding(modulus).shiftedRightOneBit()
+        precondition(borrow == 0)
+        while words.last == 0 {
+            words.removeLast()
+        }
+    }
+
+    private mutating func shiftRightOneBitInPlace() {
+        var carry: UInt32 = 0
+        for index in words.indices.reversed() {
+            let nextCarry = words[index] & 1
+            words[index] = (words[index] >> 1) | (carry << 31)
+            carry = nextCarry
+        }
+        while words.last == 0 {
+            words.removeLast()
+        }
+    }
+
+    // Inverse coefficients stay in [0, modulus); only the request-local
+    // value buffers change, while the binary GCD control flow stays intact.
+    private mutating func subtractModuloInPlace(_ other: Self, modulus: Self) {
+        if self < other {
+            addInPlace(modulus)
+        }
+        subtractInPlace(other)
+    }
+
+    private mutating func halveModuloInPlace(_ modulus: Self) {
+        if !isEven {
+            addInPlace(modulus)
+        }
+        shiftRightOneBitInPlace()
     }
 
     private init(words: [UInt32]) {

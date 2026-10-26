@@ -77,6 +77,25 @@ On October 26, 2026, reusing the accepted blinding factor's inverse was measured
 
 These same-host observations include regenerated-key variation and do not predict other hardware, configurations or complete application workloads. The optimization keeps the accepted factor and its inverse together only within that request. Deterministic construction and restoration still validate their supplied factor and compute its inverse; message validation, rejection sampling and request/signature binding remain unchanged.
 
+Subsequent measurements on the same host compared in-place limb operations in the existing binary inverse and retained public-point precomputation in Pedersen setup. Each implementation used three fresh Release processes, two warmups and seven samples, with identical benchmark source and nominal thermal state. Low Power Mode was disabled. The table reports medians of the three process medians; the before/after process-median ranges did not overlap in these runs.
+
+| Public operation | Before | After | Time reduction |
+| --- | ---: | ---: | ---: |
+| RSA-2048 request preparation | 5.230 ms | 3.322 ms | 36.5% |
+| RSA-2048 blind-signing round trip | 12.194 ms | 10.270 ms | 15.8% |
+| Pedersen 23 commitments with reused setup | 7.033 ms | 1.019 ms | 85.5% |
+| Pedersen fresh setup and 23 commitments | 7.183 ms | 1.422 ms | 80.2% |
+
+The RSA cases retain the randomized workload described above. In-place inverse operations preserve the algorithm and validation while reducing temporary allocations. Pedersen setup retains four immutable tables derived from its validated public points, approximately 4 KiB per setup, without caching nonces or commitment results. The fresh-setup case includes the precomputation cost.
+
+Run the Pedersen cases with:
+
+```bash
+swift run -c release OpalCryptoBenchmarks -- --suite hot --filter Pedersen --warmups 2 --samples 7 --output .build/opalcrypto-benchmarks/pedersen.jsonl
+```
+
+Each Pedersen sample performs eight batches of 23 commitments. A batch uses fixed nonces 1 through 23, amounts −100,000 and 99,800 for the first two commitments, and zero for the remainder. These representative inputs do not model every application's amounts. Checksums inspect public commitment encoding and are not equivalence evidence; independent direct-formula tests and the existing vectors remain correctness gates. These observed reductions do not establish a complete application speedup or qualify live Fusion execution.
+
 Capture a JSONL artifact under the ignored SwiftPM build directory:
 
 ```bash

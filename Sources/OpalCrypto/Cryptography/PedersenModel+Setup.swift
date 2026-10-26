@@ -9,6 +9,8 @@ extension PedersenModel {
 
         let alternateBasePointModel: ParsedPublicKeyModel
         let alternatePlusGenerator: AffinePointModel
+        private let alternateBasePointVerificationKey: VerificationKeyModel
+        private let alternatePlusGeneratorVerificationKey: VerificationKeyModel
 
         init() throws {
             try self.init(
@@ -50,6 +52,12 @@ extension PedersenModel {
                 throw Error.insecureAlternateBasePoint
             }
             self.alternatePlusGenerator = alternatePlusGenerator
+            self.alternateBasePointVerificationKey = VerificationKeyModel(
+                parsedPublicKeyModel: alternateBasePointModel
+            )
+            self.alternatePlusGeneratorVerificationKey = VerificationKeyModel(
+                affinePoint: alternatePlusGenerator
+            )
         }
 
         func commit(
@@ -95,14 +103,14 @@ extension PedersenModel {
 
             let offsetPoint = ScalarMultiplicationModel.mul(
                 resolvedNonceScalar,
-                alternatePlusGenerator
+                alternatePlusGeneratorVerificationKey
             )
             let resultPoint = amountMinusNonce.isZero
                 ? offsetPoint
                 : offsetPoint.add(
                     ScalarMultiplicationModel.mul(
                         amountMinusNonce,
-                        alternateBasePointModel.affinePoint
+                        alternateBasePointVerificationKey
                     )
                 )
             guard let affinePoint = resultPoint.convertToAffine() else {
