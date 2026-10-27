@@ -43,7 +43,7 @@ if [ "$lane" = focused ]; then
     }
     filter=$(printf '%s' "$identifier" | sed 's/[][\\.^$*+?(){}|]/\\&/g')
 elif [ "$lane" = develop ]; then
-    filter='(^|[./])(PublicAPIByteValueValidator|PublicAPIHashingEncodingValidator|PublicAPISecureRandomValidator|PublicAPIBitcoinImprovementProposal340Validator|MetalToolchainResolverTests)[./]'
+    filter='(^|[./])(PublicAPIByteValueValidator|PublicAPIHashingEncodingValidator|PublicAPISecureRandomValidator|PublicAPIBitcoinImprovementProposal340Validator|MetalToolchainResolverTests|StandardsResourceProvenanceValidator)[./]'
     grep -E -- "$filter" "$temporary/inventory" > "$temporary/selection" || {
         printf '%s\n' 'The development selection matched no discovered tests.' >&2; exit 65;
     }

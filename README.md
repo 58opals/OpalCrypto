@@ -30,17 +30,17 @@ Use the Xcode 27 family with a compiler supporting Swift tools 6.4 and Swift 6 l
 
 ## Installation
 
-Use the public `develop` branch for the current Swift 6.4 package stack:
+For reproducible review of the current Swift 6.4 / OS 27 stack, pin an inspected public `develop` revision. Replace the placeholder below with the full commit hash of the reviewed published candidate:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/58opals/OpalCrypto.git", branch: "develop")
+    .package(url: "https://github.com/58opals/OpalCrypto.git", revision: "<reviewed-public-develop-commit>")
 ]
 ```
 
 Then add `"OpalCrypto"` to the target dependency list where you need it.
 
-The published `v0.2.0` release remains available to version-based consumers and uses the stable `OpalDiagnostics` `v0.2.0` release. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement. The current integration manifest pins `OpalDiagnostics` to public revision `aa56dec5d6c8581beb2b3cef43b03dd577ccd9f1`; no new SemVer tag is implied.
+The published `v0.2.0` release remains available to version-based consumers and uses the stable `OpalDiagnostics` `v0.2.0` release. The historical `v0.1.3` manifest contains a branch-based `OpalDiagnostics` requirement and cannot be selected with a version-based package requirement. The current integration's exact public Diagnostics revision is declared in [Package.swift](Package.swift), with the complete graph retained in [Package.resolved](Package.resolved). Use those declarations when selecting direct sibling requirements; no new SemVer tag is implied.
 
 ## Quick Start
 
@@ -94,7 +94,7 @@ See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swi
 
 Tests own cryptographic vectors, malformed-input rejection, typed byte-value construction, secret handling, and CPU/Metal equivalence. Keep shared constructor validation in the byte-value suites and signature suites focused on signing, verification, and signature-specific failures. Canonical vectors and distinct rejection boundaries remain required when consolidating repeated setup.
 
-The default development command builds the tests once, checks a small set of byte-value, hashing/encoding, secure-random, canonical BIP340 and Metal-toolchain contracts, and executes them from that same build. It prints the selected definition count; it is not complete cryptographic or CPU/Metal assurance.
+The default development command builds the tests once, checks a small set of byte-value, hashing/encoding, secure-random, canonical BIP340, standards-resource provenance and Metal-toolchain contracts, and executes them from that same build. It prints the selected definition count; it is not complete cryptographic or CPU/Metal assurance.
 
 ```sh
 sh scripts/validate.sh

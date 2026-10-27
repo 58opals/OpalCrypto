@@ -109,9 +109,10 @@ extension OpalCrypto {
 
         /// Derives key material with RFC 5869 HKDF using HMAC-SHA-256.
         ///
-        /// Empty salt and information values are valid. An empty salt uses the
-        /// RFC-defined all-zero SHA-256 salt. HKDF does not add work-factor
-        /// hardening and must not be used directly as a password KDF.
+        /// Empty input key material, salt, and information values are valid.
+        /// An empty salt uses the RFC-defined all-zero SHA-256 salt. HKDF does
+        /// not add work-factor hardening and must not be used directly as a
+        /// password KDF.
         ///
         /// - Parameters:
         ///   - inputKeyMaterial: Source keying material. Diagnostics record only

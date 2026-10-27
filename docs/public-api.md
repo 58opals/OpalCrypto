@@ -287,7 +287,7 @@ Generic Base58 and byte-mode Base32 decoding require an explicit maximum decoded
 
 ## Key Derivation
 
-`KeyDerivation.deriveHKDFSHA256Key(inputKeyMaterial:salt:information:outputByteCount:)` implements RFC 5869 extract-and-expand with HMAC-SHA-256. It accepts the RFC-defined empty salt and information cases and limits output to `1...8160` bytes. HKDF binds existing key entropy to a context; it is not a password-hardening function.
+`KeyDerivation.deriveHKDFSHA256Key(inputKeyMaterial:salt:information:outputByteCount:)` delegates RFC 5869 extract-and-expand with HMAC-SHA-256 to CryptoKit. It accepts empty input key material, salt, and information, uses the RFC-defined default for empty salt, and limits output to `1...8160` bytes. HKDF binds existing key entropy to a context; it is not a password-hardening function.
 
 `KeyDerivation.derivePBKDF2SHA512Key(password:salt:iterationCount:derivedKeyLength:maximumWorkUnitCount:)` uses PBKDF2 with HMAC-SHA-512. Omitting `derivedKeyLength` produces 64 bytes. One work unit is one HMAC evaluation, so the required work is the number of 64-byte output blocks multiplied by `iterationCount`. The operation validates that multiplication and the caller's budget before retaining the password or allocating the result. Salt values must be nonempty, iteration counts must be positive, and invalid lengths, work overflow, or insufficient budgets throw facade-owned `KeyDerivation.Error` values.
 

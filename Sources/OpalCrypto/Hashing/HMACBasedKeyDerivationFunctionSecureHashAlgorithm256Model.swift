@@ -1,5 +1,6 @@
 // HMACBasedKeyDerivationFunctionSecureHashAlgorithm256Model.swift
 
+import CryptoKit
 import Foundation
 
 internal enum HMACBasedKeyDerivationFunctionSecureHashAlgorithm256Model {
@@ -22,23 +23,12 @@ internal enum HMACBasedKeyDerivationFunctionSecureHashAlgorithm256Model {
         let resolvedSalt = salt.isEmpty
             ? Data(repeating: 0, count: hashByteCount)
             : salt
-        let pseudorandomKey =
-            HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
-                .hash(inputKeyMaterial, key: resolvedSalt)
-        let blockCount = (outputByteCount + hashByteCount - 1) / hashByteCount
-
-        var output = Data()
-        output.reserveCapacity(outputByteCount)
-        var previousBlock = Data()
-        for blockIndex in 1...blockCount {
-            var blockInput = previousBlock
-            blockInput.append(information)
-            blockInput.append(UInt8(blockIndex))
-            previousBlock =
-                HashBasedMessageAuthenticationCodeSecureHashAlgorithm256Model
-                    .hash(blockInput, key: pseudorandomKey)
-            output.append(previousBlock)
-        }
-        return Data(output.prefix(outputByteCount))
+        let derivedKey = HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: SymmetricKey(data: inputKeyMaterial),
+            salt: resolvedSalt,
+            info: information,
+            outputByteCount: outputByteCount
+        )
+        return derivedKey.withUnsafeBytes { Data($0) }
     }
 }

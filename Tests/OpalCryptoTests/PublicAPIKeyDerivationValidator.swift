@@ -38,35 +38,108 @@ struct PublicAPIKeyDerivationValidator {
         #expect(derivedKey.rawRepresentation == expectedDerivedKey)
     }
 
-    @Test("HKDF HMAC-SHA-256 enforces the RFC output-length boundary")
-    func enforceHKDFSHA256OutputLengthBoundary() throws {
-        let maximumOutput = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
+    @Test("HKDF HMAC-SHA-256 accepts long, sliced RFC 5869 inputs")
+    func deriveHKDFSHA256UsingLongSlicedRFC5869Inputs() throws {
+        // RFC 5869 Appendix A.2: https://www.rfc-editor.org/rfc/rfc5869.html#appendix-A.2
+        let inputKeyMaterial = (Data([0xFF]) + Data(0x00...0x4F) + Data([0xEE]))
+            .dropFirst().dropLast()
+        let salt = (Data([0xFF]) + Data(0x60...0xAF) + Data([0xEE]))
+            .dropFirst().dropLast()
+        let information = (Data([0xFF]) + Data(0xB0...0xFF) + Data([0xEE]))
+            .dropFirst().dropLast()
+        let derivedKey = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
+            inputKeyMaterial: inputKeyMaterial,
+            salt: salt,
+            information: information,
+            outputByteCount: 82
+        )
+        let expectedDerivedKey = try Data(
+            hexadecimal: "b11e398dc80327a1c8e7f78c596a49344f012eda2d4efad8a050cc4c19afa97c59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71cc30c58179ec3e87c14c01d5c1f3434f1d87"
+        )
+
+        #expect(inputKeyMaterial.startIndex > 0)
+        #expect(salt.startIndex > 0)
+        #expect(information.startIndex > 0)
+        #expect(derivedKey.rawRepresentation == expectedDerivedKey)
+        #expect(derivedKey.rawRepresentation.startIndex == 0)
+    }
+
+    @Test("HKDF HMAC-SHA-256 preserves empty input key material")
+    func deriveHKDFSHA256UsingEmptyInputKeyMaterial() throws {
+        // Independently evaluated with Python's standard-library HMAC-SHA-256
+        // using RFC 5869 extract-and-expand and the all-zero default salt.
+        let expectedDerivedKey = try Data(
+            hexadecimal: "eb70f01dede9afafa449eee1b1286504e1f62388b3f7dd4f956697b0e828fe18"
+        )
+        let derivedKey = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
+            inputKeyMaterial: Data(),
+            salt: Data(),
+            information: Data(),
+            outputByteCount: 32
+        )
+
+        #expect(derivedKey.rawRepresentation == expectedDerivedKey)
+    }
+
+    @Test(
+        "HKDF HMAC-SHA-256 preserves output at block and maximum boundaries",
+        arguments: [
+            (1, "591b7cc95037822dec5a4d593a2e2e8b19c07ddd2570e5699003d17f14c440a6"),
+            (31, "35acaa365aa21886bada4dd754a61ca0b4c41bbbf33d68afcaba37da836c95f9"),
+            (32, "8e27784a523845c51f6fba68add368b611cdf463cc57ab6e899a88ad4e05e765"),
+            (33, "94f6c79ee7ffe4046a763b6fe500ba8c697ce3f63e89c8733dc4867183d941b6"),
+            (8_160, "5f6b633bd07a9266a4a43899a89c62e73cb753c3daf172ea25396f84beb94da3")
+        ]
+    )
+    func preserveHKDFSHA256OutputAtBoundaries(
+        outputByteCount: Int,
+        expectedSHA256: String
+    ) throws {
+        // Frozen hashes of independently evaluated RFC 5869 outputs keep the
+        // maximum-length fixture compact while covering all 255 output blocks.
+        let derivedKey = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
             inputKeyMaterial: Data("input".utf8),
             salt: Data("salt".utf8),
             information: Data("context".utf8),
-            outputByteCount: 8_160
+            outputByteCount: outputByteCount
         )
 
-        #expect(maximumOutput.rawRepresentation.count == 8_160)
+        #expect(derivedKey.rawRepresentation.count == outputByteCount)
         #expect(
-            throws: OpalCrypto.KeyDerivation.Error.invalidDerivedKeyLength(actual: 0)
-        ) {
-            _ = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
-                inputKeyMaterial: Data(),
-                salt: Data(),
-                information: Data(),
-                outputByteCount: 0
-            )
+            OpalCrypto.Hashing.sha256(derivedKey.rawRepresentation)
+                == (try Data(hexadecimal: expectedSHA256))
+        )
+    }
+
+    @Test("HKDF HMAC-SHA-256 enforces the RFC output-length boundary")
+    func enforceHKDFSHA256OutputLengthBoundary() throws {
+        for outputByteCount in [Int.min, -1, 0] {
+            #expect(
+                throws: OpalCrypto.KeyDerivation.Error.invalidDerivedKeyLength(
+                    actual: outputByteCount
+                )
+            ) {
+                _ = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
+                    inputKeyMaterial: Data(),
+                    salt: Data(),
+                    information: Data(),
+                    outputByteCount: outputByteCount
+                )
+            }
         }
-        #expect(
-            throws: OpalCrypto.KeyDerivation.Error.derivedKeyLengthExceedsLimit(actual: 8_161)
-        ) {
-            _ = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
-                inputKeyMaterial: Data(),
-                salt: Data(),
-                information: Data(),
-                outputByteCount: 8_161
-            )
+        for outputByteCount in [8_161, Int.max] {
+            #expect(
+                throws: OpalCrypto.KeyDerivation.Error.derivedKeyLengthExceedsLimit(
+                    actual: outputByteCount
+                )
+            ) {
+                _ = try OpalCrypto.KeyDerivation.deriveHKDFSHA256Key(
+                    inputKeyMaterial: Data(),
+                    salt: Data(),
+                    information: Data(),
+                    outputByteCount: outputByteCount
+                )
+            }
         }
     }
 
