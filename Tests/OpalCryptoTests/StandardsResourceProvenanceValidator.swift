@@ -55,6 +55,41 @@ struct StandardsResourceProvenanceValidator {
         #expect(notice.contains(subsetSHA256))
     }
 
+    @Test("Preserve the independently qualified BCH Schnorr fixture rows")
+    func preserveQualifiedBCHSchnorrRows() throws {
+        let records = SchnorrVectorRepository.all
+        #expect(records.map(\.index) == Array(1...16))
+        let rows = records.map { record in
+            [
+                String(record.index), record.secretKeyHex ?? "", record.publicKeyHex,
+                record.messageHex, record.signatureHex.trimmingCharacters(in: .whitespacesAndNewlines),
+                record.isVerificationExpected ? "TRUE" : "FALSE"
+            ].joined(separator: ",")
+        }.joined(separator: "\n") + "\n"
+        #expect(
+            StandardsFixtureProvenanceData.digest(rows)
+                == StandardsFixtureProvenanceData.bchSchnorrRowsSHA256
+        )
+    }
+
+    @Test("Retain immutable source and case bindings for qualified fixtures")
+    func retainQualifiedFixtureSourceBindings() throws {
+        let notice = try noticeText()
+        for binding in [
+            "671a1f04bcfacaf125b0db68adc45bc9ce0e763b",
+            "269ed0f69e4c192512cc779e78c555090cebc7c785b609e338a62afc3ce25040",
+            "f9fc479e134cde2980b3bb7cddbcb567b2cd96fd753835243ed067699f26a023",
+            "4448b4998c3f58cd9f5542ddf7c573189a721ff3d3ac24cd5177bb4910a787f8",
+            "07576013c91ff4a3a74acd85f189c69121cdad1b",
+            "b8a14d1778d0417e58fce2ca8092f9b289a4ccef93ce2b256c92ad5f17540f57",
+            StandardsFixtureProvenanceData.nip44MessageKeyCaseSHA256,
+            StandardsFixtureProvenanceData.nistGCMCaseSHA256,
+            StandardsFixtureProvenanceData.bchSchnorrRowsSHA256
+        ] {
+            #expect(notice.contains(binding))
+        }
+    }
+
     private func noticeText() throws -> String {
         let url = URL(filePath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()

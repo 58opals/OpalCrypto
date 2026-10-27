@@ -39,6 +39,12 @@ struct NostrImplementationPossibility44PrimitiveValidator {
                     "027c1db445f05e2eee864a0975b0ddef5b7110583c8c192de3732571ca5838c4"
             ))
         )
+        #expect(
+            StandardsFixtureProvenanceData.digestHexFields([
+                conversationKey, nonce, keys.chachaKey,
+                keys.chachaNonce, keys.authenticationKey
+            ]) == StandardsFixtureProvenanceData.nip44MessageKeyCaseSHA256
+        )
     }
 
     @Test("Match the RFC 8439 ChaCha20 block vector")

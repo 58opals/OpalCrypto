@@ -94,7 +94,7 @@ See [docs/engineering-principles.md](docs/engineering-principles.md) for the Swi
 
 Tests own cryptographic vectors, malformed-input rejection, typed byte-value construction, secret handling, and CPU/Metal equivalence. Keep shared constructor validation in the byte-value suites and signature suites focused on signing, verification, and signature-specific failures. Canonical vectors and distinct rejection boundaries remain required when consolidating repeated setup.
 
-The default development command builds the tests once, checks a small set of byte-value, hashing/encoding, secure-random, canonical BIP340, standards-resource provenance and Metal-toolchain contracts, and executes them from that same build. It prints the selected definition count; it is not complete cryptographic or CPU/Metal assurance.
+The default development command builds the tests once, checks a small set of byte-value, hashing/encoding, secure-random, canonical BIP340, standards-resource provenance, selected NIP-44/NIST fixture identities and Metal-toolchain contracts, and executes them from that same build. It prints the selected definition count; it is not complete cryptographic or CPU/Metal assurance.
 
 ```sh
 sh scripts/validate.sh

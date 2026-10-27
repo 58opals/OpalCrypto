@@ -24,6 +24,14 @@ struct PublicAPIAuthenticatedEncryptionValidator {
         let expectedCombinedRepresentation = try Data(
             hexadecimal: "ac93a1a6145299bde902f21a8995ae2e6df3dbf96fac7b7137bae67feca5aa77d51d4a0a14d9c51e1da474ab"
         )
+        #expect(
+            StandardsFixtureProvenanceData.digestHexFields([
+                key.rawRepresentation, nonce.rawRepresentation, plaintext,
+                authenticatedData,
+                Data(expectedCombinedRepresentation.dropFirst(12).dropLast(16)),
+                Data(expectedCombinedRepresentation.suffix(16))
+            ]) == StandardsFixtureProvenanceData.nistGCMCaseSHA256
+        )
 
         let sealedBox = try OpalCrypto.AuthenticatedEncryption.AES256GCM.seal(
             plaintext,
